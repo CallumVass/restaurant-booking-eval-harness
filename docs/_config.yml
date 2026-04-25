@@ -1,0 +1,5 @@
+title: Restaurant Booking Eval Results
+description: OpenCode + Lattice model evals for a .NET 10 and React restaurant booking system.
+theme: jekyll-theme-primer
+plugins:
+  - jekyll-github-metadata

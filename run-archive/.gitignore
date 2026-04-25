@@ -1,0 +1,16 @@
+# Keep archived eval solutions publishable without committing generated dependencies, build outputs, or runtime state.
+**/node_modules/
+**/dist/
+**/build/
+**/coverage/
+**/bin/
+**/obj/
+**/.lattice/
+**/.opencode/
+**/.agents/
+**/.env
+**/.env.*
+**/*.user
+**/*.suo
+**/*.tsbuildinfo
+**/.DS_Store

@@ -1,0 +1,252 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Restaurant Booking API",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5062"
+    }
+  ],
+  "paths": {
+    "/api/restaurants": {
+      "get": {
+        "operationId": "listRestaurants",
+        "tags": ["Restaurants"],
+        "responses": {
+          "200": {
+            "description": "Restaurant list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RestaurantResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/restaurants/{restaurantId}/availability": {
+      "get": {
+        "operationId": "listAvailability",
+        "tags": ["Availability"],
+        "parameters": [
+          {
+            "name": "restaurantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "partySize",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Available slots",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SlotResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/bookings": {
+      "get": {
+        "operationId": "listBookings",
+        "tags": ["Bookings"],
+        "responses": {
+          "200": {
+            "description": "Booking list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BookingResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createBooking",
+        "tags": ["Bookings"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBookingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created booking",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "responses": {
+      "Problem": {
+        "description": "Expected business failure",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ProblemDetails"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "RestaurantResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "cuisine",
+          "neighborhood",
+          "description",
+          "tables"
+        ],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "cuisine": { "type": "string" },
+          "neighborhood": { "type": "string" },
+          "description": { "type": "string" },
+          "tables": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/TableResponse" }
+          }
+        }
+      },
+      "TableResponse": {
+        "type": "object",
+        "required": ["id", "capacity"],
+        "properties": {
+          "id": { "type": "string" },
+          "capacity": { "type": "integer", "format": "int32" }
+        }
+      },
+      "SlotResponse": {
+        "type": "object",
+        "required": ["startTime", "endTime", "availableTables"],
+        "properties": {
+          "startTime": { "type": "string", "example": "18:00" },
+          "endTime": { "type": "string", "example": "19:30" },
+          "availableTables": { "type": "integer", "format": "int32" }
+        }
+      },
+      "CreateBookingRequest": {
+        "type": "object",
+        "required": [
+          "restaurantId",
+          "date",
+          "startTime",
+          "partySize",
+          "guestName",
+          "guestEmail"
+        ],
+        "properties": {
+          "restaurantId": { "type": "string" },
+          "date": { "type": "string", "format": "date" },
+          "startTime": { "type": "string", "example": "18:00" },
+          "partySize": { "type": "integer", "format": "int32" },
+          "guestName": { "type": "string" },
+          "guestEmail": { "type": "string", "format": "email" }
+        }
+      },
+      "BookingResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "restaurantId",
+          "tableId",
+          "date",
+          "startTime",
+          "endTime",
+          "partySize",
+          "guestName",
+          "guestEmail"
+        ],
+        "properties": {
+          "id": { "type": "string" },
+          "restaurantId": { "type": "string" },
+          "tableId": { "type": "string" },
+          "date": { "type": "string", "format": "date" },
+          "startTime": { "type": "string" },
+          "endTime": { "type": "string" },
+          "partySize": { "type": "integer", "format": "int32" },
+          "guestName": { "type": "string" },
+          "guestEmail": { "type": "string" }
+        }
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string" },
+          "title": { "type": "string" },
+          "status": { "type": "integer", "format": "int32" },
+          "detail": { "type": "string" },
+          "code": { "type": "string" }
+        }
+      }
+    }
+  }
+}

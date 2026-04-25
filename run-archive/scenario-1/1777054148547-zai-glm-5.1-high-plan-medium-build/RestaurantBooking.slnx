@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/backend/">
+    <Project Path="backend/RestaurantBooking.Tests/RestaurantBooking.Tests.csproj" />
+    <Project Path="backend/RestaurantBooking/RestaurantBooking.csproj" />
+  </Folder>
+</Solution>

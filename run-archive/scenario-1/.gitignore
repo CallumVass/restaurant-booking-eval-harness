@@ -1,0 +1,18 @@
+# Scenario 1 archived solutions: publish source/results only.
+1777061595354-minimax-m2.7-high-plan-medium-build/
+1777062456216-mimo-v2.5-pro-plan-mimo-v2.5-build/
+**/node_modules/
+**/dist/
+**/build/
+**/coverage/
+**/bin/
+**/obj/
+**/.lattice/
+**/.opencode/
+**/.agents/
+**/.env
+**/.env.*
+**/*.user
+**/*.suo
+**/*.tsbuildinfo
+**/.DS_Store

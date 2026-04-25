@@ -1,0 +1,23 @@
+node_modules/
+dist/
+runs/
+results/
+.agents/
+.env
+
+# Generated run archive artifacts. Keep source, README files, and result.json files publishable.
+run-archive/**/node_modules/
+run-archive/**/dist/
+run-archive/**/build/
+run-archive/**/coverage/
+run-archive/**/bin/
+run-archive/**/obj/
+run-archive/**/.lattice/
+run-archive/**/.opencode/
+run-archive/**/.agents/
+run-archive/**/.env
+run-archive/**/.env.*
+run-archive/**/*.user
+run-archive/**/*.suo
+run-archive/**/*.tsbuildinfo
+run-archive/**/.DS_Store

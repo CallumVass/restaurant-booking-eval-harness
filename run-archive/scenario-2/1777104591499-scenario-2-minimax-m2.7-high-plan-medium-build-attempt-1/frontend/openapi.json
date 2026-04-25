@@ -1,0 +1,320 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Restaurant Booking API",
+    "version": "v1"
+  },
+  "paths": {
+    "/api/restaurants": {
+      "get": {
+        "operationId": "getRestaurants",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/RestaurantDto" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/restaurants/{id}": {
+      "get": {
+        "operationId": "getRestaurantById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RestaurantDto" }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/restaurants/{id}/tables": {
+      "get": {
+        "operationId": "getRestaurantTables",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/TableDto" }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/restaurants/{id}/availability": {
+      "get": {
+        "operationId": "getAvailability",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string", "format": "date" }
+          },
+          {
+            "name": "partySize",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer", "minimum": 1 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/TimeSlotDto" }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bookings": {
+      "post": {
+        "operationId": "createBooking",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateBookingRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BookingDto" }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "getBookings",
+        "parameters": [
+          {
+            "name": "restaurantId",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "format": "date" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/BookingDto" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bookings/{id}": {
+      "get": {
+        "operationId": "getBookingById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BookingDto" }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "RestaurantDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "address": { "type": "string" },
+          "tables": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/TableDto" }
+          }
+        }
+      },
+      "TableDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "tableNumber": { "type": "integer" },
+          "capacity": { "type": "integer" }
+        }
+      },
+      "CreateBookingRequest": {
+        "type": "object",
+        "required": [
+          "restaurantId",
+          "customerName",
+          "customerEmail",
+          "customerPhone",
+          "partySize",
+          "startTime"
+        ],
+        "properties": {
+          "restaurantId": { "type": "string", "format": "uuid" },
+          "tableId": { "type": "string", "format": "uuid", "nullable": true },
+          "customerName": { "type": "string" },
+          "customerEmail": { "type": "string" },
+          "customerPhone": { "type": "string" },
+          "partySize": { "type": "integer", "minimum": 1 },
+          "startTime": { "type": "string", "format": "date-time" }
+        }
+      },
+      "BookingDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "restaurantId": { "type": "string", "format": "uuid" },
+          "tableId": { "type": "string", "format": "uuid" },
+          "customerName": { "type": "string" },
+          "customerEmail": { "type": "string" },
+          "customerPhone": { "type": "string" },
+          "partySize": { "type": "integer" },
+          "startTime": { "type": "string", "format": "date-time" },
+          "endTime": { "type": "string", "format": "date-time" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "TimeSlotDto": {
+        "type": "object",
+        "properties": {
+          "start": { "type": "string", "format": "date-time" },
+          "end": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string" },
+          "message": { "type": "string" }
+        }
+      }
+    }
+  }
+}
