@@ -41,6 +41,12 @@ Scenario 1 plus Tailwind CSS, shadcn/ui, TanStack Query/libraries, OpenAPI typed
 | 5 | `deepseek-v4-pro-high-plan-medium-build` | 86 | 36.7m | 13,984,485 | $2.620604 | Pass | [breakdown](./details?eval=s2-deepseek-medium) | [source]({{ repo }}/tree/{{ branch }}/run-archive/scenario-2/1777107333568-scenario-2-deepseek-v4-pro-high-plan-medium-build-attempt-1) |
 | 6 | `minimax-m2.7-high-plan-medium-build` | 82 | 30.0m | 12,275,788 | $0.959646 | Pass | [breakdown](./details?eval=s2-minimax-m27) | [source]({{ repo }}/tree/{{ branch }}/run-archive/scenario-2/1777104591499-scenario-2-minimax-m2.7-high-plan-medium-build-attempt-1) |
 
+## Scenario 3
+
+Brownfield extension from a neutral Scenario 3 baseline: fix known baseline issues, add local cookie auth with CSRF protection, protect booking creation, scope booking history to the authenticated user, preserve generated client/TanStack Query workflow, and score scenario-specific brownfield/auth dimensions.
+
+Scenario 3 results will be added after runs are archived.
+
 ## Repository Links
 
 - [Harness source]({{ repo }}/tree/{{ branch }})

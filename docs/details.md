@@ -204,6 +204,14 @@ function flagGrid(judge) {
   return `<div class="flag-grid">${flags.join("")}</div>`;
 }
 
+function scenarioScoreGrid(judge) {
+  const scores = Array.isArray(judge?.scenarioScores) ? judge.scenarioScores : [];
+  if (scores.length === 0) {
+    return "<p>No scenario-specific scores recorded.</p>";
+  }
+  return `<div class="score-grid">${scores.map((item) => metric(item.name || "scenarioScore", item.score ?? "N/A")).join("")}</div>`;
+}
+
 function checksTable(checks) {
   if (!checks || checks.length === 0) {
     return "<p>No deterministic checks recorded.</p>";
@@ -289,6 +297,8 @@ function renderCard(item, result) {
       <p>${escapeHtml(judge.summary || "No judge summary recorded.")}</p>
       <h3>Scores</h3>
       ${scoreGrid(judge)}
+      <h3>Scenario-Specific Scores</h3>
+      ${scenarioScoreGrid(judge)}
       <h3>Requirement Flags</h3>
       ${flagGrid(judge)}
       <h3>Major Issues</h3>
@@ -297,6 +307,8 @@ function renderCard(item, result) {
       ${list(judge.missingRequirements, "No missing requirements recorded.")}
       <h3>Notable Strengths</h3>
       ${list(judge.notableStrengths, "No notable strengths recorded.")}
+      <h3>Scenario-Specific Findings</h3>
+      ${list(judge.scenarioFindings, "No scenario-specific findings recorded.")}
       <h3>Deterministic Checks</h3>
       ${checksTable(result.checks)}
       <h3>Telemetry</h3>

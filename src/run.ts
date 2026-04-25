@@ -45,12 +45,20 @@ type TelemetrySummary = TokenTelemetry & {
   judge?: TokenTelemetry & { model?: string; provider?: string };
 };
 
+type ScenarioConfig = {
+  id: string;
+  taskPath: string;
+  baselinePath: string | null;
+  judgeInstructions: string[];
+};
+
 type RunSummary = {
   scenario: string;
   variant: string;
   attempt: number;
   maxAttempts: number;
   retryable: boolean;
+  baseline: string | null;
   workspace: string;
   startedAt: string;
   completedAt: string;
@@ -67,18 +75,30 @@ const root = process.cwd();
 const activeRunsDir = path.resolve(process.env.EVAL_RUNS_DIR ?? "/tmp/restaurant-booking-eval-harness-active");
 const archiveDir = path.resolve(process.env.EVAL_ARCHIVE_DIR ?? path.join(root, "run-archive"));
 const defaultTimeoutMs = 75 * 60 * 1000;
+const baselineExcludeNames = new Set([
+  ".agents",
+  ".git",
+  ".lattice",
+  ".opencode",
+  "bin",
+  "coverage",
+  "dist",
+  "node_modules",
+  "obj",
+  "result.json"
+]);
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const scenario = parseScenario(args);
   const modelsPath = path.resolve(root, args.models ?? "models.json");
-  const taskPath = path.resolve(root, args.task ?? path.join("scenarios", `${scenario}.md`));
+  const scenarioConfig = await makeScenarioConfig(scenario, args);
   const timeoutMs = Number(args.timeoutMs ?? defaultTimeoutMs);
   const runRetries = parseNonNegativeInteger(args.runRetries ?? "1", "runRetries");
   const maxAttempts = runRetries + 1;
 
   const models = JSON.parse(await readFile(modelsPath, "utf8")) as ModelsConfig;
-  const task = await readFile(taskPath, "utf8");
+  const task = await readFile(scenarioConfig.taskPath, "utf8");
   const requestedVariant = args.variant;
   const variants = requestedVariant
     ? models.variants.filter((variant) => variant.id === requestedVariant)
@@ -96,6 +116,9 @@ async function main() {
   await mkdir(archiveDir, { recursive: true });
 
   log(`Starting scenario ${scenario} with ${variants.length} variant(s): ${variants.map((variant) => variant.id).join(", ")}`);
+  if (scenarioConfig.baselinePath) {
+    log(`Scenario ${scenario}: seeding workspaces from ${scenarioConfig.baselinePath}`);
+  }
 
   for (const [index, variant] of variants.entries()) {
     log(`[${index + 1}/${variants.length}] Starting variant ${variant.id}`);
@@ -108,6 +131,7 @@ async function main() {
         maxAttempts,
         judge: models.judge,
         task,
+        scenarioConfig,
         timeoutMs,
         skipSkills: args.skipSkills === "true"
       });
@@ -135,13 +159,14 @@ async function runVariant(input: {
   maxAttempts: number;
   judge: PhaseModel;
   task: string;
+  scenarioConfig: ScenarioConfig;
   timeoutMs: number;
   skipSkills: boolean;
 }): Promise<RunSummary> {
   const startedAt = new Date();
   const workspace = path.join(activeRunsDir, `${Date.now()}-scenario-${input.scenario}-${safeName(input.variant.id)}-attempt-${input.attempt}`);
   log(`${input.variant.id}: preparing workspace ${workspace}`);
-  await prepareWorkspace(workspace, input.variant, input.skipSkills);
+  await prepareWorkspace(workspace, input.variant, input.skipSkills, input.scenarioConfig.baselinePath);
 
   const previousCwd = process.cwd();
   process.chdir(workspace);
@@ -198,6 +223,7 @@ async function runVariant(input: {
         log(`${input.variant.id}: deterministic checks passed despite pipeline status ${getPipelineStatus(pipelineState)}; running judge`);
         const judgeResult = await judgeRun(client, input.judge, {
           task: input.task,
+          scenario: input.scenarioConfig,
           variant: input.variant,
           plan,
           pipelineCompleted: false,
@@ -213,6 +239,7 @@ async function runVariant(input: {
           attempt: input.attempt,
           maxAttempts: input.maxAttempts,
           retryable: false,
+          baseline: input.scenarioConfig.baselinePath,
           workspace,
           startedAt: startedAt.toISOString(),
           completedAt: completedAt.toISOString(),
@@ -233,6 +260,7 @@ async function runVariant(input: {
         attempt: input.attempt,
         maxAttempts: input.maxAttempts,
         retryable: false,
+        baseline: input.scenarioConfig.baselinePath,
         workspace,
         startedAt: startedAt.toISOString(),
         completedAt: completedAt.toISOString(),
@@ -259,6 +287,7 @@ async function runVariant(input: {
     log(`${input.variant.id}: running LLM judge`);
     const judgeResult = await judgeRun(client, input.judge, {
       task: input.task,
+      scenario: input.scenarioConfig,
       variant: input.variant,
       plan,
       pipelineTelemetry,
@@ -276,6 +305,7 @@ async function runVariant(input: {
       attempt: input.attempt,
       maxAttempts: input.maxAttempts,
       retryable: false,
+      baseline: input.scenarioConfig.baselinePath,
       workspace,
       startedAt: startedAt.toISOString(),
       completedAt: completedAt.toISOString(),
@@ -293,14 +323,27 @@ async function runVariant(input: {
   }
 }
 
-async function prepareWorkspace(workspace: string, variant: ModelVariant, skipSkills: boolean) {
+async function prepareWorkspace(workspace: string, variant: ModelVariant, skipSkills: boolean, baselinePath: string | null) {
   await rm(workspace, { recursive: true, force: true });
+  await mkdir(workspace, { recursive: true });
+
+  if (baselinePath) {
+    log(`${variant.id}: copying baseline source from ${baselinePath}`);
+    await copyBaseline(baselinePath, workspace);
+  }
+
   await mkdir(path.join(workspace, ".opencode", "lattice-pipelines"), { recursive: true });
   await mkdir(path.join(workspace, ".opencode", "scripts"), { recursive: true });
   await mkdir(path.join(workspace, ".lattice", "plans"), { recursive: true });
 
-  await writeFile(path.join(workspace, "package.json"), `${JSON.stringify({ private: true }, null, 2)}\n`);
-  await writeFile(path.join(workspace, ".gitignore"), [".lattice/", "node_modules/", "bin/", "obj/", "frontend/node_modules/", ""].join("\n"));
+  const packageJsonPath = path.join(workspace, "package.json");
+  if (!(await exists(packageJsonPath))) {
+    await writeFile(packageJsonPath, `${JSON.stringify({ private: true }, null, 2)}\n`);
+  }
+  const gitignorePath = path.join(workspace, ".gitignore");
+  if (!(await exists(gitignorePath))) {
+    await writeFile(gitignorePath, [".lattice/", "node_modules/", "bin/", "obj/", "frontend/node_modules/", ""].join("\n"));
+  }
   await writeFile(path.join(workspace, "opencode.json"), `${JSON.stringify(makeOpenCodeConfig(variant), null, 2)}\n`);
   await cp(
     path.join(root, "templates", "lattice-pipeline.ts"),
@@ -323,6 +366,25 @@ async function prepareWorkspace(workspace: string, variant: ModelVariant, skipSk
   } else {
     log(`${variant.id}: skipping skill install`);
   }
+}
+
+async function copyBaseline(baselinePath: string, workspace: string) {
+  const entries = await readdir(baselinePath, { withFileTypes: true });
+  for (const entry of entries) {
+    if (baselineExcludeNames.has(entry.name)) continue;
+    const source = path.join(baselinePath, entry.name);
+    const destination = path.join(workspace, entry.name);
+    await cp(source, destination, {
+      recursive: true,
+      filter: (candidate) => !isExcludedBaselinePath(baselinePath, candidate)
+    });
+  }
+}
+
+function isExcludedBaselinePath(baselinePath: string, candidate: string): boolean {
+  const relative = path.relative(baselinePath, candidate);
+  if (!relative || relative.startsWith("..")) return false;
+  return relative.split(path.sep).some((part) => baselineExcludeNames.has(part));
 }
 
 async function archiveRun(workspace: string, scenario: string): Promise<string> {
@@ -577,6 +639,7 @@ async function judgeRun(
   details: unknown
 ): Promise<{ output: unknown; telemetry: TokenTelemetry & { model?: string; provider?: string } }> {
   const session = await client.session.create({ body: { title: "judge restaurant booking eval" } });
+  const scenarioInstructions = getScenarioJudgeInstructions(details);
   const prompt = [
     "You are an impartial LLM judge for a coding-agent eval.",
     "Score the generated restaurant booking system against the requested task.",
@@ -586,10 +649,10 @@ async function judgeRun(
     "Set each backend/frontend pass boolean directly from the matching command result, not from intent or README claims.",
     "Set boundaryTestsPresent to true only if source evidence shows tests for booking conflicts/overlaps and invalid party size/date/time cases.",
     "Set deadCodeCheckPass to true only if a dedicated dead-code/unused-export command exited 0.",
-    "For scenario 2, score Tailwind/shadcn usage, TanStack usage, and OpenAPI-generated typed client usage from source evidence, not claims.",
     "Set typedOpenApiClientUsed to true only if the frontend uses generated types/client code from OpenAPI through Orval or an equivalent generator.",
     "Score planQualityScore based on specificity, risk awareness, vertical slicing, testing strategy, and coverage of requested frontend/client technology.",
     "Score planAdherenceScore based on how closely the implementation follows the saved plan, allowing justified deviations when documented.",
+    ...scenarioInstructions,
     "Penalize missing runnable code, failed deterministic checks, weak conflict prevention, no boundary tests, over-engineering, hidden implementation gaps, formatting drift, lint failures, dead code, generic UI, untyped fetch wrappers where typed generation was requested, weak plans, and poor plan adherence.",
     "Reward clean architecture when proportionate, pure domain logic, explicit Result-style business errors, strong responsive UI, generated typed API clients, TanStack Query integration, and useful React/API integration.",
     "Return only structured output matching the schema.",
@@ -611,6 +674,14 @@ async function judgeRun(
     output: result.data.info.structured_output ?? result.data.info,
     telemetry: telemetryFromAssistantInfo(result.data.info)
   };
+}
+
+function getScenarioJudgeInstructions(details: unknown): string[] {
+  if (!details || typeof details !== "object") return [];
+  const scenario = (details as { scenario?: unknown }).scenario;
+  if (!scenario || typeof scenario !== "object") return [];
+  const instructions = (scenario as { judgeInstructions?: unknown }).judgeInstructions;
+  return Array.isArray(instructions) ? instructions.filter((instruction): instruction is string => typeof instruction === "string") : [];
 }
 
 function telemetryFromAssistantInfo(info: any): TokenTelemetry & { model?: string; provider?: string } {
@@ -734,6 +805,57 @@ function parseArgs(args: string[]): Record<string, string> {
     }
   }
   return parsed;
+}
+
+async function makeScenarioConfig(scenario: string, args: Record<string, string>): Promise<ScenarioConfig> {
+  const taskPath = path.resolve(root, args.task ?? path.join("scenarios", `${scenario}.md`));
+  const baselineArg = args.base ?? args.baseline;
+  const baselinePath = baselineArg ? path.resolve(root, baselineArg) : null;
+
+  if (baselinePath && !(await exists(baselinePath))) {
+    throw new Error(`Baseline path does not exist: ${baselinePath}`);
+  }
+
+  return {
+    id: scenario,
+    taskPath,
+    baselinePath,
+    judgeInstructions: judgeInstructionsForScenario(scenario, Boolean(baselinePath))
+  };
+}
+
+function judgeInstructionsForScenario(scenario: string, hasBaseline: boolean): string[] {
+  const instructions = [
+    "Populate scenarioScores with any scenario-specific dimensions you used. Use concise camelCase names and 0-100 numeric scores.",
+    "Populate scenarioFindings with concise evidence-backed notes for those scenario-specific scores."
+  ];
+
+  if (scenario === "2") {
+    instructions.push(
+      "For scenario 2, score Tailwind/shadcn usage, TanStack usage, and OpenAPI-generated typed client usage from source evidence, not claims."
+    );
+  }
+
+  if (hasBaseline) {
+    instructions.push(
+      "This run started from a seeded baseline. Judge it as brownfield work: reward focused changes that preserve existing behavior and fit the existing architecture.",
+      "For brownfield runs, include scenarioScores entries for baselinePreservation, changeMinimality, integrationQuality, and regressionSafety.",
+      "Penalize unnecessary rewrites, replacing established project structure, bypassing existing generated clients, duplicated APIs, or failing to update tests/docs around changed behavior."
+    );
+  }
+
+  if (scenario === "3") {
+    instructions.push(
+      "For scenario 3, include scenarioScores entries for baselineIssueResolution, authCorrectness, authSecurity, bookingOwnership, brownfieldIntegration, and regressionCoverage.",
+      "Score baselineIssueResolution low if booking conflict prevention only rechecks conflicts before adding without synchronization, locking, transactional semantics, database constraints, or another credible atomic critical section.",
+      "Score authCorrectness low if unauthenticated users can create bookings, auth endpoints are not usable from the SPA, or booking history is not tied to authenticated users.",
+      "Score authSecurity low if cookie auth is used without CSRF protection for state-changing requests, auth tokens are stored in localStorage/sessionStorage, or credentialed CORS is configured carelessly.",
+      "Score bookingOwnership low if users can view another user's booking history or bookings are not associated with the authenticated creator.",
+      "Score regressionCoverage low if there are no tests for auth boundaries, user-scoped booking history, and atomic conflict prevention."
+    );
+  }
+
+  return instructions;
 }
 
 function parseScenario(args: Record<string, string>): string {

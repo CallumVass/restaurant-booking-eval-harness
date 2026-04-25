@@ -14,6 +14,18 @@ export const judgeSchema = {
     typedClientScore: { type: "number", minimum: 0, maximum: 100 },
     planQualityScore: { type: "number", minimum: 0, maximum: 100 },
     planAdherenceScore: { type: "number", minimum: 0, maximum: 100 },
+    scenarioScores: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          score: { type: "number", minimum: 0, maximum: 100 }
+        },
+        required: ["name", "score"],
+        additionalProperties: false
+      }
+    },
     deterministicChecksPass: { type: "boolean" },
     backendBuildPass: { type: "boolean" },
     backendTestsPass: { type: "boolean" },
@@ -31,6 +43,7 @@ export const judgeSchema = {
     majorIssues: { type: "array", items: { type: "string" } },
     missingRequirements: { type: "array", items: { type: "string" } },
     notableStrengths: { type: "array", items: { type: "string" } },
+    scenarioFindings: { type: "array", items: { type: "string" } },
     summary: { type: "string" }
   },
   required: [
@@ -47,6 +60,7 @@ export const judgeSchema = {
     "typedClientScore",
     "planQualityScore",
     "planAdherenceScore",
+    "scenarioScores",
     "deterministicChecksPass",
     "backendBuildPass",
     "backendTestsPass",
@@ -64,6 +78,7 @@ export const judgeSchema = {
     "majorIssues",
     "missingRequirements",
     "notableStrengths",
+    "scenarioFindings",
     "summary"
   ],
   additionalProperties: false
