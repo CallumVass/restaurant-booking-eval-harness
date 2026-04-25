@@ -21,12 +21,10 @@ Restaurant booking system with .NET 10 API, React SPA, Tailwind CSS, shadcn/ui, 
 
 | Rank | Variant | Score | Time | Tokens | Cost | Checks | Details | Solution |
 |---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | `openai-gpt-5.5-plan-build` | 91 | 10.8m | 4,397,754 | $3.566181 | Pass | [breakdown](./details?eval=s1-openai-gpt-55) | [source]({{ repo }}/tree/{{ branch }}/run-archive/scenario-1/1777100816107-scenario-1-openai-gpt-5.5-plan-build) |
-| 2 | `mimo-v2.5-pro-plan-mimo-v2.5-build` | 86 | 15.7m | 10,786,018 | $1.099003 | Pass | [breakdown](./details?eval=s1-mimo-v25) | [source]({{ repo }}/tree/{{ branch }}/run-archive/scenario-1/1777106388919-scenario-1-mimo-v2.5-pro-plan-mimo-v2.5-build-attempt-1) |
-| 3 | `moonshot-kimi-k2.6-high-plan-medium-build` | 86 | 20.3m | 4,705,968 | $0.447946 | Pass | [breakdown](./details?eval=s1-kimi-k26) | [source]({{ repo }}/tree/{{ branch }}/run-archive/scenario-1/1777103372714-scenario-1-moonshot-kimi-k2.6-high-plan-medium-build-attempt-1) |
-| 4 | `deepseek-v4-pro-plan-flash-build` | 86 | 29.7m | 25,445,570 | $0.986744 | Pass | [breakdown](./details?eval=s1-deepseek-flash) | [source]({{ repo }}/tree/{{ branch }}/run-archive/scenario-1/1777109534353-scenario-1-deepseek-v4-pro-plan-flash-build-attempt-1) |
-| 5 | `deepseek-v4-pro-high-plan-medium-build` | 86 | 36.7m | 13,984,485 | $2.620604 | Pass | [breakdown](./details?eval=s1-deepseek-medium) | [source]({{ repo }}/tree/{{ branch }}/run-archive/scenario-1/1777107333568-scenario-1-deepseek-v4-pro-high-plan-medium-build-attempt-1) |
-| 6 | `minimax-m2.7-high-plan-medium-build` | 82 | 30.0m | 12,275,788 | $0.959646 | Pass | [breakdown](./details?eval=s1-minimax-m27) | [source]({{ repo }}/tree/{{ branch }}/run-archive/scenario-1/1777104591499-scenario-1-minimax-m2.7-high-plan-medium-build-attempt-1) |
+| 1 | `openai-gpt-5.5-plan-build` | 91 | 12.6m | 4,237,796 | $3.646083 | Pass | [breakdown](./details?eval=s1-openai-gpt-55) | [source]({{ repo }}/tree/{{ branch }}/run-archive/scenario-1/1777138615836-scenario-1-openai-gpt-5.5-plan-build-attempt-1) |
+| 2 | `deepseek-v4-pro-plan-flash-build` | 88 | 22.3m | 11,359,693 | $0.398040 | Pass | [breakdown](./details?eval=s1-deepseek-flash) | [source]({{ repo }}/tree/{{ branch }}/run-archive/scenario-1/1777144375955-scenario-1-deepseek-v4-pro-plan-flash-build-attempt-1) |
+| 3 | `mimo-v2.5-pro-plan-mimo-v2.5-build` | 74 | 15.4m | 10,325,013 | $0.974228 | Pass | [breakdown](./details?eval=s1-mimo-v25) | [source]({{ repo }}/tree/{{ branch }}/run-archive/scenario-1/1777143448989-scenario-1-mimo-v2.5-pro-plan-mimo-v2.5-build-attempt-1) |
+| 4 | `qwen3.6-plus-high-plan-medium-build` | 72 | 25.9m | 9,474,158 | $0.643007 | Pass | [breakdown](./details?eval=s1-qwen36) | [source]({{ repo }}/tree/{{ branch }}/run-archive/scenario-1/1777141829210-scenario-1-qwen3.6-plus-high-plan-medium-build-attempt-1) |
 
 ## Scenario 2
 

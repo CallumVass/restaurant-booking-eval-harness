@@ -1,23 +1,20 @@
-# Restaurant Booking Eval
+# Restaurant Booking System
 
-Small restaurant booking system for Scenario 1: .NET 10 Minimal API backend, React SPA frontend, Tailwind/shadcn-style UI components, TanStack Query, and an Orval-generated typed API client.
+Small full-stack restaurant booking system.
 
-## Structure
+## Stack
 
-- `backend/RestaurantBooking.Api` - .NET 10 API with in-memory restaurants, tables, and bookings.
-- `backend/RestaurantBooking.Tests` - xUnit integration tests through the API surface.
-- `frontend` - Vite React SPA using Tailwind CSS, shadcn/ui-style local components, TanStack Query, and Orval.
-- `frontend/openapi/restaurant-booking.json` - OpenAPI source used by Orval to regenerate the typed client.
+- Backend: .NET 10 minimal Web API, in-memory persistence, OpenAPI at `/openapi/v1.json`.
+- Frontend: Vite React SPA, Tailwind CSS, shadcn/ui-style source components, TanStack Query.
+- API client: Orval-generated TypeScript client from `frontend/openapi/restaurant-booking.json`.
 
-## Run Backend
+The frontend OpenAPI source is checked in so typed-client generation is deterministic without requiring a running backend during CI-style checks. It mirrors the backend endpoints, and the backend also exposes a live OpenAPI document for inspection and regeneration workflows.
+
+## Run
 
 ```bash
-dotnet run --project backend/RestaurantBooking.Api/RestaurantBooking.Api.csproj --urls http://localhost:5062
+dotnet run --project backend/RestaurantBooking.Api --urls http://localhost:5177
 ```
-
-OpenAPI is served at `http://localhost:5062/openapi/v1.json`. In-memory data resets when the API restarts.
-
-## Run Frontend
 
 ```bash
 cd frontend
@@ -26,11 +23,9 @@ npm run generate:api
 npm run dev
 ```
 
-The SPA expects the API at `http://localhost:5062`, matching the OpenAPI document and generated client.
+Open the Vite URL shown in the terminal. The dev server proxies `/api` to `http://localhost:5177`.
 
-## Verification
-
-Backend:
+## Backend Checks
 
 ```bash
 dotnet build RestaurantBooking.slnx
@@ -38,23 +33,22 @@ dotnet test RestaurantBooking.slnx --no-build
 dotnet format RestaurantBooking.slnx --verify-no-changes
 ```
 
-Frontend:
+## Frontend Checks
 
 ```bash
 cd frontend
 npm install
 npm run generate:api
+npm run build
 npm run typecheck
 npm run lint
 npm run format:check
 npm run deadcode
-npm run build
 ```
 
-## Notes
+## Behavior Covered
 
-- The implementation follows the saved plan: vertical slices for restaurant listing, availability, booking creation, and existing bookings.
-- Conflict and availability logic lives in pure domain functions; endpoints and the in-memory store are thin imperative shells.
-- Expected business failures return explicit result errors mapped to ProblemDetails-style responses.
-- The frontend does not use handwritten fetch wrappers; it consumes the Orval-generated typed TanStack Query hooks in `frontend/src/api/generated/restaurant-booking.ts`.
-- `frontend/openapi/restaurant-booking.json` is checked in so client generation is deterministic during `npm run build`.
+- Restaurant list, booking list, availability lookup, and create booking endpoints.
+- Conflict prevention rechecked inside the in-memory store when a booking is created.
+- Boundary tests cover invalid party size, invalid dates, invalid times, unknown restaurants, adjacent non-overlapping bookings, overlapping reservations, and capacity limits.
+- Expected business failures use Result-style errors mapped to `400`, `404`, or `409` responses.

@@ -92,37 +92,25 @@ const evals = [
     slug: "s1-openai-gpt-55",
     scenario: "Scenario 1",
     rank: 1,
-    path: "run-archive/scenario-1/1777100816107-scenario-1-openai-gpt-5.5-plan-build/result.json"
-  },
-  {
-    slug: "s1-mimo-v25",
-    scenario: "Scenario 1",
-    rank: 2,
-    path: "run-archive/scenario-1/1777106388919-scenario-1-mimo-v2.5-pro-plan-mimo-v2.5-build-attempt-1/result.json"
-  },
-  {
-    slug: "s1-kimi-k26",
-    scenario: "Scenario 1",
-    rank: 3,
-    path: "run-archive/scenario-1/1777103372714-scenario-1-moonshot-kimi-k2.6-high-plan-medium-build-attempt-1/result.json"
+    path: "run-archive/scenario-1/1777138615836-scenario-1-openai-gpt-5.5-plan-build-attempt-1/result.json"
   },
   {
     slug: "s1-deepseek-flash",
     scenario: "Scenario 1",
+    rank: 2,
+    path: "run-archive/scenario-1/1777144375955-scenario-1-deepseek-v4-pro-plan-flash-build-attempt-1/result.json"
+  },
+  {
+    slug: "s1-mimo-v25",
+    scenario: "Scenario 1",
+    rank: 3,
+    path: "run-archive/scenario-1/1777143448989-scenario-1-mimo-v2.5-pro-plan-mimo-v2.5-build-attempt-1/result.json"
+  },
+  {
+    slug: "s1-qwen36",
+    scenario: "Scenario 1",
     rank: 4,
-    path: "run-archive/scenario-1/1777109534353-scenario-1-deepseek-v4-pro-plan-flash-build-attempt-1/result.json"
-  },
-  {
-    slug: "s1-deepseek-medium",
-    scenario: "Scenario 1",
-    rank: 5,
-    path: "run-archive/scenario-1/1777107333568-scenario-1-deepseek-v4-pro-high-plan-medium-build-attempt-1/result.json"
-  },
-  {
-    slug: "s1-minimax-m27",
-    scenario: "Scenario 1",
-    rank: 6,
-    path: "run-archive/scenario-1/1777104591499-scenario-1-minimax-m2.7-high-plan-medium-build-attempt-1/result.json"
+    path: "run-archive/scenario-1/1777141829210-scenario-1-qwen3.6-plus-high-plan-medium-build-attempt-1/result.json"
   }
 ];
 
