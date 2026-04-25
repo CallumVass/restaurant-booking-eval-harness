@@ -9,7 +9,7 @@ title: Detailed Eval Breakdown
 
 # Detailed Eval Breakdown
 
-This page loads each published `result.json` from the archived eval solutions and renders the judge scores, deterministic checks, telemetry, findings, and links back to the exact source directories.
+Open a breakdown from the summary table to see one eval at a time. This page loads the selected published `result.json` from the archived eval solution and renders the judge scores, deterministic checks, telemetry, findings, and links back to the exact source directory.
 
 [Back to summary](./)
 
@@ -89,51 +89,61 @@ const branch = "{{ branch }}";
 
 const evals = [
   {
+    slug: "s1-openai-gpt-55-fast",
     scenario: "Scenario 1",
     rank: 1,
     path: "run-archive/scenario-1/1777053335143-openai-gpt-5.5-plan-fast-build/result.json"
   },
   {
+    slug: "s1-zai-glm-51",
     scenario: "Scenario 1",
     rank: 2,
     path: "run-archive/scenario-1/1777054148547-zai-glm-5.1-high-plan-medium-build/result.json"
   },
   {
+    slug: "s1-qwen36-plus",
     scenario: "Scenario 1",
     rank: 3,
     path: "run-archive/scenario-1/1777058053592-qwen3.6-plus-high-plan-medium-build/result.json"
   },
   {
+    slug: "s1-kimi-k26",
     scenario: "Scenario 1",
     rank: 4,
     path: "run-archive/scenario-1/1777055782131-moonshot-kimi-k2.6-high-plan-medium-build/result.json"
   },
   {
+    slug: "s2-openai-gpt-55",
     scenario: "Scenario 2",
     rank: 1,
     path: "run-archive/scenario-2/1777100816107-scenario-2-openai-gpt-5.5-plan-build/result.json"
   },
   {
+    slug: "s2-mimo-v25",
     scenario: "Scenario 2",
     rank: 2,
     path: "run-archive/scenario-2/1777106388919-scenario-2-mimo-v2.5-pro-plan-mimo-v2.5-build-attempt-1/result.json"
   },
   {
+    slug: "s2-kimi-k26",
     scenario: "Scenario 2",
     rank: 3,
     path: "run-archive/scenario-2/1777103372714-scenario-2-moonshot-kimi-k2.6-high-plan-medium-build-attempt-1/result.json"
   },
   {
+    slug: "s2-deepseek-flash",
     scenario: "Scenario 2",
     rank: 4,
     path: "run-archive/scenario-2/1777109534353-scenario-2-deepseek-v4-pro-plan-flash-build-attempt-1/result.json"
   },
   {
+    slug: "s2-deepseek-medium",
     scenario: "Scenario 2",
     rank: 5,
     path: "run-archive/scenario-2/1777107333568-scenario-2-deepseek-v4-pro-high-plan-medium-build-attempt-1/result.json"
   },
   {
+    slug: "s2-minimax-m27",
     scenario: "Scenario 2",
     rank: 6,
     path: "run-archive/scenario-2/1777104591499-scenario-2-minimax-m2.7-high-plan-medium-build-attempt-1/result.json"
@@ -302,10 +312,25 @@ function renderCard(item, result) {
 async function loadResults() {
   const container = document.getElementById("results");
   const status = document.getElementById("status");
+  const selectedSlug = new URLSearchParams(window.location.search).get("eval");
+  const selectedEval = selectedSlug ? evals.find((item) => item.slug === selectedSlug) : undefined;
+
+  if (selectedSlug && !selectedEval) {
+    status.innerHTML = `Unknown eval: ${escapeHtml(selectedSlug)}. Choose one from the summary page.`;
+    container.innerHTML = evals.map((item) => `<p><a href="?eval=${encodeURIComponent(item.slug)}">${escapeHtml(item.scenario)} Rank ${item.rank}: ${escapeHtml(item.slug)}</a></p>`).join("");
+    return;
+  }
+
+  if (!selectedEval) {
+    status.innerHTML = "Choose an eval breakdown from the summary page, or use one of these direct links.";
+    container.innerHTML = evals.map((item) => `<p><a href="?eval=${encodeURIComponent(item.slug)}">${escapeHtml(item.scenario)} Rank ${item.rank}: ${escapeHtml(item.slug)}</a></p>`).join("");
+    return;
+  }
+
   const cards = [];
   const failures = [];
 
-  for (const item of evals) {
+  for (const item of [selectedEval]) {
     try {
       const response = await fetch(`${rawBase}${item.path}`);
       if (!response.ok) {
@@ -320,8 +345,8 @@ async function loadResults() {
 
   container.innerHTML = cards.join("");
   status.innerHTML = failures.length === 0
-    ? `Loaded ${cards.length} archived result files.`
-    : `Loaded ${cards.length} archived result files. Failed to load: ${escapeHtml(failures.join("; "))}`;
+    ? `Loaded ${escapeHtml(selectedEval.scenario)} rank ${selectedEval.rank}.`
+    : `Failed to load: ${escapeHtml(failures.join("; "))}`;
 }
 
 loadResults();
