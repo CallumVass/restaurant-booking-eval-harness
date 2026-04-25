@@ -1019,12 +1019,14 @@ function judgeInstructionsForScenario(scenario: string, hasBaseline: boolean): s
 
   if (scenario === "2") {
     instructions.push(
-      "For scenario 2, include scenarioScores entries for baselineIssueResolution, authCorrectness, authSecurity, bookingOwnership, brownfieldIntegration, and regressionCoverage.",
-      "Score baselineIssueResolution low if booking conflict prevention only rechecks conflicts before adding without synchronization, locking, transactional semantics, database constraints, or another credible atomic critical section.",
+      "For scenario 2, include scenarioScores entries for authCorrectness, authSecurity, bookingOwnership, httpOpenApiCoverage, frontendFlowCoverage, generatedQueryIntegration, brownfieldIntegration, and regressionCoverage.",
       "Score authCorrectness low if unauthenticated users can create bookings, auth endpoints are not usable from the SPA, or booking history is not tied to authenticated users.",
       "Score authSecurity low if cookie auth is used without CSRF protection for state-changing requests, auth tokens are stored in localStorage/sessionStorage, or credentialed CORS is configured carelessly.",
       "Score bookingOwnership low if users can view another user's booking history or bookings are not associated with the authenticated creator.",
-      "Score regressionCoverage low if there are no tests for auth boundaries, user-scoped booking history, and atomic conflict prevention."
+      "Score httpOpenApiCoverage low if backend tests only cover domain functions and do not exercise HTTP endpoints, OpenAPI availability, and error mapping.",
+      "Score frontendFlowCoverage low if there are no frontend UI/integration tests for booking forms, auth flows, API errors, confirmations, and booking history.",
+      "Score generatedQueryIntegration low if the frontend bypasses the generated OpenAPI client, uses stringly typed fetch wrappers, or keeps avoidable manual TanStack Query wrappers where generated query hooks are available.",
+      "Score regressionCoverage low if there are no tests for auth boundaries, user-scoped booking history, and the carried-over Scenario 1 gaps requested in the task."
     );
   }
 
