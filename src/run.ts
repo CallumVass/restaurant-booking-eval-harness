@@ -717,9 +717,11 @@ async function judgeRun(
 ): Promise<{ output: unknown; telemetry: TokenTelemetry & { model?: string; provider?: string } }> {
   const session = await client.session.create({ body: { title: "judge restaurant booking eval" } });
   const scenarioInstructions = getScenarioJudgeInstructions(details);
+  const blindDetails = makeBlindJudgeDetails(details);
   const prompt = [
     "You are an impartial LLM judge for a coding-agent eval.",
     "Score the generated restaurant booking system against the requested task.",
+    "The implementation author and model identity have been intentionally removed. Do not infer or discuss which agent/model produced the work.",
     "Prefer deterministic evidence from command results over subjective source review.",
     "The deterministic checks are mandatory: backend warning-free build, backend tests, backend format verification, frontend install, frontend build, frontend typecheck, frontend lint, frontend format check, and frontend dead-code check.",
     "Set deterministicChecksPass to true only if every deterministic command exited 0.",
@@ -734,7 +736,7 @@ async function judgeRun(
     "Reward clean architecture when proportionate, pure domain logic, explicit Result-style business errors, strong responsive UI, generated typed API clients, TanStack Query integration, and useful React/API integration.",
     "Return only structured output matching the schema.",
     "",
-    JSON.stringify(details, null, 2)
+    JSON.stringify(blindDetails, null, 2)
   ].join("\n");
 
   const result = await client.session.prompt({
@@ -751,6 +753,100 @@ async function judgeRun(
     output: result.data.info.structured_output ?? result.data.info,
     telemetry: telemetryFromAssistantInfo(result.data.info)
   };
+}
+
+function makeBlindJudgeDetails(details: unknown): unknown {
+  const redactions = collectJudgeRedactions(details);
+  return sanitizeJudgeValue(details, redactions);
+}
+
+function collectJudgeRedactions(value: unknown, redactions = new Set<string>()): Set<string> {
+  if (Array.isArray(value)) {
+    for (const item of value) collectJudgeRedactions(item, redactions);
+    return redactions;
+  }
+
+  if (!value || typeof value !== "object") return redactions;
+
+  const record = value as Record<string, unknown>;
+  if (record.variant && typeof record.variant === "object") collectVariantRedactions(record.variant, redactions);
+
+  for (const [key, item] of Object.entries(record)) {
+    if (["model", "provider", "modelID", "providerID"].includes(key) && typeof item === "string" && item.length > 0) {
+      redactions.add(item);
+    }
+
+    collectJudgeRedactions(item, redactions);
+  }
+
+  return redactions;
+}
+
+function collectVariantRedactions(value: unknown, redactions: Set<string>): void {
+  if (!value || typeof value !== "object") return;
+  const variant = value as { id?: unknown; plan?: unknown; build?: unknown };
+  if (typeof variant.id === "string" && variant.id.length > 0) redactions.add(variant.id);
+  for (const phase of [variant.plan, variant.build]) {
+    if (!phase || typeof phase !== "object") continue;
+    const model = (phase as { model?: unknown }).model;
+    if (typeof model === "string" && model.length > 0) redactions.add(model);
+  }
+}
+
+function sanitizeJudgeValue(value: unknown, redactions: Set<string>): unknown {
+  if (typeof value === "string") return sanitizeJudgeString(value, redactions);
+  if (Array.isArray(value)) return value.map((item) => sanitizeJudgeValue(item, redactions));
+  if (!value || typeof value !== "object") return value;
+
+  const record = value as Record<string, unknown>;
+  if ("judgeInstructions" in record && "taskPath" in record) {
+    return {
+      id: sanitizeJudgeValue(record.id, redactions),
+      hasBaseline: Boolean(record.baselinePath),
+      judgeInstructions: sanitizeJudgeValue(record.judgeInstructions, redactions)
+    };
+  }
+
+  const sanitized: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(record)) {
+    if (
+      [
+        "variant",
+        "pipelineTelemetry",
+        "telemetry",
+        "model",
+        "provider",
+        "modelID",
+        "providerID",
+        "agentOptions",
+        "workspace",
+        "cwd",
+        "root",
+        "taskPath",
+        "baselinePath",
+        "cost",
+        "costUSD"
+      ].includes(key)
+    ) {
+      continue;
+    }
+
+    sanitized[key] = sanitizeJudgeValue(item, redactions);
+  }
+
+  return sanitized;
+}
+
+function sanitizeJudgeString(value: string, redactions: Set<string>): string {
+  let sanitized = value
+    .replaceAll(/\/tmp\/restaurant-booking-eval-harness-active\/[^\s"')]+/g, "/workspace")
+    .replaceAll(/\/home\/[^\s"')]*restaurant-booking-eval-harness\/run-archive\/[^\s"')]+/g, "/workspace");
+
+  for (const redaction of redactions) {
+    sanitized = sanitized.split(redaction).join("[redacted]");
+  }
+
+  return sanitized;
 }
 
 function getScenarioJudgeInstructions(details: unknown): string[] {
