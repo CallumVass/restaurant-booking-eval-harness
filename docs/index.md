@@ -11,6 +11,8 @@ OpenCode + Lattice evals where model variants built a .NET 10 API and React SPA 
 
 Costs use provider-reported costs where available. OpenAI GPT-5.5/GPT-5.5-fast costs are estimated from token counts using public GPT-5.5 pricing: $5/input 1M, $0.50/cached-input 1M, $30/output 1M.
 
+[Detailed breakdown by eval](./details)
+
 ## Scenario 1
 
 Original restaurant booking system: .NET 10 API, React SPA, booking conflict prevention, available slots, boundary tests, deterministic backend/frontend checks.
