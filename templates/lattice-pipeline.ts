@@ -5,7 +5,8 @@ export default {
       id: "plan",
       type: "stage",
       agent: "eval-planner",
-      completion: "idle",
+      completion: "tool_signal",
+      signals: ["complete"],
       fork: false,
       skills: {
         pinned: [
@@ -30,14 +31,16 @@ export default {
         "Use explicit Result-style errors for expected business failures.",
         "If the goal asks for Tailwind/shadcn, TanStack, or OpenAPI-generated clients, include concrete plan steps for those choices.",
         "Write the plan to .lattice/plans/restaurant-booking.md, then return the same plan in your response.",
-        "Do not edit any other files during planning."
+        "Do not edit any other files during planning.",
+        "Only call lattice_signal(status: \"complete\") after the plan file exists and your response includes the same plan."
       ].join("\n")
     },
     {
       id: "build",
       type: "stage",
       agent: "build",
-      completion: "idle",
+      completion: "tool_signal",
+      signals: ["complete"],
       fork: true,
       isRewindTarget: true,
       maxRewinds: 1,
@@ -64,6 +67,8 @@ export default {
       },
       prompt: [
         "Implement the plan for the restaurant booking system.",
+        "Before editing, read .lattice/plans/restaurant-booking.md and use it as your implementation checklist.",
+        "Follow the plan unless the codebase proves a step is unsafe or obsolete; if you deviate, document why in your final response.",
         "Use .NET 10 for the API and React for the SPA.",
         "Follow the goal's scenario-specific frontend/client requirements, including Tailwind/shadcn, TanStack Query, and OpenAPI-generated typed clients when requested.",
         "Work in behavior-focused TDD slices where practical.",
@@ -76,7 +81,8 @@ export default {
         "Use strict compiler/linter settings; do not leave warnings, unused code, unused exports, or dead code.",
         "The deterministic checker discovers the .NET solution/project and frontend package directory; ensure those artifacts exist and the checks pass from a clean workspace.",
         "Ensure backend build, backend tests, dotnet format verification, frontend install, frontend build, typecheck, lint, format check, and dead-code check all pass.",
-        "If property-based testing is a natural fit for pure availability logic, use it; otherwise use focused example-based boundary tests."
+        "If property-based testing is a natural fit for pure availability logic, use it; otherwise use focused example-based boundary tests.",
+        "Do not call lattice_signal(status: \"complete\") until implementation is finished and you have run the deterministic checker or equivalent commands successfully."
       ].join("\n")
     }
   ]

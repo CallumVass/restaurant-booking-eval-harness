@@ -1,6 +1,0 @@
-{
-  "$schema": "https://unpkg.com/knip@latest/schema.json",
-  "ignore": ["src/api/**"],
-  "ignoreFiles": ["orval.config.ts", "src/components/ui/select.tsx"],
-  "exclude": ["exports", "nsExports"]
-}

@@ -1,4 +1,0 @@
-{
-  "entry": ["orval.config.ts"],
-  "ignore": ["src/api/generated/**"]
-}

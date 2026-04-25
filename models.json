@@ -19,8 +19,24 @@
       }
     },
     {
-      "id": "moonshot-kimi-k2.6-high-plan-medium-build",
+      "id": "qwen3.6-plus-high-plan-medium-build",
       "enabled": true,
+      "plan": {
+        "model": "opencode-go/qwen3.6-plus",
+        "agentOptions": {
+          "reasoningEffort": "high"
+        }
+      },
+      "build": {
+        "model": "opencode-go/qwen3.6-plus",
+        "agentOptions": {
+          "reasoningEffort": "medium"
+        }
+      }
+    },
+    {
+      "id": "moonshot-kimi-k2.6-high-plan-medium-build",
+      "enabled": false,
       "plan": {
         "model": "opencode-go/kimi-k2.6",
         "agentOptions": {

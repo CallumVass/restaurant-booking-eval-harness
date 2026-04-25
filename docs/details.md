@@ -89,64 +89,40 @@ const branch = "{{ branch }}";
 
 const evals = [
   {
-    slug: "s1-openai-gpt-55-fast",
+    slug: "s1-openai-gpt-55",
     scenario: "Scenario 1",
     rank: 1,
-    path: "run-archive/scenario-1/1777053335143-openai-gpt-5.5-plan-fast-build/result.json"
+    path: "run-archive/scenario-1/1777100816107-scenario-1-openai-gpt-5.5-plan-build/result.json"
   },
   {
-    slug: "s1-zai-glm-51",
+    slug: "s1-mimo-v25",
     scenario: "Scenario 1",
     rank: 2,
-    path: "run-archive/scenario-1/1777054148547-zai-glm-5.1-high-plan-medium-build/result.json"
-  },
-  {
-    slug: "s1-qwen36-plus",
-    scenario: "Scenario 1",
-    rank: 3,
-    path: "run-archive/scenario-1/1777058053592-qwen3.6-plus-high-plan-medium-build/result.json"
+    path: "run-archive/scenario-1/1777106388919-scenario-1-mimo-v2.5-pro-plan-mimo-v2.5-build-attempt-1/result.json"
   },
   {
     slug: "s1-kimi-k26",
     scenario: "Scenario 1",
-    rank: 4,
-    path: "run-archive/scenario-1/1777055782131-moonshot-kimi-k2.6-high-plan-medium-build/result.json"
-  },
-  {
-    slug: "s2-openai-gpt-55",
-    scenario: "Scenario 2",
-    rank: 1,
-    path: "run-archive/scenario-2/1777100816107-scenario-2-openai-gpt-5.5-plan-build/result.json"
-  },
-  {
-    slug: "s2-mimo-v25",
-    scenario: "Scenario 2",
-    rank: 2,
-    path: "run-archive/scenario-2/1777106388919-scenario-2-mimo-v2.5-pro-plan-mimo-v2.5-build-attempt-1/result.json"
-  },
-  {
-    slug: "s2-kimi-k26",
-    scenario: "Scenario 2",
     rank: 3,
-    path: "run-archive/scenario-2/1777103372714-scenario-2-moonshot-kimi-k2.6-high-plan-medium-build-attempt-1/result.json"
+    path: "run-archive/scenario-1/1777103372714-scenario-1-moonshot-kimi-k2.6-high-plan-medium-build-attempt-1/result.json"
   },
   {
-    slug: "s2-deepseek-flash",
-    scenario: "Scenario 2",
+    slug: "s1-deepseek-flash",
+    scenario: "Scenario 1",
     rank: 4,
-    path: "run-archive/scenario-2/1777109534353-scenario-2-deepseek-v4-pro-plan-flash-build-attempt-1/result.json"
+    path: "run-archive/scenario-1/1777109534353-scenario-1-deepseek-v4-pro-plan-flash-build-attempt-1/result.json"
   },
   {
-    slug: "s2-deepseek-medium",
-    scenario: "Scenario 2",
+    slug: "s1-deepseek-medium",
+    scenario: "Scenario 1",
     rank: 5,
-    path: "run-archive/scenario-2/1777107333568-scenario-2-deepseek-v4-pro-high-plan-medium-build-attempt-1/result.json"
+    path: "run-archive/scenario-1/1777107333568-scenario-1-deepseek-v4-pro-high-plan-medium-build-attempt-1/result.json"
   },
   {
-    slug: "s2-minimax-m27",
-    scenario: "Scenario 2",
+    slug: "s1-minimax-m27",
+    scenario: "Scenario 1",
     rank: 6,
-    path: "run-archive/scenario-2/1777104591499-scenario-2-minimax-m2.7-high-plan-medium-build-attempt-1/result.json"
+    path: "run-archive/scenario-1/1777104591499-scenario-1-minimax-m2.7-high-plan-medium-build-attempt-1/result.json"
   }
 ];
 

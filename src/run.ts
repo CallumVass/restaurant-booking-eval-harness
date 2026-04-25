@@ -278,12 +278,41 @@ async function runVariant(input: {
       };
     }
 
+    log(`${input.variant.id}: pipeline completed; waiting for workspace to settle before checks`);
+    await waitForStableWorkspace(workspace, 10_000, 120_000);
     log(`${input.variant.id}: pipeline completed; running deterministic checks`);
     const plan = await readPlan(workspace);
     const checks = await runChecks(workspace);
     log(`${input.variant.id}: deterministic checks finished; collecting files`);
     const fileTree = await listFiles(workspace, 500);
     const pipelineTelemetry = summarizeTelemetry(pipelineState);
+    const pipelineAnomaly = completedPipelineAnomaly(pipelineState);
+    if (pipelineAnomaly) {
+      log(`${input.variant.id}: skipping judge because completed pipeline is anomalous: ${pipelineAnomaly}`);
+      const completedAt = new Date();
+      return {
+        variant: input.variant.id,
+        scenario: input.scenario,
+        attempt: input.attempt,
+        maxAttempts: input.maxAttempts,
+        retryable: true,
+        baseline: input.scenarioConfig.baselinePath,
+        workspace,
+        startedAt: startedAt.toISOString(),
+        completedAt: completedAt.toISOString(),
+        durationMs: completedAt.getTime() - startedAt.getTime(),
+        pipelineState,
+        plan,
+        telemetry: pipelineTelemetry,
+        checks,
+        fileTree,
+        judge: {
+          skipped: true,
+          reason: pipelineAnomaly,
+          status: getPipelineStatus(pipelineState)
+        }
+      };
+    }
     log(`${input.variant.id}: running LLM judge`);
     const judgeResult = await judgeRun(client, input.judge, {
       task: input.task,
@@ -529,6 +558,13 @@ function isPipelineCompleted(state: unknown): boolean {
 }
 
 function isRetryableSummary(summary: RunSummary): boolean {
+  const skippedReason =
+    typeof summary.judge === "object" && summary.judge !== null && "reason" in summary.judge
+      ? String((summary.judge as { reason?: unknown }).reason ?? "")
+      : "";
+  if (skippedReason.includes("completed pipeline has no assistant telemetry")) return true;
+  if (skippedReason.includes("completed build stage has no assistant telemetry")) return true;
+
   const status = getPipelineStatus(summary.pipelineState);
   if (status !== "failed" && status !== "timeout") return false;
   if (summary.checks.length > 0 && summary.checks.every((check) => check.exitCode === 0)) return false;
@@ -537,6 +573,47 @@ function isRetryableSummary(summary: RunSummary): boolean {
 
 function getPipelineStatus(state: unknown): string | undefined {
   return typeof state === "object" && state !== null ? (state as { status?: string }).status : undefined;
+}
+
+function completedPipelineAnomaly(state: unknown): string | null {
+  if (getPipelineStatus(state) !== "completed") return null;
+  if (!state || typeof state !== "object") return "completed pipeline state is missing";
+
+  const stages = (state as { stages?: unknown }).stages;
+  if (!Array.isArray(stages)) return "completed pipeline state has no stages";
+
+  const completedStages = stages.filter((stage) => {
+    if (!stage || typeof stage !== "object") return false;
+    const status = (stage as { status?: unknown }).status;
+    return status === "completed";
+  });
+
+  if (completedStages.length === 0) return "completed pipeline has no completed stages";
+
+  const buildStage = completedStages.find((stage) => {
+    const record = stage as { id?: unknown; agent?: unknown };
+    return record.id === "build" || record.agent === "build" || record.agent === "implementor";
+  });
+  const stagesToCheck = buildStage ? [buildStage] : completedStages;
+
+  for (const stage of stagesToCheck) {
+    const record = stage as { id?: unknown; telemetry?: unknown };
+    const id = typeof record.id === "string" ? record.id : "unknown";
+    if (!record.telemetry || typeof record.telemetry !== "object") {
+      return buildStage ? `completed build stage has no assistant telemetry (${id})` : "completed pipeline has no assistant telemetry";
+    }
+    const telemetry = record.telemetry as { messageCount?: unknown; tokensIn?: unknown; tokensOut?: unknown };
+    const messageCount = typeof telemetry.messageCount === "number" ? telemetry.messageCount : 0;
+    const tokensIn = typeof telemetry.tokensIn === "number" ? telemetry.tokensIn : 0;
+    const tokensOut = typeof telemetry.tokensOut === "number" ? telemetry.tokensOut : 0;
+    if (messageCount === 0 || (tokensIn === 0 && tokensOut === 0)) {
+      return buildStage
+        ? `completed build stage has no assistant telemetry (${id})`
+        : `completed stage has no assistant telemetry (${id})`;
+    }
+  }
+
+  return null;
 }
 
 async function readPlan(workspace: string): Promise<string | null> {
@@ -830,9 +907,9 @@ function judgeInstructionsForScenario(scenario: string, hasBaseline: boolean): s
     "Populate scenarioFindings with concise evidence-backed notes for those scenario-specific scores."
   ];
 
-  if (scenario === "2") {
+  if (scenario === "1") {
     instructions.push(
-      "For scenario 2, score Tailwind/shadcn usage, TanStack usage, and OpenAPI-generated typed client usage from source evidence, not claims."
+      "For scenario 1, score Tailwind/shadcn usage, TanStack usage, and OpenAPI-generated typed client usage from source evidence, not claims."
     );
   }
 
@@ -844,9 +921,9 @@ function judgeInstructionsForScenario(scenario: string, hasBaseline: boolean): s
     );
   }
 
-  if (scenario === "3") {
+  if (scenario === "2") {
     instructions.push(
-      "For scenario 3, include scenarioScores entries for baselineIssueResolution, authCorrectness, authSecurity, bookingOwnership, brownfieldIntegration, and regressionCoverage.",
+      "For scenario 2, include scenarioScores entries for baselineIssueResolution, authCorrectness, authSecurity, bookingOwnership, brownfieldIntegration, and regressionCoverage.",
       "Score baselineIssueResolution low if booking conflict prevention only rechecks conflicts before adding without synchronization, locking, transactional semantics, database constraints, or another credible atomic critical section.",
       "Score authCorrectness low if unauthenticated users can create bookings, auth endpoints are not usable from the SPA, or booking history is not tied to authenticated users.",
       "Score authSecurity low if cookie auth is used without CSRF protection for state-changing requests, auth tokens are stored in localStorage/sessionStorage, or credentialed CORS is configured carelessly.",
@@ -867,8 +944,8 @@ function parseScenario(args: Record<string, string>): string {
   if (!scenario) {
     throw new Error("Scenario is required. Use `npm start -- --1`, `npm start -- --2`, or `npm start -- --scenario 2`.");
   }
-  if (!/^\d+$/.test(scenario)) {
-    throw new Error(`Invalid scenario ${scenario}. Use a numeric scenario such as --1 or --scenario 2.`);
+  if (!/^[12]$/.test(scenario)) {
+    throw new Error(`Invalid scenario ${scenario}. Use --1, --2, --scenario 1, or --scenario 2.`);
   }
   if (numericFlags.length > 1) {
     throw new Error(`Only one scenario may be selected; got ${numericFlags.map((flag) => `--${flag}`).join(", ")}.`);
@@ -894,6 +971,46 @@ async function exists(filePath: string): Promise<boolean> {
 
 function safeName(value: string): string {
   return value.replace(/[^a-zA-Z0-9._-]/g, "-");
+}
+
+const SETTLE_IGNORED_DIRS = new Set([".git", ".lattice", ".opencode", "bin", "coverage", "dist", "node_modules", "obj"]);
+
+async function latestWorkspaceMtimeMs(dir: string): Promise<number> {
+  let latest = 0;
+  let entries: string[];
+  try {
+    entries = await readdir(dir);
+  } catch {
+    return latest;
+  }
+
+  for (const entry of entries) {
+    if (SETTLE_IGNORED_DIRS.has(entry)) continue;
+    const filePath = path.join(dir, entry);
+    let stats;
+    try {
+      stats = await stat(filePath);
+    } catch {
+      continue;
+    }
+
+    latest = Math.max(latest, stats.mtimeMs);
+    if (stats.isDirectory()) {
+      latest = Math.max(latest, await latestWorkspaceMtimeMs(filePath));
+    }
+  }
+
+  return latest;
+}
+
+async function waitForStableWorkspace(workspace: string, quietMs: number, timeoutMs: number): Promise<void> {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    const latestMtimeMs = await latestWorkspaceMtimeMs(workspace);
+    if (Date.now() - latestMtimeMs >= quietMs) return;
+    await sleep(1_000);
+  }
+  log(`Workspace did not stay quiet for ${Math.round(quietMs / 1000)}s before timeout; continuing with latest files`);
 }
 
 function sleep(ms: number): Promise<void> {

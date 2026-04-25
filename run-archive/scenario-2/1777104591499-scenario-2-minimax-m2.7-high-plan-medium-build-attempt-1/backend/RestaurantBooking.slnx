@@ -1,5 +1,0 @@
-<Solution>
-  <Project Path="RestaurantBooking.Api/RestaurantBooking.Api.csproj" />
-  <Project Path="RestaurantBooking.Domain/RestaurantBooking.Domain.csproj" />
-  <Project Path="RestaurantBooking.Tests/RestaurantBooking.Tests.csproj" />
-</Solution>

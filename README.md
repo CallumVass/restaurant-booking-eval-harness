@@ -32,29 +32,29 @@ npm install
 ## Run One Variant
 
 ```bash
-npm start -- --3 --base ./baselines/scenario-3 --variant openai-gpt-5.5-plan-build
+npm start -- --2 --base ./baselines/scenario-2 --variant openai-gpt-5.5-plan-build
 ```
 
 ## Run All Variants
 
 ```bash
-npm start -- --3 --base ./baselines/scenario-3
+npm start -- --2 --base ./baselines/scenario-2
 ```
 
 ## Useful Options
 
 ```bash
 npm start -- --variant moonshot-kimi-k2.6-high-plan-medium-build --timeoutMs 4500000
-npm start -- --2 --variant moonshot-kimi-k2.6-high-plan-medium-build --runRetries 2
+npm start -- --1 --variant moonshot-kimi-k2.6-high-plan-medium-build --runRetries 2
 npm start -- --1 --skipSkills
 npm start -- --scenario 2 --models ./models.json
-npm start -- --scenario 3 --base ./baselines/scenario-3
-npm start -- --2 --task ./scenarios/2.md
-EVAL_RUNS_DIR=/tmp/my-eval-runs npm start -- --2
-EVAL_ARCHIVE_DIR=/tmp/my-eval-archive npm start -- --2
+npm start -- --scenario 2 --base ./baselines/scenario-2
+npm start -- --1 --task ./scenarios/1.md
+EVAL_RUNS_DIR=/tmp/my-eval-runs npm start -- --1
+EVAL_ARCHIVE_DIR=/tmp/my-eval-archive npm start -- --1
 ```
 
-The scenario argument is required. Use `--1`, `--2`, `--3`, or `--scenario 3`.
+The scenario argument is required. Use `--1`, `--2`, `--scenario 1`, or `--scenario 2`.
 
 `--skipSkills` is useful for smoke-testing the harness wiring. Real eval runs should keep skills enabled.
 
@@ -64,13 +64,13 @@ The scenario argument is required. Use `--1`, `--2`, `--3`, or `--scenario 3`.
 
 Use `--base <path>` or `--baseline <path>` to seed every run workspace from an existing project before the Lattice/OpenCode harness files are installed. This makes a scenario a true brownfield extension instead of a prompt-only instruction to reuse prior work.
 
-Recommended workflow for a scenario that extends a neutral Scenario 3 baseline:
+Recommended workflow for a scenario that extends a neutral Scenario 2 baseline:
 
-1. Create a sanitized baseline directory, for example `baselines/scenario-3/`.
-2. Copy only project source from the selected Scenario 2 archive into that baseline.
+1. Create a sanitized baseline directory, for example `baselines/scenario-2/`.
+2. Copy only project source from the selected Scenario 1 archive into that baseline.
 3. Include useful project files such as `backend/`, `frontend/`, `RestaurantBooking.slnx`, `.editorconfig`, and `README.md`.
 4. Exclude eval/runtime files such as `.opencode/`, `.agents/`, `.lattice/`, `result.json`, `node_modules/`, `bin/`, `obj/`, `dist/`, and `coverage/`.
-5. Run with `npm start -- --scenario 3 --base ./baselines/scenario-3`.
+5. Run with `npm start -- --scenario 2 --base ./baselines/scenario-2`.
 
 The runner also excludes those eval/runtime paths while copying a baseline, so archived runs can be used directly in a pinch. A curated `baselines/` snapshot is still preferable because it is stable, reviewable, and avoids carrying stale generated eval state into future comparisons.
 
@@ -102,7 +102,6 @@ The public-facing reports are:
 - `docs/index.md`: website landing page with solution links.
 - `eval-scenario-1.md`: detailed scenario 1 report.
 - `eval-scenario-2.md`: detailed scenario 2 report.
-- `eval-scenario-3.md`: detailed scenario 3 report once generated.
 
 The `run-archive/` directory contains the generated solutions and `result.json` files. Archive-level `.gitignore` rules keep generated dependency folders, build outputs, runtime state, and environment files out of the public repo while preserving source and evaluation evidence.
 
