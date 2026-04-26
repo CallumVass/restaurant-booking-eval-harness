@@ -1,5 +1,0 @@
-{
-  "entry": ["orval.config.ts", "src/main.tsx"],
-  "project": ["src/**/*.{ts,tsx}", "*.ts"],
-  "ignoreDependencies": ["tailwindcss"]
-}

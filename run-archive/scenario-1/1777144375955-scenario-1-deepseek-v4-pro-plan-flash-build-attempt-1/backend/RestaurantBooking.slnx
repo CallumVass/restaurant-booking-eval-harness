@@ -1,9 +1,0 @@
-<Solution>
-  <Folder Name="/src/">
-    <Project Path="src/RestaurantBooking.Api/RestaurantBooking.Api.csproj" />
-    <Project Path="src/RestaurantBooking.Domain/RestaurantBooking.Domain.csproj" />
-  </Folder>
-  <Folder Name="/tests/">
-    <Project Path="tests/RestaurantBooking.Domain.Tests/RestaurantBooking.Domain.Tests.csproj" />
-  </Folder>
-</Solution>

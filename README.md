@@ -41,6 +41,33 @@ npm start -- --2 --base ./baselines/scenario-2 --variant openai-gpt-5.5-plan-bui
 npm start -- --2 --base ./baselines/scenario-2
 ```
 
+## Current Model Matrix
+
+The current default matrix is intentionally small. It reflects prior exploratory runs where broad model sweeps were less useful than testing a few clear planner/builder/reviewer combinations.
+
+| Variant | Plan | Build | Review | Use |
+|---|---|---|---|---|
+| `openai-gpt-5.5-plan-build` | OpenAI GPT-5.5 | OpenAI GPT-5.5 | none | Proprietary quality reference. Review was not materially useful in prior OpenAI runs. |
+| `deepseek-v4-pro-plan-flash-build-mimo-review` | DeepSeek V4 Pro | DeepSeek V4 Flash | Mimo v2.5 Pro | Tests whether cheap DeepSeek implementation plus independent open-model review beats paying for Pro implementation. |
+| `deepseek-v4-pro-plan-pro-build` | DeepSeek V4 Pro | DeepSeek V4 Pro | none | Open-model quality ceiling/control without review overhead. |
+| `mimo-v2.5-pro-plan-mimo-v2.5-build-deepseek-review` | Mimo v2.5 Pro | Mimo v2.5 | DeepSeek V4 Pro | Tests Mimo planning/building with independent DeepSeek review. |
+
+The `review` field in `models.json` is optional. When a variant omits `review`, the generated workspace pipeline excludes the `plan-adherence-review` stage. When present, the review stage is included and uses the configured review model/options.
+
+## Review Strategy
+
+The plan-adherence review is a scoped reviewer, not the final judge. It reads `.lattice/plans/restaurant-booking.md`, treats prior stage summaries as untrusted hints, and verifies whether the material commitments in the saved plan were implemented.
+
+Prior exploratory runs suggested:
+
+- OpenAI plan/build runs generally followed the plan well; review added time and did not improve scores.
+- Same-model review was weak for weaker implementations because it tended to rubber-stamp the builder's assumptions.
+- Cross-model open review is more promising because it gives the builder independent feedback without using a proprietary reviewer.
+- Review is only worth its overhead when it catches material misses and triggers a rewind/retry.
+- Brownfield/security/ownership scenarios benefited more from review than greenfield Scenario 1-style builds.
+
+For future comparisons, keep no-review and review variants distinct in `models.json` so before/after effects remain visible in `run-archive/`.
+
 ## Useful Options
 
 ```bash

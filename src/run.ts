@@ -10,12 +10,17 @@ type PhaseModel = {
   agentOptions?: Record<string, unknown>;
 };
 
+type ReviewModel = PhaseModel & {
+  enabled?: boolean;
+};
+
 type ModelVariant = {
   id: string;
   enabled?: boolean;
   reason?: string;
   plan: PhaseModel;
   build: PhaseModel;
+  review?: ReviewModel;
 };
 
 type ModelsConfig = {
@@ -371,9 +376,9 @@ async function prepareWorkspace(workspace: string, variant: ModelVariant, skipSk
     await writeFile(gitignorePath, [".lattice/", "node_modules/", "bin/", "obj/", "frontend/node_modules/", ""].join("\n"));
   }
   await writeFile(path.join(workspace, "opencode.json"), `${JSON.stringify(makeOpenCodeConfig(variant), null, 2)}\n`);
-  await cp(
-    path.join(root, "templates", "lattice-pipeline.ts"),
-    path.join(workspace, ".opencode", "lattice-pipelines", "restaurant-booking-eval.ts")
+  await writeFile(
+    path.join(workspace, ".opencode", "lattice-pipelines", "restaurant-booking-eval.ts"),
+    await renderPipelineTemplate(variant)
   );
   await cp(
     path.join(root, "templates", "scripts", "deterministic-checks.mjs"),
@@ -443,6 +448,7 @@ async function syncSkillsForLattice(workspace: string) {
 }
 
 function makeOpenCodeConfig(variant: ModelVariant) {
+  const review = reviewModelForVariant(variant);
   return {
     $schema: "https://opencode.ai/config.json",
     model: variant.build.model,
@@ -472,7 +478,7 @@ function makeOpenCodeConfig(variant: ModelVariant) {
         ...variant.plan.agentOptions
       },
       "plan-reviewer": {
-        model: variant.plan.model,
+        model: review?.model ?? variant.plan.model,
         mode: "subagent",
         description: "Reviews whether the implementation followed the saved plan and scenario requirements.",
         permission: {
@@ -489,7 +495,7 @@ function makeOpenCodeConfig(variant: ModelVariant) {
           webfetch: "allow",
           skill: "allow"
         },
-        ...variant.plan.agentOptions
+        ...(review?.agentOptions ?? variant.plan.agentOptions)
       },
       build: {
         model: variant.build.model,
@@ -513,6 +519,28 @@ function makeOpenCodeConfig(variant: ModelVariant) {
     },
     snapshot: false
   };
+}
+
+async function renderPipelineTemplate(variant: ModelVariant): Promise<string> {
+  const template = await readFile(path.join(root, "templates", "lattice-pipeline.ts"), "utf8");
+  if (reviewModelForVariant(variant)) return template;
+
+  const reviewStageStart = template.indexOf('\n    {\n      id: "plan-adherence-review"');
+  if (reviewStageStart === -1) {
+    throw new Error("Could not find plan-adherence-review stage in pipeline template");
+  }
+
+  const stagesEnd = template.indexOf("\n  ]", reviewStageStart);
+  if (stagesEnd === -1) {
+    throw new Error("Could not find end of stages array in pipeline template");
+  }
+
+  return template.slice(0, reviewStageStart) + template.slice(stagesEnd);
+}
+
+function reviewModelForVariant(variant: ModelVariant): ReviewModel | undefined {
+  if (!variant.review || variant.review.enabled === false) return undefined;
+  return variant.review;
 }
 
 async function waitForPipeline(workspace: string, timeoutMs: number): Promise<unknown> {

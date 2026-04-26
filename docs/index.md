@@ -7,37 +7,24 @@ title: Restaurant Booking Eval Results
 
 # Restaurant Booking Eval Results
 
-OpenCode + Lattice evals where model variants built a .NET 10 API and React SPA for a restaurant booking system. The archived solutions are linked to the generated source directories in GitHub.
+OpenCode + Lattice evals where model variants build a .NET 10 API and React SPA for a restaurant booking system.
 
-Costs use provider-reported costs where available. OpenAI GPT-5.5/GPT-5.5-fast costs are estimated from token counts using public GPT-5.5 pricing: $5/input 1M, $0.50/cached-input 1M, $30/output 1M.
+Results have been reset. New runs will be published here after the next Scenario 1 and Scenario 2 batches complete.
 
-[Detailed breakdown by eval](./details)
+## Current Matrix
 
-## Scenario 1
+| Variant | Review | Purpose |
+|---|---|---|
+| `openai-gpt-5.5-plan-build` | none | Proprietary quality reference. |
+| `deepseek-v4-pro-plan-flash-build-mimo-review` | Mimo v2.5 Pro | Cheap DeepSeek build with independent open-model review. |
+| `deepseek-v4-pro-plan-pro-build` | none | DeepSeek Pro quality ceiling without review overhead. |
+| `mimo-v2.5-pro-plan-mimo-v2.5-build-deepseek-review` | DeepSeek V4 Pro | Mimo build with independent DeepSeek review. |
 
-Restaurant booking system with .NET 10 API, React SPA, Tailwind CSS, shadcn/ui, TanStack Query, OpenAPI typed client generation, polished responsive UI, booking conflict prevention, available slots, boundary tests, deterministic backend/frontend checks, and plan/adherence judging.
+## Reports
 
-[Full Scenario 1 Report]({{ repo }}/blob/{{ branch }}/eval-scenario-1.md)
-
-| Rank | Variant | Score | Time | Tokens | Cost | Checks | Details | Solution |
-|---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | `openai-gpt-5.5-plan-build` | 92 | 12.6m | 4,237,796 | $3.646083 | Pass | [breakdown](./details?eval=s1-openai-gpt-55) | [source]({{ repo }}/tree/{{ branch }}/run-archive/scenario-1/1777138615836-scenario-1-openai-gpt-5.5-plan-build-attempt-1) |
-| 2 | `mimo-v2.5-pro-plan-mimo-v2.5-build` | 78 | 15.4m | 10,325,013 | $0.974228 | Pass | [breakdown](./details?eval=s1-mimo-v25) | [source]({{ repo }}/tree/{{ branch }}/run-archive/scenario-1/1777143448989-scenario-1-mimo-v2.5-pro-plan-mimo-v2.5-build-attempt-1) |
-| 3 | `deepseek-v4-pro-plan-flash-build` | 76 | 22.3m | 11,359,693 | $0.398040 | Pass | [breakdown](./details?eval=s1-deepseek-flash) | [source]({{ repo }}/tree/{{ branch }}/run-archive/scenario-1/1777144375955-scenario-1-deepseek-v4-pro-plan-flash-build-attempt-1) |
-| 4 | `qwen3.6-plus-high-plan-medium-build` | 74 | 25.9m | 9,474,158 | $0.643007 | Pass | [breakdown](./details?eval=s1-qwen36) | [source]({{ repo }}/tree/{{ branch }}/run-archive/scenario-1/1777141829210-scenario-1-qwen3.6-plus-high-plan-medium-build-attempt-1) |
-
-## Scenario 2
-
-Brownfield extension from a neutral Scenario 2 baseline: fix known baseline issues, add local cookie auth with CSRF protection, protect booking creation, scope booking history to the authenticated user, preserve generated client/TanStack Query workflow, and score scenario-specific brownfield/auth dimensions.
-
-[Full Scenario 2 Report]({{ repo }}/blob/{{ branch }}/eval-scenario-2.md)
-
-| Rank | Variant | Score | Time | Tokens | Cost | Checks | Details | Solution |
-|---:|---|---:|---:|---:|---:|---|---|---|
-| 1 | `openai-gpt-5.5-plan-build` | 86 | 12.0m | 5,785,397 | $4.800921 | Pass | [breakdown](./details?eval=s2-openai-gpt-55) | [source]({{ repo }}/tree/{{ branch }}/run-archive/scenario-2/1777186150651-scenario-2-openai-gpt-5.5-plan-build-attempt-1) |
-| 2 | `mimo-v2.5-pro-plan-mimo-v2.5-build` | 72 | 18.9m | 11,383,556 | $1.180013 | Pass | [breakdown](./details?eval=s2-mimo-v25) | [source]({{ repo }}/tree/{{ branch }}/run-archive/scenario-2/1777189331664-scenario-2-mimo-v2.5-pro-plan-mimo-v2.5-build-attempt-1) |
-| 3 | `qwen3.6-plus-high-plan-medium-build` | 67 | 41.0m | 21,082,012 | $1.388018 | Pass | [breakdown](./details?eval=s2-qwen36) | [source]({{ repo }}/tree/{{ branch }}/run-archive/scenario-2/1777186871188-scenario-2-qwen3.6-plus-high-plan-medium-build-attempt-1) |
-| 4 | `deepseek-v4-pro-plan-flash-build` | 66 | 29.8m | 21,004,354 | $0.772080 | Pass | [breakdown](./details?eval=s2-deepseek-flash) | [source]({{ repo }}/tree/{{ branch }}/run-archive/scenario-2/1777190465750-scenario-2-deepseek-v4-pro-plan-flash-build-attempt-1) |
+- [Scenario 1 report]({{ repo }}/blob/{{ branch }}/eval-scenario-1.md)
+- [Scenario 2 report]({{ repo }}/blob/{{ branch }}/eval-scenario-2.md)
+- [Detailed breakdown](./details)
 
 ## Repository Links
 
