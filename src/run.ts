@@ -204,7 +204,13 @@ async function runVariant(input: {
     });
     log(`${input.variant.id}: Lattice start prompt returned; waiting for pipeline state`);
 
-    const pipelineState = await waitForPipeline(workspace, input.timeoutMs);
+    let pipelineState = await waitForPipeline(workspace, input.timeoutMs);
+    const retryFinding = planReviewRejectionSummary(pipelineState);
+    if (retryFinding) {
+      log(`${input.variant.id}: plan-adherence review rejected; retrying build with review findings`);
+      await retryPausedPipeline(client, sessionId, retryFinding);
+      pipelineState = await waitForPipeline(workspace, input.timeoutMs);
+    }
     if (!isPipelineCompleted(pipelineState)) {
       const completedAt = new Date();
       log(`${input.variant.id}: pipeline did not complete; running deterministic checks for salvage evidence`);
@@ -465,6 +471,26 @@ function makeOpenCodeConfig(variant: ModelVariant) {
         },
         ...variant.plan.agentOptions
       },
+      "plan-reviewer": {
+        model: variant.plan.model,
+        mode: "subagent",
+        description: "Reviews whether the implementation followed the saved plan and scenario requirements.",
+        permission: {
+          read: "allow",
+          edit: "deny",
+          glob: "allow",
+          grep: "allow",
+          list: "allow",
+          bash: "allow",
+          external_directory: {
+            "/tmp/*": "allow",
+            "*": "deny"
+          },
+          webfetch: "allow",
+          skill: "allow"
+        },
+        ...variant.plan.agentOptions
+      },
       build: {
         model: variant.build.model,
         permission: {
@@ -564,6 +590,36 @@ function isRetryableSummary(summary: RunSummary): boolean {
 
 function getPipelineStatus(state: unknown): string | undefined {
   return typeof state === "object" && state !== null ? (state as { status?: string }).status : undefined;
+}
+
+function planReviewRejectionSummary(state: unknown): string | null {
+  if (getPipelineStatus(state) !== "paused" || !state || typeof state !== "object") return null;
+  const stages = (state as { stages?: unknown }).stages;
+  if (!Array.isArray(stages)) return null;
+  const rejected = stages.find((stage) => {
+    if (!stage || typeof stage !== "object") return false;
+    const record = stage as { id?: unknown; status?: unknown };
+    return record.id === "plan-adherence-review" && record.status === "rejected";
+  });
+  if (!rejected || typeof rejected !== "object") return null;
+  const summary = (rejected as { summary?: unknown }).summary;
+  return typeof summary === "string" && summary.trim().length > 0 ? summary.trim() : "Plan-adherence review rejected without a summary.";
+}
+
+async function retryPausedPipeline(client: any, sessionId: string, findings: string): Promise<void> {
+  log("Pipeline: invoking /lattice-retry with plan-review findings");
+  await client.session.command({
+    path: { id: sessionId },
+    body: {
+      command: "lattice-retry",
+      arguments: [
+        "Retry the build stage and address these plan-adherence review findings before signaling complete again:",
+        "",
+        findings
+      ].join("\n")
+    }
+  });
+  log("Pipeline: /lattice-retry command completed");
 }
 
 function completedPipelineAnomaly(state: unknown): string | null {
