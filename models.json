@@ -2,6 +2,25 @@
   "variants": [
     {
       "id": "openai-gpt-5.5-plan-build",
+      "enabled": false,
+      "reason": "Kept as the pre-review/control variant name; use openai-gpt-5.5-plan-build-reviewed for post plan-adherence runs.",
+      "plan": {
+        "model": "openai/gpt-5.5",
+        "agentOptions": {
+          "reasoningEffort": "xhigh",
+          "textVerbosity": "low"
+        }
+      },
+      "build": {
+        "model": "openai/gpt-5.5",
+        "agentOptions": {
+          "reasoningEffort": "medium",
+          "textVerbosity": "low"
+        }
+      }
+    },
+    {
+      "id": "openai-gpt-5.5-plan-build-reviewed",
       "enabled": true,
       "plan": {
         "model": "openai/gpt-5.5",
@@ -20,7 +39,8 @@
     },
     {
       "id": "qwen3.6-plus-high-plan-high-build",
-      "enabled": true,
+      "enabled": false,
+      "reason": "Replaced by qwen3.6-plus-high-plan-high-build-reviewed for post plan-adherence runs.",
       "plan": {
         "model": "opencode-go/qwen3.6-plus",
         "agentOptions": {
@@ -36,7 +56,8 @@
     },
     {
       "id": "minimax-m2.7-plan-deepseek-v4-pro-build",
-      "enabled": true,
+      "enabled": false,
+      "reason": "Replaced by minimax-m2.7-plan-deepseek-v4-pro-build-reviewed for post plan-adherence runs.",
       "plan": {
         "model": "opencode-go/minimax-m2.7",
         "agentOptions": {
@@ -52,7 +73,8 @@
     },
     {
       "id": "deepseek-v4-pro-plan-flash-build",
-      "enabled": true,
+      "enabled": false,
+      "reason": "Kept as the pre-review/control variant name; use deepseek-v4-pro-plan-flash-build-reviewed for post plan-adherence runs.",
       "plan": {
         "model": "opencode-go/deepseek-v4-pro",
         "agentOptions": {
@@ -68,6 +90,71 @@
     },
     {
       "id": "deepseek-v4-pro-plan-pro-build",
+      "enabled": false,
+      "reason": "Replaced by deepseek-v4-pro-plan-pro-build-reviewed for post plan-adherence runs.",
+      "plan": {
+        "model": "opencode-go/deepseek-v4-pro",
+        "agentOptions": {
+          "reasoningEffort": "high"
+        }
+      },
+      "build": {
+        "model": "opencode-go/deepseek-v4-pro",
+        "agentOptions": {
+          "reasoningEffort": "medium"
+        }
+      }
+    },
+    {
+      "id": "qwen3.6-plus-high-plan-high-build-reviewed",
+      "enabled": true,
+      "plan": {
+        "model": "opencode-go/qwen3.6-plus",
+        "agentOptions": {
+          "reasoningEffort": "high"
+        }
+      },
+      "build": {
+        "model": "opencode-go/qwen3.6-plus",
+        "agentOptions": {
+          "reasoningEffort": "high"
+        }
+      }
+    },
+    {
+      "id": "minimax-m2.7-plan-deepseek-v4-pro-build-reviewed",
+      "enabled": true,
+      "plan": {
+        "model": "opencode-go/minimax-m2.7",
+        "agentOptions": {
+          "reasoningEffort": "high"
+        }
+      },
+      "build": {
+        "model": "opencode-go/deepseek-v4-pro",
+        "agentOptions": {
+          "reasoningEffort": "medium"
+        }
+      }
+    },
+    {
+      "id": "deepseek-v4-pro-plan-flash-build-reviewed",
+      "enabled": true,
+      "plan": {
+        "model": "opencode-go/deepseek-v4-pro",
+        "agentOptions": {
+          "reasoningEffort": "high"
+        }
+      },
+      "build": {
+        "model": "opencode-go/deepseek-v4-flash",
+        "agentOptions": {
+          "reasoningEffort": "medium"
+        }
+      }
+    },
+    {
+      "id": "deepseek-v4-pro-plan-pro-build-reviewed",
       "enabled": true,
       "plan": {
         "model": "opencode-go/deepseek-v4-pro",
