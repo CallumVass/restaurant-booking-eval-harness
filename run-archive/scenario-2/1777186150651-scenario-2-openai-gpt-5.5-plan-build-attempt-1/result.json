@@ -565,51 +565,51 @@
     },
     "finish": "tool-calls",
     "structured": {
-      "overallScore": 82,
-      "requirementCoverage": 84,
+      "overallScore": 86,
+      "requirementCoverage": 85,
       "backendScore": 88,
-      "frontendScore": 78,
-      "correctnessScore": 84,
-      "testQualityScore": 70,
-      "maintainabilityScore": 84,
-      "architectureScore": 85,
-      "functionalCoreScore": 82,
-      "uiUxScore": 80,
-      "typedClientScore": 88,
-      "planQualityScore": 93,
-      "planAdherenceScore": 86,
+      "frontendScore": 82,
+      "correctnessScore": 90,
+      "testQualityScore": 74,
+      "maintainabilityScore": 88,
+      "architectureScore": 89,
+      "functionalCoreScore": 85,
+      "uiUxScore": 84,
+      "typedClientScore": 90,
+      "planQualityScore": 92,
+      "planAdherenceScore": 88,
       "scenarioScores": [
         {
           "name": "authCorrectness",
-          "score": 88
+          "score": 90
         },
         {
           "name": "authSecurity",
-          "score": 82
+          "score": 87
         },
         {
           "name": "bookingOwnership",
-          "score": 90
+          "score": 92
         },
         {
           "name": "httpOpenApiCoverage",
-          "score": 74
+          "score": 76
         },
         {
           "name": "frontendFlowCoverage",
-          "score": 58
+          "score": 70
         },
         {
           "name": "generatedQueryIntegration",
-          "score": 90
+          "score": 91
         },
         {
           "name": "brownfieldIntegration",
-          "score": 86
+          "score": 90
         },
         {
           "name": "regressionCoverage",
-          "score": 70
+          "score": 76
         }
       ],
       "deterministicChecksPass": true,
@@ -627,32 +627,33 @@
       "boundaryTestsPresent": true,
       "runnable": true,
       "majorIssues": [
-        "The added frontend test suite does not pass when run with `npm --prefix frontend test`: 3 of 4 tests fail with `Invalid Chai property: toBeInTheDocument`.",
-        "Backend HTTP/OpenAPI coverage is partial: `BookingApiTests.cs` checks OpenAPI only by substring presence and does not exercise HTTP invalid-date or invalid-time booking error mapping."
+        "Backend HTTP/OpenAPI regression coverage is incomplete: `BookingApiTests.cs` exercises restaurants, availability party-size/unknown-restaurant errors, auth boundaries, ownership, conflict mapping, and OpenAPI availability, but invalid booking date/time cases remain covered only in `BookingRulesTests.cs` rather than through HTTP endpoints.",
+        "OpenAPI coverage is shallow: `OpenApiDocumentIncludesAuthAndBookings` only asserts that `/api/auth/login` and `/api/bookings` appear in `/openapi/v1.json`, not protected-operation 401 responses, CSRF header documentation, request/response shapes, or error mapping.",
+        "Frontend tests are limited mocked component tests in `frontend/src/App.test.tsx`; they cover unauthenticated gating, login mutation shape, booking confirmation/history display, and conflict display, but do not cover registration, logout behavior, CSRF header delivery, real generated-client transport behavior, or broader API error states."
       ],
       "missingRequirements": [
-        "Passing frontend UI/integration tests for the requested auth and booking flows are not achieved, despite test source being present.",
-        "HTTP-level backend tests for invalid booking date/time cases are missing; those cases are covered only in domain tests.",
-        "Frontend tests do not cover registration, logout, invalid auth display, CSRF failure handling, or booking-history isolation through UI behavior."
+        "Focused frontend UI/integration coverage for registration and logout flows is missing.",
+        "HTTP-level backend tests for invalid booking date/time validation are missing, despite domain-level coverage.",
+        "Live backend OpenAPI tests do not assert the protected booking/auth contract beyond endpoint presence."
       ],
       "notableStrengths": [
-        "All mandatory deterministic build, test, format, lint, typecheck, install, and dead-code commands exited 0.",
-        "Backend uses ASP.NET Core Identity with HTTP-only cookies, explicit local CORS origins with credentials, antiforgery validation for login/register/logout/booking creation, and no token storage in frontend source.",
-        "Bookings are associated with authenticated user ids and `/api/bookings` returns only bookings for the current user with optional restaurant filtering.",
-        "Frontend uses Orval-generated React Query hooks and generated types rather than hand-written stringly typed fetch wrappers.",
-        "README documents demo credentials, CSRF behavior, credentialed requests, ownership, and quality commands."
+        "All mandatory deterministic checks exited 0, including warning-free backend build, backend tests, backend format, frontend install/build/typecheck/lint/format, and dedicated `npm --prefix frontend run deadcode`.",
+        "Backend uses ASP.NET Core Identity with HTTP-only cookies, explicit local CORS origins with credentials, antiforgery header validation on login, register, logout, and booking creation, and no frontend localStorage/sessionStorage token usage.",
+        "Bookings store `UserId`, booking creation requires authorization, and `GET /api/bookings` filters by the authenticated user and optional restaurant.",
+        "Frontend uses Orval-generated React Query hooks (`useLogin`, `useRegister`, `useCreateBooking`, `useListBookings`, etc.) rather than hand-written stringly typed fetch wrappers.",
+        "README documents demo credentials, cookie/CSRF behavior, CORS, booking ownership, generated client workflow, and quality-gate commands."
       ],
       "scenarioFindings": [
-        "authCorrectness: unauthenticated booking creation is protected with `.RequireAuthorization()` and tested for 401; auth endpoints are present and SPA uses them.",
-        "authSecurity: cookies are HTTP-only, CSRF token endpoint and `X-CSRF-TOKEN` validation are implemented, and no localStorage/sessionStorage usage was found; CORS is limited to local Vite origins.",
-        "bookingOwnership: `Booking.UserId` is set at creation and `BookingsForUser` filters by user id; backend tests verify a second user cannot see the first user's restaurant history.",
-        "httpOpenApiCoverage: HTTP tests cover restaurants, availability, auth rejection, invalid credentials, CSRF, ownership, conflict, concurrent conflict, and OpenAPI availability, but OpenAPI assertions are shallow and HTTP invalid date/time cases are absent.",
-        "frontendFlowCoverage: UI source includes login/register/logout, auth gating, confirmation, and history display, but the frontend test command fails and coverage omits several auth/error flows.",
-        "generatedQueryIntegration: Orval is configured with `client: react-query`; `App.tsx` imports and uses generated hooks such as `useLogin`, `useCreateBooking`, and `useListBookings`.",
-        "brownfieldIntegration: changes preserve the minimal API, in-memory booking store, Result-style domain rules, Tailwind/shadcn components, TanStack Query, and generated client workflow.",
-        "regressionCoverage: backend regression coverage improved substantially, including boundary and ownership tests, but frontend regression coverage is not currently executable and carried-over HTTP edge coverage remains incomplete."
+        "authCorrectness: `POST /api/bookings` has `.RequireAuthorization()`, unauthenticated create is tested as 401, auth endpoints are exposed, and the SPA uses login/register/me/logout hooks.",
+        "authSecurity: auth cookies are configured HTTP-only, CSRF is validated for state-changing auth and booking endpoints, CORS is limited to localhost Vite origins with credentials, and source search found no localStorage/sessionStorage token storage.",
+        "bookingOwnership: `Booking.UserId` is set from `ClaimTypes.NameIdentifier`, `BookingsForUser` filters by `UserId`, and tests verify a second user cannot see the first user's restaurant history.",
+        "httpOpenApiCoverage: integration tests cover some endpoint behavior and OpenAPI availability, but OpenAPI assertions are substring-only and several validation/error cases are domain-only.",
+        "frontendFlowCoverage: Vitest tests cover core booking gating, login, confirmation/history, and conflict display, but registration/logout and real network/client behavior are not tested.",
+        "generatedQueryIntegration: Orval is configured with `client: \"react-query\"`, the build regenerates the client, and `App.tsx` consumes generated hooks with thin `RequestInit` options for credentials/CSRF.",
+        "brownfieldIntegration: the solution preserves the minimal API, in-memory booking store, pure `BookingRules`, Tailwind/shadcn-style components, TanStack Query, and Orval workflow rather than rewriting the app.",
+        "regressionCoverage: backend has meaningful auth, ownership, conflict, and domain boundary tests, and frontend has four focused tests, but required HTTP validation and full auth UI coverage remain partial."
       ],
-      "summary": "Strong focused implementation with passing mandatory deterministic gates, correct core authenticated booking ownership, CSRF-protected cookie auth, generated React Query client usage, and good README updates. Main penalties are the failing frontend test suite and incomplete HTTP-level edge/OpenAPI assertions."
+      "summary": "Strong focused brownfield implementation with all deterministic gates passing and the main authenticated booking behavior implemented correctly. The primary deductions are for incomplete HTTP/OpenAPI assertion depth and limited frontend integration coverage, not for runtime/build failures."
     },
     "id": "msg_dc8974230001tW7WxO3aTtGBDz",
     "sessionID": "ses_237695421ffe8fEGGqOTQC6Gwj"

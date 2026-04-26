@@ -574,39 +574,39 @@
     },
     "finish": "tool-calls",
     "structured": {
-      "overallScore": 77,
-      "requirementCoverage": 78,
-      "backendScore": 84,
-      "frontendScore": 65,
-      "correctnessScore": 78,
-      "testQualityScore": 83,
+      "overallScore": 78,
+      "requirementCoverage": 77,
+      "backendScore": 86,
+      "frontendScore": 66,
+      "correctnessScore": 82,
+      "testQualityScore": 80,
       "maintainabilityScore": 78,
-      "architectureScore": 80,
-      "functionalCoreScore": 78,
-      "uiUxScore": 68,
-      "typedClientScore": 0,
+      "architectureScore": 82,
+      "functionalCoreScore": 86,
+      "uiUxScore": 70,
+      "typedClientScore": 10,
       "planQualityScore": 92,
-      "planAdherenceScore": 65,
+      "planAdherenceScore": 70,
       "scenarioScores": [
         {
           "name": "tailwindShadcnUsage",
-          "score": 40
+          "score": 45
         },
         {
           "name": "tanstackUsage",
-          "score": 85
+          "score": 90
         },
         {
           "name": "openApiTypedClientUsage",
-          "score": 0
+          "score": 10
         },
         {
           "name": "bookingConflictRules",
-          "score": 78
+          "score": 82
         },
         {
           "name": "responsivePolish",
-          "score": 65
+          "score": 70
         },
         {
           "name": "deterministicQuality",
@@ -628,30 +628,30 @@
       "boundaryTestsPresent": true,
       "runnable": true,
       "majorIssues": [
-        "The frontend does not use a generated OpenAPI client: `frontend/src/api/client.ts` is a hand-written `fetchJson` wrapper with manual interfaces, `frontend/orval.config.ts` references `./openapi.json`, and no `openapi*.json` file was present.",
-        "`BookingDomain.GetAvailableSlots` excludes a slot if any suitable table has an overlapping booking, even when another suitable table remains free; this can hide bookable times for restaurants with multiple tables.",
-        "The UI uses Tailwind utility classes but no shadcn project evidence was found: no `components.json`, no shadcn component files, and no shadcn component imports in inspected frontend source."
+        "OpenAPI-generated frontend client is not implemented: `frontend/src/api/client.ts` is a hand-written fetch wrapper, `frontend/openapi.json` is absent, and Orval generation is not reproducible from source despite `frontend/orval.config.ts` targeting `./openapi.json`.",
+        "shadcn/ui is not actually present: no `components.json` or `frontend/src/components` shadcn components were found, and UI pages use hand-written Tailwind markup rather than shadcn components.",
+        "`BookingDomain.GetAvailableSlots` hides a slot if any suitable table is booked at that time, even when another suitable table remains free, because it computes `hasConflict` across all suitable tables instead of checking whether at least one suitable table has no overlap."
       ],
       "missingRequirements": [
-        "Generated and used fully typed API client from backend OpenAPI document with Orval or equivalent.",
-        "Reproducible OpenAPI client generation from a present OpenAPI document.",
-        "shadcn/ui interface implementation."
+        "Use and reproducibly generate a fully typed API client from the backend OpenAPI document with Orval or equivalent.",
+        "Use shadcn/ui components for the interface.",
+        "Provide a source OpenAPI document suitable for frontend generation; Swagger is enabled at runtime, but the configured Orval input file is missing."
       ],
       "notableStrengths": [
-        "All mandatory deterministic commands exited 0, including warning-free backend build, tests, backend format, frontend install/build/typecheck/lint/format, and dead-code check.",
-        "Backend has clear domain-level Result-style booking errors and unit tests for invalid party sizes, invalid dates, invalid times, overlap rejection, no-fit tables, and same-time different-table success.",
-        "Frontend uses TanStack Query for restaurant, slot, and booking queries plus booking mutation invalidation.",
-        "The system is runnable with documented backend and frontend commands."
+        "All mandatory deterministic checks exited 0, including warning-free backend build, backend tests, backend format, frontend install/build/typecheck/lint/format/deadcode.",
+        "Backend uses pure domain functions with explicit Result-style booking errors and lightweight repository boundaries.",
+        "Boundary tests cover invalid party sizes, past dates, invalid times, overlapping reservations, no suitable table, and concurrent capacity on different tables.",
+        "Frontend uses TanStack Query for restaurant loading, available slots, booking creation, query invalidation, and bookings display."
       ],
       "scenarioFindings": [
-        "tailwindShadcnUsage: Tailwind CSS is used via `@import \"tailwindcss\"` and utility classes throughout pages, but source inspection found no shadcn setup or components.",
-        "tanstackUsage: `QueryClientProvider`, `useQuery`, `useMutation`, and query invalidation are used for API state.",
-        "openApiTypedClientUsage: Orval is installed/configured, but the configured input document is absent and the checked-in API client is hand-written.",
-        "bookingConflictRules: `CreateBooking` checks table-level overlaps and tests cover same-slot conflicts and different-table success; available-slot generation is overly restrictive across multiple tables and same-day past times are not rejected.",
-        "responsivePolish: The UI has responsive grids, loading states, error states, and confirmation feedback, but it is mostly generic card/form markup and lacks shadcn components.",
-        "deterministicQuality: Every mandatory deterministic check provided in the results exited 0."
+        "tailwindShadcnUsage: Tailwind CSS v4 is configured and used extensively via utility classes, but no shadcn project files or components are present.",
+        "tanstackUsage: `QueryClientProvider`, `useQuery`, `useMutation`, and invalidation are used appropriately for API state.",
+        "openApiTypedClientUsage: Orval is listed and configured, but generation cannot run from the submitted source because `frontend/openapi.json` is absent; the checked-in client is hand-written.",
+        "bookingConflictRules: `CreateBooking` validates size/date/time and prevents same-table overlaps while allowing different tables, but available-slot calculation undercounts capacity when one of multiple suitable tables is occupied.",
+        "responsivePolish: Pages use responsive grids, loading skeletons, icons, focus styling, and confirmation UI, but the interface is conventional and lacks the requested shadcn polish.",
+        "deterministicQuality: Mandatory commands all passed: `dotnet build RestaurantBooking.slnx -p:TreatWarningsAsErrors=true`, `dotnet test RestaurantBooking.slnx --no-build`, `dotnet format RestaurantBooking.slnx --verify-no-changes`, `npm --prefix frontend install`, `npm --prefix frontend run build`, `typecheck`, `lint`, `format:check`, and `deadcode`."
       ],
-      "summary": "A mostly functional restaurant booking system with strong deterministic quality and decent backend domain tests, but it misses the key frontend typed OpenAPI client requirement and shadcn usage. Backend conflict prevention is generally implemented, yet available-slot listing incorrectly treats one booked suitable table as blocking the entire slot, and current-day past times are not guarded."
+      "summary": "A runnable full-stack booking system with strong deterministic quality and solid backend domain/testing coverage. The largest gaps are frontend technology compliance: no actual shadcn usage and no generated OpenAPI typed client, plus an availability-slot capacity bug when multiple suitable tables exist."
     },
     "id": "msg_dc60eeb2f001Od3UjZyvPd4Rg0",
     "sessionID": "ses_239f15217ffexXzaBTill1BDYw"

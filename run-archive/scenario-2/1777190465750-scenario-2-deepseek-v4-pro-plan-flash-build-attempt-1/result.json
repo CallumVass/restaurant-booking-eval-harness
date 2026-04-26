@@ -573,51 +573,51 @@
     },
     "finish": "tool-calls",
     "structured": {
-      "overallScore": 78,
-      "requirementCoverage": 79,
-      "backendScore": 83,
-      "frontendScore": 74,
-      "correctnessScore": 78,
-      "testQualityScore": 66,
-      "maintainabilityScore": 80,
-      "architectureScore": 82,
-      "functionalCoreScore": 80,
-      "uiUxScore": 76,
-      "typedClientScore": 76,
-      "planQualityScore": 88,
-      "planAdherenceScore": 76,
+      "overallScore": 66,
+      "requirementCoverage": 68,
+      "backendScore": 72,
+      "frontendScore": 52,
+      "correctnessScore": 60,
+      "testQualityScore": 60,
+      "maintainabilityScore": 74,
+      "architectureScore": 76,
+      "functionalCoreScore": 78,
+      "uiUxScore": 62,
+      "typedClientScore": 58,
+      "planQualityScore": 90,
+      "planAdherenceScore": 70,
       "scenarioScores": [
         {
           "name": "authCorrectness",
-          "score": 84
+          "score": 70
         },
         {
           "name": "authSecurity",
-          "score": 62
+          "score": 42
         },
         {
           "name": "bookingOwnership",
-          "score": 82
+          "score": 50
         },
         {
           "name": "httpOpenApiCoverage",
-          "score": 78
+          "score": 76
         },
         {
           "name": "frontendFlowCoverage",
-          "score": 40
+          "score": 25
         },
         {
           "name": "generatedQueryIntegration",
-          "score": 74
+          "score": 55
         },
         {
           "name": "brownfieldIntegration",
-          "score": 84
+          "score": 72
         },
         {
           "name": "regressionCoverage",
-          "score": 68
+          "score": 58
         }
       ],
       "deterministicChecksPass": true,
@@ -633,37 +633,41 @@
       "tanstackUsed": true,
       "typedOpenApiClientUsed": true,
       "boundaryTestsPresent": true,
-      "runnable": true,
+      "runnable": false,
       "majorIssues": [
-        "CSRF protection is not shown as enforced for JSON mutation endpoints: Program.cs registers antiforgery and returns tokens, but the mapped POST endpoints do not call ValidateRequestAsync or attach antiforgery validation metadata, and tests only assert the token endpoint returns a token rather than asserting missing/invalid token rejection.",
-        "Frontend auth state bypasses the generated OpenAPI client: frontend/src/lib/auth.tsx uses hand-written fetch calls for /api/auth/me, login, register, logout even though generated hooks/functions exist in frontend/src/generated/booking-client.ts.",
-        "Frontend flow tests are very shallow: App.test.tsx only checks authenticated header/list rendering and the history tab label, while AuthPage.test.tsx only checks rendering and mode toggle; there are no UI/integration assertions for successful booking submission, booking confirmation, API error display, logout behavior, or displayed booking history data.",
-        "The booking-history isolation HTTP test uses separate WebApplicationFactory/client instances with fresh BookingStore instances for user A and user B, so it does not prove two users sharing the same backend store cannot see each other's bookings."
+        "CSRF protection is configured but not enforced for JSON mutation endpoints: Program.cs only calls AddAntiforgery/UseAntiforgery, and source search found no ValidateRequestAsync/RequireAntiforgery usage. Backend tests fetch and send tokens but do not assert login/register/logout/create-booking fail without the CSRF header.",
+        "Public GET /api/bookings still returns store.Bookings without authorization or user filtering in Program.cs, exposing all bookings including guest email and userId. This conflicts with the authenticated-account ownership requirement even though /api/bookings/mine is scoped.",
+        "Frontend runtime data handling is inconsistent with the generated client mutator: apiFetch returns raw JSON, but App.tsx and BookingHistory.tsx read Orval response envelopes such as data.data/status. Against the real backend, restaurant lists and booking history resolve to empty, and create-booking success is treated as failure.",
+        "AuthProvider bypasses generated auth hooks/operations with hand-written fetch calls for token, me, login, register, and logout even though Orval generated hooks for those endpoints.",
+        "Frontend tests are shallow mocks of generated hooks and auth context. They do not exercise real form submission, API error display, booking confirmation, booking history rendering from mocked server responses, or CSRF-aware mutation behavior."
       ],
       "missingRequirements": [
-        "No source-level evidence that CSRF/anti-forgery validation is actually required by login, register, logout, or booking creation mutations.",
-        "Frontend authenticated-user state is not implemented through the generated OpenAPI/TanStack Query hooks where they are available.",
-        "Focused frontend integration coverage for booking creation, API errors, confirmations, logout, and populated booking history is largely missing."
+        "State-changing cookie-auth requests do not have evidence-backed CSRF enforcement on the backend.",
+        "Users can access a public all-bookings endpoint rather than only user-scoped booking history.",
+        "Frontend core booking flows are not correctly wired to the generated client's actual runtime return shape.",
+        "Generated TanStack Query integration is incomplete for auth flows and weakened by hand-written fetch wrappers.",
+        "Required frontend UI/integration coverage for auth, booking creation, API errors, confirmations, and booking history is largely missing.",
+        "README claims CSRF-protected mutations and history isolation more strongly than the inspected source/tests substantiate."
       ],
       "notableStrengths": [
-        "All mandatory deterministic checks exited 0, including warning-free backend build, backend tests, backend formatting, frontend install/build/typecheck/lint/format, and dedicated knip dead-code check.",
-        "Backend uses ASP.NET Core Identity with HTTP-only cookies, protects booking creation, associates bookings with the authenticated user id, and exposes a current-user scoped /api/bookings/mine endpoint.",
-        "Booking conflict logic remains in the existing functional core/store style with lock-based atomic creation and Result-style error mapping to 400/404/409 responses.",
-        "Backend HTTP tests cover restaurants, availability, unauthenticated booking creation, authenticated booking creation, invalid party size/time/restaurant, overlapping bookings, adjacent bookings, auth endpoints, and live OpenAPI availability.",
-        "Orval is configured with client: react-query and the generated client includes TanStack Query hooks used by the main booking and history UI.",
-        "README documents local demo credentials, cookie auth, CSRF token flow, protected endpoints, and quality commands."
+        "All mandatory deterministic checks passed: warning-free backend build, backend tests, backend format verification, frontend install/build/typecheck/lint/format/deadcode.",
+        "Backend adds ASP.NET Core Identity with HTTP-only cookie settings, demo user seeding, protected booking creation, and a user-scoped /api/bookings/mine endpoint.",
+        "BookingStore keeps conflict creation under a lock and preserves the existing Result-style domain error mapping.",
+        "Backend HTTP tests cover restaurants, availability errors, unauthenticated create returning 401, authenticated create, overlap conflicts, invalid party size/time, unknown restaurants, auth login/me, OpenAPI availability, and user-scoped mine results.",
+        "Orval is configured to generate TanStack Query hooks, and several generated hooks are used in the SPA.",
+        "UI work preserves Tailwind/shadcn-style components and improves the layout with auth state, tabs, responsive cards, and booking history presentation."
       ],
       "scenarioFindings": [
-        "authCorrectness: unauthenticated POST /api/bookings is protected with RequireAuthorization and tested for 401; login/register/me endpoints exist and are usable, though auth context uses manual fetch.",
-        "authSecurity: cookies are HTTP-only and no localStorage/sessionStorage usage was found, but CSRF enforcement is not demonstrated in endpoint source or tests despite token plumbing.",
-        "bookingOwnership: Booking includes UserId and /api/bookings/mine filters by current claim; the isolation test intent is present but weakened by using separate backend store instances.",
-        "httpOpenApiCoverage: backend tests exercise HTTP endpoints and live /openapi/v1.json includes auth paths, but tests do not verify protected-operation OpenAPI details, 401 metadata broadly, or missing-CSRF error mapping.",
-        "frontendFlowCoverage: frontend tests are mostly smoke tests and do not cover the core booking/auth/history/error flows requested.",
-        "generatedQueryIntegration: generated React Query hooks are used for restaurants, availability, booking creation, and my bookings, but auth flows bypass generated operations with string URL fetch calls.",
-        "brownfieldIntegration: implementation preserves the existing minimal API, in-memory BookingStore, Result-style domain rules, Tailwind/shadcn components, TanStack Query, and Orval workflow without a rewrite.",
-        "regressionCoverage: backend regression coverage improved substantially, including boundary tests, but frontend regression coverage and real same-store multi-user history isolation remain weak."
+        "authCorrectness: POST /api/bookings is protected and stores userId, auth endpoints exist, but the SPA's real data path is broken by raw-json versus response-envelope mismatch.",
+        "authSecurity: Cookies are HTTP-only and CORS is restricted to localhost:5173 with credentials, but CSRF validation is not explicitly enforced for JSON mutations and is not tested negatively.",
+        "bookingOwnership: /api/bookings/mine filters by current user, but public /api/bookings exposes all bookings and user-associated data.",
+        "httpOpenApiCoverage: Backend HTTP tests exist and pass, including live /openapi/v1.json path checks, but they mostly assert path presence rather than protected-operation metadata/error schemas and miss CSRF negative cases.",
+        "frontendFlowCoverage: npm --prefix frontend test passed as evidenceOnly, but source shows only four shallow component tests with mocked hooks/context and no booking submission/error/confirmation/history integration coverage.",
+        "generatedQueryIntegration: Generated React Query hooks are present and used for restaurant/booking operations, but auth uses direct fetch and the custom mutator does not match the generated response-envelope types consumed by the UI.",
+        "brownfieldIntegration: The implementation is mostly additive and preserves baseline domain/store shape, but leaves an old public bookings endpoint inconsistent with the new auth model.",
+        "regressionCoverage: Domain and backend HTTP boundary tests are materially improved, but regression safety is reduced by missing CSRF negative tests, no real frontend integration tests, no concurrent atomic-conflict test, and untested public booking leakage."
       ],
-      "summary": "Strong focused brownfield implementation with all deterministic gates passing and most backend auth/ownership behavior implemented. The main deductions are incomplete CSRF enforcement evidence, shallow frontend integration coverage, manual fetch-based auth despite generated client support, and a weakened booking-history isolation test."
+      "summary": "The submission passes every deterministic quality gate and adds a substantial backend auth/account slice with useful HTTP tests. However, key requirements are undermined by unenforced CSRF validation, a public all-bookings endpoint that leaks other users' booking data, and a frontend generated-client integration bug that makes the real SPA fail to display/use backend data correctly. Backend coverage is much stronger than the baseline, but frontend flow coverage and generated-client adherence remain weak."
     },
     "id": "msg_dc8e961e3001ruxDX636UgpUUb",
     "sessionID": "ses_23717047bffe9poiRCBbQCIz7F"

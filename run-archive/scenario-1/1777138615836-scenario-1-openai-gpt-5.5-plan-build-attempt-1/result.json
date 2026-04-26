@@ -562,15 +562,15 @@
     "finish": "tool-calls",
     "structured": {
       "overallScore": 92,
-      "requirementCoverage": 95,
+      "requirementCoverage": 94,
       "backendScore": 94,
-      "frontendScore": 90,
+      "frontendScore": 91,
       "correctnessScore": 93,
       "testQualityScore": 84,
-      "maintainabilityScore": 91,
+      "maintainabilityScore": 89,
       "architectureScore": 90,
-      "functionalCoreScore": 92,
-      "uiUxScore": 87,
+      "functionalCoreScore": 91,
+      "uiUxScore": 88,
       "typedClientScore": 91,
       "planQualityScore": 94,
       "planAdherenceScore": 93,
@@ -581,11 +581,11 @@
         },
         {
           "name": "tanstackUsage",
-          "score": 94
+          "score": 95
         },
         {
           "name": "openApiTypedClientUsage",
-          "score": 91
+          "score": 90
         },
         {
           "name": "bookingConflictRules",
@@ -593,7 +593,7 @@
         },
         {
           "name": "responsivePolish",
-          "score": 87
+          "score": 88
         },
         {
           "name": "deterministicQuality",
@@ -617,22 +617,21 @@
       "majorIssues": [],
       "missingRequirements": [],
       "notableStrengths": [
-        "All mandatory deterministic checks exited 0, including backend warning-free build, backend tests, backend format verification, frontend install/build/typecheck/lint/format, and dedicated Knip dead-code check.",
-        "Backend uses pure booking rule functions with explicit Result-style errors and a thin in-memory store/endpoints layer.",
-        "Conflict prevention is rechecked under a lock in BookingStore.TryCreate, reducing race risk for in-memory persistence.",
-        "Frontend uses TanStack Query for restaurants, bookings, availability, and booking mutation invalidation.",
-        "Orval reproducibly generates a typed client from frontend/openapi/restaurant-booking.json during the frontend build, and App.tsx imports and uses the generated operations and types.",
-        "UI uses Tailwind CSS and shadcn-style components with responsive grid layouts, cards, badges, accessible labels, loading states, slot selection, confirmation, and existing bookings."
+        "All mandatory deterministic checks exited 0, including warning-free backend build, backend tests, format verification, frontend install/build/typecheck/lint/format check, and dedicated knip dead-code check.",
+        "Backend separates pure booking rules in `BookingRules` from the in-memory `BookingStore` shell, with explicit `BookingResult<T>` errors mapped to 400, 404, and 409 responses.",
+        "Conflict handling rechecks availability under a lock in `BookingStore.TryCreate`, and overlap logic correctly rejects intersecting two-hour reservations while allowing adjacent reservations.",
+        "Frontend uses Tailwind CSS, shadcn-style components, TanStack Query, and an Orval-generated typed client from a checked-in OpenAPI document.",
+        "UI includes restaurant cards, availability slot picking, booking confirmation, existing bookings, responsive grid layouts, loading/empty/error states, and accessible labels for form fields."
       ],
       "scenarioFindings": [
-        "tailwindShadcnUsage: components.json, Tailwind v4 CSS/theme setup, shadcn-style ui components, and Tailwind utility classes are used throughout App.tsx.",
-        "tanstackUsage: QueryClientProvider is configured in main.tsx; useQuery/useMutation cover API state and invalidation in App.tsx.",
-        "openApiTypedClientUsage: orval.config.ts consumes a checked-in OpenAPI document and generates src/generated/booking-client.ts; the documented paths and schemas match the inspected backend endpoints and DTO shapes.",
-        "bookingConflictRules: BookingRules rejects invalid party sizes, past/out-of-window dates, invalid seating times, unknown restaurants, unavailable capacity, and overlapping reservations on the assigned table; tests assert invalid party size/date/time, unknown restaurant, adjacent non-overlap, overlap, and capacity limits.",
-        "responsivePolish: The SPA provides a restaurant list, booking form, availability picker, confirmation card, and existing bookings in a responsive card-based layout; polish is good but still a compact single-page eval UI without deeper accessibility or visual-state testing.",
-        "deterministicQuality: Every mandatory deterministic command in the provided checks exited 0."
+        "tailwindShadcnUsage: `components.json`, Tailwind v4 setup in `src/index.css`/`vite.config.ts`, and local shadcn-style `Button`, `Card`, `Badge`, `Field`, and `Input` components are used throughout `App.tsx`.",
+        "tanstackUsage: `QueryClientProvider` is configured in `src/main.tsx`; `App.tsx` uses `useQuery` for restaurants/bookings/availability and `useMutation` with query invalidation for booking creation.",
+        "openApiTypedClientUsage: `frontend/orval.config.ts` consumes `frontend/openapi/restaurant-booking.json`, `npm run build` runs `generate:api`, and `App.tsx` imports typed operations and DTOs from `src/generated/booking-client.ts`; grep found raw `fetch` only inside the generated client.",
+        "bookingConflictRules: `BookingRules.CreateBooking` validates restaurant, party size, date, seating time, capacity, and overlapping reservations; tests cover invalid party size, unknown restaurant, past date, invalid time, adjacent non-overlap, overlap rejection, and capacity limits.",
+        "responsivePolish: UI uses cards, badges, hero stats, responsive `sm`/`md`/`lg` grid breakpoints, inline errors, confirmation, and empty states; minor accessibility polish remains because the slot picker declares `role=\"radiogroup\"` while rendering buttons with `aria-pressed` rather than radio semantics.",
+        "deterministicQuality: all provided deterministic commands exited 0, including `dotnet build RestaurantBooking.slnx -p:TreatWarningsAsErrors=true`, `dotnet test RestaurantBooking.slnx --no-build`, `dotnet format RestaurantBooking.slnx --verify-no-changes`, and all required frontend scripts."
       ],
-      "summary": "Strong Scenario 1 implementation. It satisfies the backend rules, frontend technology requirements, generated typed client workflow, deterministic scripts, README instructions, and saved plan with only modest deductions for limited test breadth beyond domain boundary tests and a relatively compact UI."
+      "summary": "Strong full-stack submission with passing deterministic checks, robust core booking rules, boundary tests, TanStack Query integration, reproducible Orval client generation, and a polished responsive SPA. Main limitations are modest test breadth beyond the domain layer and minor UI accessibility semantics rather than missing core requirements."
     },
     "id": "msg_dc5c284c3001gT2TYjoAid7K1N",
     "sessionID": "ses_23a3dc4b6ffe7fZtfC2E7Pj5im"

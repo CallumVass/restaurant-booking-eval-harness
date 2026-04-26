@@ -1,40 +1,40 @@
 # Restaurant Booking Eval Results: Scenario 1
 
-Generated: 2026-04-26T11:18:51.065Z
+Generated: 2026-04-26T12:22:49.265Z
 
 Costs use provider-reported costs where available. OpenAI GPT-5.5/GPT-5.5-fast costs are estimated from token counts using public GPT-5.5 pricing: $5/input 1M, $0.50/cached-input 1M, $30/output 1M.
 
 | Rank | Variant | Status | Score | Time | Tokens | Cost | Checks |
 |---:|---|---|---:|---:|---:|---:|---|
 | 1 | `openai-gpt-5.5-plan-build` | Completed | 92 | 12.6m | 4,237,796 | $3.646083 | Pass |
-| 2 | `mimo-v2.5-pro-plan-mimo-v2.5-build` | Completed | 77 | 15.4m | 10,325,013 | $0.974228 | Pass |
-| 3 | `qwen3.6-plus-high-plan-medium-build` | Completed | 76 | 25.9m | 9,474,158 | $0.643007 | Pass |
-| 4 | `deepseek-v4-pro-plan-flash-build` | Completed | 76 | 22.3m | 11,359,693 | $0.398040 | Pass |
+| 2 | `mimo-v2.5-pro-plan-mimo-v2.5-build` | Completed | 78 | 15.4m | 10,325,013 | $0.974228 | Pass |
+| 3 | `deepseek-v4-pro-plan-flash-build` | Completed | 76 | 22.3m | 11,359,693 | $0.398040 | Pass |
+| 4 | `qwen3.6-plus-high-plan-medium-build` | Completed | 74 | 25.9m | 9,474,158 | $0.643007 | Pass |
 
 ## Scenario 1 Scores
 
 | Variant | Requirements | Backend | Frontend | Correctness | Tests | Maintainability | Architecture | Functional Core | UI/UX | Typed Client | Plan Adherence |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `openai-gpt-5.5-plan-build` | 95 | 94 | 90 | 93 | 84 | 91 | 90 | 92 | 87 | 91 | 93 |
-| `mimo-v2.5-pro-plan-mimo-v2.5-build` | 78 | 84 | 65 | 78 | 83 | 78 | 80 | 78 | 68 | 0 | 65 |
-| `qwen3.6-plus-high-plan-medium-build` | 80 | 83 | 64 | 68 | 82 | 80 | 84 | 80 | 74 | 60 | 78 |
-| `deepseek-v4-pro-plan-flash-build` | 78 | 91 | 62 | 68 | 78 | 82 | 84 | 84 | 72 | 70 | 82 |
+| `openai-gpt-5.5-plan-build` | 94 | 94 | 91 | 93 | 84 | 89 | 90 | 91 | 88 | 91 | 93 |
+| `mimo-v2.5-pro-plan-mimo-v2.5-build` | 77 | 86 | 66 | 82 | 80 | 78 | 82 | 86 | 70 | 10 | 70 |
+| `deepseek-v4-pro-plan-flash-build` | 82 | 86 | 62 | 68 | 75 | 80 | 82 | 84 | 72 | 70 | 76 |
+| `qwen3.6-plus-high-plan-medium-build` | 78 | 86 | 58 | 68 | 80 | 76 | 82 | 78 | 74 | 55 | 78 |
 
 ## Scenario-Specific Scores
 
 | Variant | Tailwind/shadcn | TanStack | OpenAPI Typed Client | Booking Rules | Responsive Polish | Deterministic Quality |
 |---|---:|---:|---:|---:|---:|---:|
-| `openai-gpt-5.5-plan-build` | 92 | 94 | 91 | 94 | 87 | 100 |
-| `mimo-v2.5-pro-plan-mimo-v2.5-build` | 40 | 85 | 0 | 78 | 65 | 100 |
-| `qwen3.6-plus-high-plan-medium-build` | 90 | 88 | 62 | 82 | 76 | 100 |
-| `deepseek-v4-pro-plan-flash-build` | 90 | 85 | 70 | 88 | 72 | 100 |
+| `openai-gpt-5.5-plan-build` | 92 | 95 | 90 | 94 | 88 | 100 |
+| `mimo-v2.5-pro-plan-mimo-v2.5-build` | 45 | 90 | 10 | 82 | 70 | 100 |
+| `deepseek-v4-pro-plan-flash-build` | 90 | 80 | 72 | 84 | 70 | 100 |
+| `qwen3.6-plus-high-plan-medium-build` | 95 | 90 | 55 | 82 | 78 | 100 |
 
 ## Findings
 
-- `openai-gpt-5.5-plan-build`: Strongest Scenario 1 result. It met the backend rules, frontend stack, generated typed client workflow, deterministic scripts, README expectations, and saved plan. Deductions were modest: test breadth is mostly domain-oriented and the UI remains compact rather than highly distinctive.
-- `mimo-v2.5-pro-plan-mimo-v2.5-build`: Deterministic gates passed and the backend domain tests were good, but it missed key frontend/client requirements. The frontend used a handwritten fetch wrapper with manual interfaces rather than a generated OpenAPI client, shadcn/ui evidence was absent, and availability can hide valid slots when one suitable table is booked while another is free.
-- `qwen3.6-plus-high-plan-medium-build`: Strong backend/domain slice and deterministic hygiene, but the frontend integration is materially broken. Generated client types, custom fetch behavior, and component expectations disagree, browser CORS is not configured for the Vite/backend split, and the OpenAPI document does not accurately describe booking creation responses.
-- `deepseek-v4-pro-plan-flash-build`: Solid backend/domain implementation and deterministic checks, with Tailwind/shadcn, TanStack Query, and OpenAPI generation present. The major deduction is a frontend runtime mismatch where the custom Orval mutator returns raw JSON while wrapper code expects `{ data, status }`, preventing the SPA from correctly consuming restaurants and booking responses.
+- `openai-gpt-5.5-plan-build`: Strongest Scenario 1 result. It delivered robust booking rules, boundary tests, TanStack Query integration, reproducible Orval client generation, and a polished responsive SPA. Deductions are mostly modest test breadth beyond the domain layer and minor UI accessibility semantics.
+- `mimo-v2.5-pro-plan-mimo-v2.5-build`: Runnable with strong deterministic quality and solid backend domain/testing coverage. The largest gaps are frontend technology compliance: no actual shadcn usage, no generated OpenAPI typed client in use, and an availability capacity bug when multiple suitable tables exist.
+- `deepseek-v4-pro-plan-flash-build`: Strong deterministic quality and a mostly complete backend/domain implementation. The main limiter is a serious frontend runtime integration bug between the generated Orval client and custom fetch mutator, plus incomplete validation for over-capacity availability requests.
+- `qwen3.6-plus-high-plan-medium-build`: Strong deterministic quality and a solid backend/domain slice, but the frontend API integration is materially broken. Generated client types, custom fetch runtime behavior, OpenAPI POST metadata, and CORS/proxy setup do not align, so the SPA falls short of being fully runnable.
 
 ## Totals
 
