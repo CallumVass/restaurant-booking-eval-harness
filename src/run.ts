@@ -230,8 +230,7 @@ async function runVariant(input: {
           pipelineStatus: getPipelineStatus(pipelineState),
           pipelineTelemetry,
           checks,
-          fileTree,
-          sourceSnapshot: await sourceSnapshot(workspace)
+          fileTree
         });
         return {
           variant: input.variant.id,
@@ -321,8 +320,7 @@ async function runVariant(input: {
       plan,
       pipelineTelemetry,
       checks,
-      fileTree,
-      sourceSnapshot: await sourceSnapshot(workspace)
+      fileTree
     });
     const telemetry = summarizeTelemetry(pipelineState, judgeResult.telemetry);
     log(`${input.variant.id}: judge completed`);
@@ -731,6 +729,12 @@ async function judgeRun(
     "Set typedOpenApiClientUsed to true only if the frontend uses generated types/client code from OpenAPI through Orval or an equivalent generator.",
     "Score planQualityScore based on specificity, risk awareness, vertical slicing, testing strategy, and coverage of requested frontend/client technology.",
     "Score planAdherenceScore based on how closely the implementation follows the saved plan, allowing justified deviations when documented.",
+    "You are running in the submitted solution workspace. Before producing final structured output, inspect the codebase with filesystem/search tools as needed. Do not rely only on fileTree or deterministic check text for source-level claims.",
+    "Separate source evidence from test evidence. If source implements a requirement but tests do not assert it, score implementation correctness separately from regression coverage instead of calling the requirement missing.",
+    "Do not turn optional best-practice preferences into missing requirements. Penalize them proportionally under maintainability, UI/UX, typed-client quality, or scenario-specific polish unless the task explicitly required them.",
+    "Avoid speculative findings such as 'likely' or 'appears' unless you label them as unverified risk. If the file snapshot is incomplete but the file tree shows relevant files, do not claim absence; say the evidence provided was insufficient.",
+    "Make majorIssues and missingRequirements evidence-backed. Prefer mentioning the concrete source/test behavior that supports the finding, not only the inferred consequence.",
+    "Inspect relevant test and implementation files directly before setting boundaryTestsPresent or declaring evidence unavailable. Do not say source content was not provided unless you attempted to inspect it and it was absent or unreadable.",
     ...scenarioInstructions,
     "Penalize missing runnable code, failed deterministic checks, weak conflict prevention, no boundary tests, over-engineering, hidden implementation gaps, formatting drift, lint failures, dead code, generic UI, untyped fetch wrappers where typed generation was requested, weak plans, and poor plan adherence.",
     "Reward clean architecture when proportionate, pure domain logic, explicit Result-style business errors, strong responsive UI, generated typed API clients, TanStack Query integration, and useful React/API integration.",
@@ -871,21 +875,6 @@ function telemetryFromAssistantInfo(info: any): TokenTelemetry & { model?: strin
   };
 }
 
-async function sourceSnapshot(workspace: string): Promise<Record<string, string>> {
-  const candidates = (await listFiles(workspace, 2000)).filter((file) => {
-    if (file.includes("node_modules/") || file.includes("bin/") || file.includes("obj/")) return false;
-    return /\.(cs|csproj|ts|tsx|js|jsx|json|md)$/.test(file);
-  });
-
-  const selected = candidates.slice(0, 80);
-  const snapshot: Record<string, string> = {};
-  for (const file of selected) {
-    const content = await readFile(path.join(workspace, file), "utf8");
-    snapshot[file] = content.length > 12_000 ? `${content.slice(0, 12_000)}\n...[truncated]` : content;
-  }
-  return snapshot;
-}
-
 async function listFiles(directory: string, limit: number): Promise<string[]> {
   const files: string[] = [];
 
@@ -1005,7 +994,9 @@ function judgeInstructionsForScenario(scenario: string, hasBaseline: boolean): s
 
   if (scenario === "1") {
     instructions.push(
-      "For scenario 1, score Tailwind/shadcn usage, TanStack usage, and OpenAPI-generated typed client usage from source evidence, not claims."
+      "For scenario 1, scenarioScores must use exactly these names: tailwindShadcnUsage, tanstackUsage, openApiTypedClientUsage, bookingConflictRules, responsivePolish, deterministicQuality.",
+      "Score Tailwind/shadcn usage, TanStack usage, and OpenAPI-generated typed client usage from source evidence, not claims.",
+      "For OpenAPI client generation, give credit when Orval or an equivalent generator consumes an OpenAPI document that is present in the solution, matches the current backend endpoints/request/response shapes from source evidence, and generation is reproducible from source. Do not treat absence of live-backend OpenAPI fetching during deterministic build as a missing requirement unless the task explicitly requires that exact workflow; penalize drift only when the OpenAPI document does not represent the current backend API."
     );
   }
 
@@ -1019,11 +1010,13 @@ function judgeInstructionsForScenario(scenario: string, hasBaseline: boolean): s
 
   if (scenario === "2") {
     instructions.push(
-      "For scenario 2, include scenarioScores entries for authCorrectness, authSecurity, bookingOwnership, httpOpenApiCoverage, frontendFlowCoverage, generatedQueryIntegration, brownfieldIntegration, and regressionCoverage.",
+      "For scenario 2, scenarioScores must use exactly these names: authCorrectness, authSecurity, bookingOwnership, httpOpenApiCoverage, frontendFlowCoverage, generatedQueryIntegration, brownfieldIntegration, regressionCoverage.",
       "Score authCorrectness low if unauthenticated users can create bookings, auth endpoints are not usable from the SPA, or booking history is not tied to authenticated users.",
       "Score authSecurity low if cookie auth is used without CSRF protection for state-changing requests, auth tokens are stored in localStorage/sessionStorage, or credentialed CORS is configured carelessly.",
       "Score bookingOwnership low if users can view another user's booking history or bookings are not associated with the authenticated creator.",
       "Score httpOpenApiCoverage low if backend tests only cover domain functions and do not exercise HTTP endpoints, OpenAPI availability, and error mapping.",
+      "For OpenAPI auth coverage, give credit for auth endpoints, protected-operation 401 responses, generated client support, and documented CSRF headers when the OpenAPI document matches the current backend source. Do not treat absence of a formal cookie-auth securitySchemes entry as a missing requirement unless the task explicitly requested security scheme metadata; mention it only as a minor documentation/polish gap.",
+      "Distinguish live backend OpenAPI output from checked-in frontend OpenAPI specs. A checked-in spec can satisfy generated-client workflow evidence, while live backend OpenAPI tests should be scored based on what the backend actually serves and what tests assert.",
       "Score frontendFlowCoverage low if there are no frontend UI/integration tests for booking forms, auth flows, API errors, confirmations, and booking history.",
       "Score generatedQueryIntegration low if the frontend bypasses the generated OpenAPI client, uses stringly typed fetch wrappers, or keeps avoidable manual TanStack Query wrappers where generated query hooks are available.",
       "Score regressionCoverage low if there are no tests for auth boundaries, user-scoped booking history, and the carried-over Scenario 1 gaps requested in the task."

@@ -579,42 +579,42 @@
     },
     "finish": "tool-calls",
     "structured": {
-      "overallScore": 72,
-      "requirementCoverage": 70,
-      "backendScore": 84,
-      "frontendScore": 50,
-      "correctnessScore": 62,
+      "overallScore": 76,
+      "requirementCoverage": 80,
+      "backendScore": 83,
+      "frontendScore": 64,
+      "correctnessScore": 68,
       "testQualityScore": 82,
-      "maintainabilityScore": 78,
-      "architectureScore": 78,
-      "functionalCoreScore": 70,
-      "uiUxScore": 66,
-      "typedClientScore": 58,
-      "planQualityScore": 91,
+      "maintainabilityScore": 80,
+      "architectureScore": 84,
+      "functionalCoreScore": 80,
+      "uiUxScore": 74,
+      "typedClientScore": 60,
+      "planQualityScore": 88,
       "planAdherenceScore": 78,
       "scenarioScores": [
         {
-          "name": "backendBookingRules",
-          "score": 84
-        },
-        {
-          "name": "frontendRuntimeIntegration",
-          "score": 42
-        },
-        {
           "name": "tailwindShadcnUsage",
-          "score": 78
+          "score": 90
         },
         {
           "name": "tanstackUsage",
-          "score": 82
+          "score": 88
         },
         {
           "name": "openApiTypedClientUsage",
-          "score": 58
+          "score": 62
         },
         {
-          "name": "deterministicQualityGates",
+          "name": "bookingConflictRules",
+          "score": 82
+        },
+        {
+          "name": "responsivePolish",
+          "score": 76
+        },
+        {
+          "name": "deterministicQuality",
           "score": 100
         }
       ],
@@ -631,33 +631,34 @@
       "tanstackUsed": true,
       "typedOpenApiClientUsed": true,
       "boundaryTestsPresent": true,
-      "runnable": true,
+      "runnable": false,
       "majorIssues": [
-        "Generated Orval client types expect responses shaped as { data, status, headers }, but customFetch returns only raw JSON/text, so frontend code using restaurants?.data, slots?.data, and bookings?.data will not receive the expected data at runtime.",
-        "Create booking success handling expects response.headers.location, but customFetch does not return headers, so confirmation IDs and response handling are incorrect.",
-        "Available-slots endpoint returns an empty list for unknown restaurants, invalid party size, and past/invalid dates instead of explicit validation errors.",
-        "Conflict prevention is split between BookRestaurant and AddBooking without an atomic store operation, leaving a race window under concurrent requests."
+        "Frontend API runtime shape is broken: Orval generated hooks are typed as returning objects with `data/status/headers` in `frontend/src/api/generated.ts`, but `frontend/src/api/custom-fetch.ts` returns only raw JSON/text, while components read `restaurants?.data`, `slots?.data`, and `bookings?.data`. This means lists and slots will not render correctly despite passing typecheck.",
+        "The browser SPA is configured to call `http://localhost:5053` from `frontend/src/api/custom-fetch.ts`, but backend `Program.cs` has no CORS policy and `vite.config.ts` has no proxy, so normal Vite development API calls are blocked cross-origin.",
+        "The checked-in OpenAPI document does not accurately represent booking creation: `frontend/openapi/openapi.json` lists `POST /api/bookings` as `200` with no response schema, while `BookingEndpoints.cs` returns `201 Created` with `BookingResponse`. This propagates to generated `createBookingResponse` as `void`, breaking typed confirmation behavior.",
+        "Available-slots validation is incomplete: `RestaurantEndpoints.cs` always returns `200 OK`, and `BookingService.GetAvailableSlots` returns empty for unknown restaurants and accepts non-positive party sizes instead of explicit validation errors."
       ],
       "missingRequirements": [
-        "Frontend API integration is not correctly wired despite passing typecheck due to an incompatible custom Orval mutator.",
-        "Available slots API does not explicitly validate/report invalid party size, invalid date, or unknown restaurant.",
-        "OpenAPI client generation is documented and configured, but not part of build/prebuild, so reproducibility is a manual step.",
-        "UI uses shadcn components but has several raw Tailwind status colors, custom loading skeletons, and form layout patterns rather than consistently using shadcn form primitives."
+        "Integrated frontend booking flow is not functional against the backend because of CORS plus the generated-client/custom-fetch response mismatch.",
+        "OpenAPI document for `POST /api/bookings` is not usable/accurate for current backend response shape.",
+        "Available-slots endpoint does not explicitly validate invalid party size or unknown restaurant cases.",
+        "Typed-client generation is reproducible via `npm run generate:api`, but it is not wired into `build` and the generated output is inconsistent with the runtime fetcher."
       ],
       "notableStrengths": [
-        "All mandatory deterministic commands exited 0, including warning-free backend build, tests, formatting, frontend install/build/typecheck/lint/format, and knip dead-code check.",
-        "Backend includes Result-style domain errors, typed Minimal API endpoints, in-memory persistence, OpenAPI/Scalar, and focused booking conflict logic.",
-        "Backend test suite includes 20 tests covering invalid party sizes, invalid dates/times, unknown restaurants, overlaps, exact boundary conflicts, available slots, and all tables booked.",
-        "Frontend includes Tailwind CSS, shadcn/ui source components, TanStack Query provider/hooks, Orval configuration, generated API code, restaurant list, booking form, confirmation, and booking list."
+        "All mandatory deterministic checks exited 0, including warning-free backend build, backend tests, backend format, frontend install/build/typecheck/lint/format, and dedicated knip dead-code check.",
+        "Backend has a clear lightweight domain/API split with Result-style business errors and in-memory persistence.",
+        "Boundary test evidence covers invalid party sizes, past/current/out-of-hours dates, unknown restaurant, direct overlap, partial overlap, non-overlap, exact-touch overlap helper, and all-tables-booked conflict cases.",
+        "Frontend source uses Tailwind/shadcn-style components, responsive grids, TanStack Query hooks, loading/error states, and Orval-generated React Query code."
       ],
       "scenarioFindings": [
-        "tailwindShadcnUsage: components.json and shadcn-style ui components are present, with Tailwind v4 CSS and Card/Button/Input/Select/Table/Badge usage; polish is decent but some raw colors and non-shadcn form/loading patterns remain.",
-        "tanstackUsage: QueryClientProvider is configured and generated hooks use useQuery/useMutation; mutation invalidates bookings, but runtime data access is broken by the customFetch response shape.",
-        "openApiTypedClientUsage: src/api/generated.ts is generated by Orval v8.8.1 from frontend/openapi/openapi.json, but the custom mutator violates generated response types.",
-        "backendBookingRules: BookRestaurant checks party size, future/opening hours, restaurant existence, table capacity, and overlaps; endpoint persistence is non-atomic.",
-        "deterministicQualityGates: all supplied backend and frontend checks exited 0; knip emitted a configuration hint on stderr but exit code was 0."
+        "tailwindShadcnUsage: `components.json`, Tailwind v4 CSS, and `src/components/ui/*` are present and used throughout feature components.",
+        "tanstackUsage: `QueryClientProvider`, generated `useQuery`/`useMutation` hooks, invalidation, and React Query devtools are used.",
+        "openApiTypedClientUsage: Orval consumes `frontend/openapi/openapi.json` and generates hooks, but POST response drift and custom fetch response wrapping make the typed client unreliable at runtime.",
+        "bookingConflictRules: domain overlap detection is tested and generally correct for a single process, but endpoint check/add is not atomic and slot endpoint validation is weaker.",
+        "responsivePolish: UI uses card grids, badges, responsive columns, sticky header, skeleton states, and accessible labels, but the frontend data display flow is runtime-broken.",
+        "deterministicQuality: every provided deterministic command exited 0."
       ],
-      "summary": "Strong deterministic results and a solid backend/test core, but the frontend's generated-client integration has a serious runtime shape mismatch that likely prevents restaurant lists, slots, bookings, and confirmations from working correctly. The implementation substantially follows the plan, but falls short on robust frontend correctness and explicit validation for the slots endpoint."
+      "summary": "Strong deterministic quality and a good backend/domain/testing slice, but the submitted system has a serious frontend integration defect: generated client types, custom fetch behavior, and component expectations disagree, and browser CORS is not configured. The backend booking conflict logic and boundary tests are good for an eval, though slot validation and OpenAPI accuracy are incomplete."
     },
     "id": "msg_dc5ffbd57001VVXBGKMO7QMoFn",
     "sessionID": "ses_23a00e2fbffemTOuKhsgjcP8QL"

@@ -589,39 +589,39 @@
     },
     "finish": "tool-calls",
     "structured": {
-      "overallScore": 88,
-      "requirementCoverage": 89,
+      "overallScore": 76,
+      "requirementCoverage": 78,
       "backendScore": 91,
-      "frontendScore": 84,
-      "correctnessScore": 89,
-      "testQualityScore": 82,
-      "maintainabilityScore": 85,
-      "architectureScore": 87,
-      "functionalCoreScore": 89,
-      "uiUxScore": 78,
-      "typedClientScore": 88,
-      "planQualityScore": 94,
-      "planAdherenceScore": 84,
+      "frontendScore": 62,
+      "correctnessScore": 68,
+      "testQualityScore": 78,
+      "maintainabilityScore": 82,
+      "architectureScore": 84,
+      "functionalCoreScore": 84,
+      "uiUxScore": 72,
+      "typedClientScore": 70,
+      "planQualityScore": 92,
+      "planAdherenceScore": 82,
       "scenarioScores": [
         {
           "name": "tailwindShadcnUsage",
-          "score": 88
+          "score": 90
         },
         {
           "name": "tanstackUsage",
-          "score": 86
+          "score": 85
         },
         {
           "name": "openApiTypedClientUsage",
-          "score": 90
+          "score": 70
         },
         {
-          "name": "bookingConflictPrevention",
-          "score": 90
+          "name": "bookingConflictRules",
+          "score": 88
         },
         {
-          "name": "frontendPolish",
-          "score": 78
+          "name": "responsivePolish",
+          "score": 72
         },
         {
           "name": "deterministicQuality",
@@ -643,29 +643,28 @@
       "boundaryTestsPresent": true,
       "runnable": true,
       "majorIssues": [
-        "No source evidence of API-level tests for unknown restaurants or HTTP error mapping.",
-        "Frontend mostly uses basic form controls and some raw radio-button markup rather than richer shadcn form/select/calendar composition.",
-        "Frontend wraps generated Orval functions in manual TanStack Query hooks instead of using the generated React Query hooks directly."
+        "Frontend API integration is broken by source evidence: `frontend/src/api/mutator.ts` returns raw JSON, while `frontend/src/lib/api.ts` expects Orval responses shaped as `{ data, status }`. As a result `fetchRestaurants` returns `[]`, `fetchRestaurant` throws because `response.status` is undefined, and booking submission treats successful raw booking responses as failures.",
+        "The React pages exist for restaurant list, booking form, confirmation, and bookings, but the API wrapper mismatch prevents those requirements from working correctly at runtime against the backend."
       ],
       "missingRequirements": [
-        "Unknown restaurant boundary case is implemented but not covered by tests.",
-        "Availability for party sizes above table capacity returns an empty slot list rather than an explicit validation error."
+        "Functional frontend display of backend restaurant data is not satisfied because `fetchRestaurants` reads `response.data` from a raw array response and falls back to an empty list.",
+        "Functional booking form/confirmation flow is not satisfied because restaurant detail and create-booking wrappers rely on nonexistent `status` fields from the custom mutator response."
       ],
       "notableStrengths": [
-        "All mandatory deterministic checks exited 0, including warning-free backend build, backend tests, frontend build/typecheck/lint/format, and knip dead-code check.",
-        "Orval-generated client is present and build runs `generate:api`; generated code imports TanStack Query and exposes typed API functions/hooks.",
-        "Domain tests cover party size zero/negative/exceeds max, past date, outside-hours times, and overlapping/non-overlapping booking conflicts.",
-        "Backend separates pure domain validation/conflict/availability logic from thin API endpoints and uses Result-style business errors."
+        "All mandatory deterministic checks exited 0, including warning-free backend build, backend tests, backend format verification, frontend install/build/typecheck/lint/format, and dedicated `knip` dead-code check.",
+        "Backend uses .NET 10-style minimal API with in-memory repositories, OpenAPI mapping, pure domain functions, and explicit `Result<T>` business errors.",
+        "Domain tests cover invalid party sizes, past dates, invalid times, overlapping same-table reservations, non-overlap cases, and availability scenarios.",
+        "Frontend includes Tailwind CSS, shadcn-style component primitives, TanStack Query setup, Orval configuration, a present OpenAPI document, and generated typed client code."
       ],
       "scenarioFindings": [
-        "tailwindShadcnUsage: `components.json` uses shadcn base-nova with Tailwind v4 CSS variables, and pages import shadcn Card/Button/Input/Badge/Skeleton/Sonner components.",
-        "tanstackUsage: `QueryClientProvider` is configured and pages use `useQuery`, `useMutation`, invalidation, and query keys for restaurants, availability, and bookings.",
-        "openApiTypedClientUsage: `orval.config.ts` uses local `openapi.json`, `client: react-query`, and generates `src/api/booking-api.ts`; frontend imports generated types/functions from that file.",
-        "bookingConflictPrevention: API selects a suitable table only when `ConflictDetector.HasConflict` is false and validator repeats conflict detection before persistence.",
-        "frontendPolish: responsive grids, skeletons, badges, toasts, empty states, and accessible radiogroup are present, but the layout remains relatively standard and form composition is basic.",
-        "deterministicQuality: all supplied backend and frontend deterministic commands passed with exit code 0."
+        "tailwindShadcnUsage: `components.json`, Tailwind v4 CSS theme tokens, and shadcn-style `Button`, `Card`, `Input`, `Label`, `Skeleton`, `Badge`, `Separator`, and `Sonner` components are present and used.",
+        "tanstackUsage: `QueryClientProvider`, `useQuery`, and `useMutation` are used for restaurants, availability, bookings, and booking submission.",
+        "openApiTypedClientUsage: Orval consumes `frontend/openapi.json` and generates `src/api/booking-api.ts`; the OpenAPI paths and DTO shapes match the backend source, but the custom mutator response shape breaks generated client usage.",
+        "bookingConflictRules: `ConflictDetector.HasConflict` rejects same-table overlapping intervals, and `CreateBooking` searches suitable tables before creating bookings; tests assert overlap and non-overlap cases.",
+        "responsivePolish: UI uses responsive grids, cards, loading skeletons, empty/error states, labels, focus styling, a radio-group time selector, and print styling, but the layout is still fairly conventional and runtime data flow is broken.",
+        "deterministicQuality: every provided deterministic command exited 0, including the dedicated dead-code command."
       ],
-      "summary": "Strong runnable implementation with all deterministic checks passing, solid backend domain logic/tests, and real React/Tailwind/shadcn/TanStack/Orval integration. Main deductions are limited API-level test coverage, modest UI sophistication, and partial deviation from the plan's richer shadcn/generated-hook usage."
+      "summary": "Strong deterministic hygiene and a solid backend/domain implementation are offset by a critical frontend runtime integration bug between the Orval-generated response types and the custom fetch mutator. Source evidence supports Tailwind/shadcn, TanStack Query, OpenAPI client generation, conflict prevention, and boundary tests, but the SPA cannot correctly consume backend data as written."
     },
     "id": "msg_dc62350d30012uEYDFyzahTrNk",
     "sessionID": "ses_239dcfb8dffeq3KnazUM0ZbEl1"

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc --noEmit",
+    "rejudge": "tsx src/rejudge.ts",
     "start": "tsx src/run.ts",
     "skills:install": "bash scripts/install-skills.sh"
   },

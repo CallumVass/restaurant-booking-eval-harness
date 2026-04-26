@@ -97,20 +97,44 @@ const evals = [
   {
     slug: "s1-deepseek-flash",
     scenario: "Scenario 1",
-    rank: 2,
+    rank: 4,
     path: "run-archive/scenario-1/1777144375955-scenario-1-deepseek-v4-pro-plan-flash-build-attempt-1/result.json"
   },
   {
     slug: "s1-mimo-v25",
     scenario: "Scenario 1",
-    rank: 3,
+    rank: 2,
     path: "run-archive/scenario-1/1777143448989-scenario-1-mimo-v2.5-pro-plan-mimo-v2.5-build-attempt-1/result.json"
   },
   {
     slug: "s1-qwen36",
     scenario: "Scenario 1",
-    rank: 4,
+    rank: 3,
     path: "run-archive/scenario-1/1777141829210-scenario-1-qwen3.6-plus-high-plan-medium-build-attempt-1/result.json"
+  },
+  {
+    slug: "s2-openai-gpt-55",
+    scenario: "Scenario 2",
+    rank: 1,
+    path: "run-archive/scenario-2/1777186150651-scenario-2-openai-gpt-5.5-plan-build-attempt-1/result.json"
+  },
+  {
+    slug: "s2-deepseek-flash",
+    scenario: "Scenario 2",
+    rank: 2,
+    path: "run-archive/scenario-2/1777190465750-scenario-2-deepseek-v4-pro-plan-flash-build-attempt-1/result.json"
+  },
+  {
+    slug: "s2-mimo-v25",
+    scenario: "Scenario 2",
+    rank: 3,
+    path: "run-archive/scenario-2/1777189331664-scenario-2-mimo-v2.5-pro-plan-mimo-v2.5-build-attempt-1/result.json"
+  },
+  {
+    slug: "s2-qwen36",
+    scenario: "Scenario 2",
+    rank: 4,
+    path: "run-archive/scenario-2/1777186871188-scenario-2-qwen3.6-plus-high-plan-medium-build-attempt-1/result.json"
   }
 ];
 
