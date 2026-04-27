@@ -558,7 +558,7 @@ function renderStages(variant: ModelVariant): PipelineStage[] {
     stages.push(singleBuildStage(planMode));
   } else {
     if (planMode === "big") stages.push(sliceNormalizerStage());
-    for (let index = 1; index <= maxSliceSlots; index += 1) stages.push(sliceBuildStage(index));
+    stages.push(dynamicSliceExpansionStage());
     stages.push(finalIntegrationStage());
   }
 
@@ -676,30 +676,41 @@ function sliceNormalizerStage(): PipelineStage {
   };
 }
 
-function sliceBuildStage(index: number): PipelineStage {
-  const slot = String(index).padStart(2, "0");
+function dynamicSliceExpansionStage(): PipelineStage {
   return {
-    id: `build-slice-${slot}`,
+    id: "build-slices",
     type: "stage",
     agent: "build",
     completion: "tool_signal",
     signals: ["complete"],
     fork: false,
     skills: commonSkills(),
-    prompt: [
-      `Implement slice slot ${slot}.`,
-      "Read .lattice/plans/slices/manifest.json first.",
-      `Find the manifest slice with index ${index}. If no such slice exists, write .lattice/summaries/slice-${slot}-unused.md explaining that this slot is unused, then immediately call lattice_signal(status: \"complete\").`,
-      "If the slice exists, read the slice file referenced by its `file` field and treat that file as the slice contract.",
-      "Also inspect the current codebase and any previous .lattice/summaries/slice-*.md files before editing.",
-      "Work only on this slice's acceptance criteria and preserve earlier behavior. Do not implement later manifest slices early unless required to keep the current slice coherent.",
-      "If a slice contract conflicts with the current codebase or scenario goal, choose the safer implementation and document the deviation in the slice summary.",
-      "Use TDD where practical for this slice. Add or update tests required by the slice contract.",
-      "Run the slice's verification commands, plus any directly relevant build/test commands for touched areas.",
-      `Write .lattice/summaries/slice-${slot}-<slice-id>.md with changes made, checks run, known gaps, and handoff notes.`,
-      "Do not claim unrelated future slices are done.",
-      "Call lattice_signal(status: \"complete\") only when this slice is implemented, verified, and summarized."
-    ].join("\n")
+    expand: {
+      from: ".lattice/plans/slices/manifest.json",
+      arrayPath: "slices",
+      maxItems: maxSliceSlots,
+      template: {
+        id: "build-slice-{{index}}-{{id}}",
+        type: "stage",
+        agent: "build",
+        completion: "tool_signal",
+        signals: ["complete"],
+        fork: false,
+        skills: commonSkills(),
+        prompt: [
+          "Implement slice {{index}}: {{title}}.",
+          "Read {{file}} and treat it as the slice contract.",
+          "Also inspect the current codebase and any previous .lattice/summaries/slice-*.md files before editing.",
+          "Work only on this slice's acceptance criteria and preserve earlier behavior. Do not implement later manifest slices early unless required to keep the current slice coherent.",
+          "If a slice contract conflicts with the current codebase or scenario goal, choose the safer implementation and document the deviation in the slice summary.",
+          "Use TDD where practical for this slice. Add or update tests required by the slice contract.",
+          "Run the slice's verification commands, plus any directly relevant build/test commands for touched areas.",
+          "Write .lattice/summaries/slice-{{index}}-{{id}}.md with changes made, checks run, known gaps, and handoff notes.",
+          "Do not claim unrelated future slices are done.",
+          "Call lattice_signal(status: \"complete\") only when this slice is implemented, verified, and summarized."
+        ].join("\n")
+      }
+    }
   };
 }
 

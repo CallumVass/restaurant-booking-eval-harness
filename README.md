@@ -55,7 +55,7 @@ The current default matrix is intentionally small. It reflects prior exploratory
 
 The `review` field in `models.json` is optional. When a variant omits `review`, the generated workspace pipeline excludes the `plan-adherence-review` stage. When present, the review stage is included and uses the configured review model/options.
 
-`plan.mode` and `build.mode` are optional. Defaults preserve the original behavior: `plan.mode: "big"` and `build.mode: "single"`. A sliced build keeps the big plan available, normalizes it into a task-specific `.lattice/plans/slices/manifest.json` plus referenced slice files, runs generic numbered slice slots in fresh subagent contexts, then runs a final integration stage before optional review. The slice names, count, order, and acceptance criteria come from the generated plan, not from restaurant-specific harness phases.
+`plan.mode` and `build.mode` are optional. Defaults preserve the original behavior: `plan.mode: "big"` and `build.mode: "single"`. A sliced build keeps the big plan available, normalizes it into a task-specific `.lattice/plans/slices/manifest.json` plus referenced slice files, then relies on Lattice dynamic stage expansion to create exactly one fresh-context build stage per manifest slice before final integration and optional review. The slice names, count, order, and acceptance criteria come from the generated plan, not from restaurant-specific harness phases.
 
 ## Review Strategy
 
