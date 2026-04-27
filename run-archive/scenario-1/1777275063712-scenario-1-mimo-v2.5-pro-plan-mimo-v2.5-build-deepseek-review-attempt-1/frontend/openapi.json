@@ -1,0 +1,231 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "RestaurantBooking.Api | v1",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5099/"
+    }
+  ],
+  "paths": {
+    "/api/restaurants": {
+      "get": {
+        "tags": ["Restaurants"],
+        "operationId": "ListRestaurants",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Restaurant" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/restaurants/{id}": {
+      "get": {
+        "tags": ["Restaurants"],
+        "operationId": "GetRestaurant",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Restaurant" }
+              }
+            }
+          },
+          "404": { "description": "Not Found" }
+        }
+      }
+    },
+    "/api/restaurants/{id}/availability": {
+      "get": {
+        "tags": ["Availability"],
+        "operationId": "GetAvailability",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string", "format": "date" }
+          },
+          {
+            "name": "partySize",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer", "format": "int32" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/AvailableSlot" }
+                }
+              }
+            }
+          },
+          "400": { "description": "Bad Request" },
+          "404": { "description": "Not Found" }
+        }
+      }
+    },
+    "/api/bookings": {
+      "post": {
+        "tags": ["Bookings"],
+        "operationId": "CreateBooking",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/BookingRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Booking" }
+              }
+            }
+          },
+          "400": { "description": "Bad Request" }
+        }
+      },
+      "get": {
+        "tags": ["Bookings"],
+        "operationId": "ListBookings",
+        "parameters": [
+          {
+            "name": "restaurantId",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Booking" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bookings/{id}": {
+      "get": {
+        "tags": ["Bookings"],
+        "operationId": "GetBooking",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Booking" }
+              }
+            }
+          },
+          "404": { "description": "Not Found" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Restaurant": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "address": { "type": "string" },
+          "cuisineType": { "type": "string" },
+          "openingTime": { "type": "string" },
+          "closingTime": { "type": "string" }
+        }
+      },
+      "AvailableSlot": {
+        "type": "object",
+        "properties": {
+          "slot": { "$ref": "#/components/schemas/TimeSlot" },
+          "tableId": { "type": "string" },
+          "tableLocation": { "type": "string" },
+          "tableSeats": { "type": "integer" }
+        }
+      },
+      "TimeSlot": {
+        "type": "object",
+        "properties": {
+          "startTime": { "type": "string" },
+          "endTime": { "type": "string" }
+        }
+      },
+      "BookingRequest": {
+        "type": "object",
+        "required": ["restaurantId", "customerName", "partySize", "date", "startTime", "endTime"],
+        "properties": {
+          "restaurantId": { "type": "string" },
+          "customerName": { "type": "string" },
+          "partySize": { "type": "integer" },
+          "date": { "type": "string", "format": "date" },
+          "startTime": { "type": "string" },
+          "endTime": { "type": "string" }
+        }
+      },
+      "Booking": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "restaurantId": { "type": "string" },
+          "tableId": { "type": "string" },
+          "customerName": { "type": "string" },
+          "partySize": { "type": "integer" },
+          "date": { "type": "string" },
+          "startTime": { "type": "string" },
+          "endTime": { "type": "string" },
+          "createdAt": { "type": "string" }
+        }
+      }
+    }
+  }
+}

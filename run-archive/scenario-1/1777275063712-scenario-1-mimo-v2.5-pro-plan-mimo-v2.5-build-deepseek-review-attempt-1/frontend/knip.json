@@ -1,0 +1,4 @@
+{
+  "ignore": ["src/api/**", "src/components/ui/**", "src/lib/**", "orval.config.ts"],
+  "ignoreDependencies": ["@base-ui/react", "class-variance-authority", "clsx", "tailwind-merge", "next-themes", "lucide-react", "@hookform/resolvers"]
+}
