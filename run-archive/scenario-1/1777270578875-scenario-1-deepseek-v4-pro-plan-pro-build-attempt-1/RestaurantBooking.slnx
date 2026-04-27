@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/RestaurantBooking.Domain/RestaurantBooking.Domain.csproj" />
+    <Project Path="src/RestaurantBooking.Web/RestaurantBooking.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/RestaurantBooking.Tests/RestaurantBooking.Tests.csproj" />
+  </Folder>
+</Solution>
