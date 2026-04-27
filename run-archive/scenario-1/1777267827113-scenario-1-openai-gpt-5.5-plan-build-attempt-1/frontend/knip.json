@@ -1,0 +1,6 @@
+{
+  "entry": ["orval.config.ts"],
+  "project": ["src/**/*.{ts,tsx}", "*.{ts,js}"],
+  "ignore": ["src/api/generated/**"],
+  "ignoreDependencies": ["tailwindcss"]
+}
