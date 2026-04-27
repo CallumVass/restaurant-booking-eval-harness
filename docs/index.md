@@ -15,10 +15,10 @@ Scenario 1 has completed for the current four-variant matrix. All variants passe
 
 | Rank | Variant | Review | Score | Status | Checks | Cost |
 |---:|---|---|---:|---|---|---:|
-| 1 | `openai-gpt-5.5-plan-build` | none | 91 | completed | pass | ~$3.54 |
-| 2 | `mimo-v2.5-pro-plan-mimo-v2.5-build-deepseek-review` | DeepSeek V4 Pro | 84 | judged after review rejection | pass | $1.62 |
-| 3 | `deepseek-v4-pro-plan-pro-build` | none | 82 | completed | pass | $0.80 |
-| 4 | `deepseek-v4-pro-plan-flash-build-mimo-review` | Mimo v2.5 Pro | 78 | completed, review approved | pass | $0.65 |
+| 1 | [`openai-gpt-5.5-plan-build`](./details#openai-gpt-55-plan-build) | none | 91 | completed | pass | ~$3.54 |
+| 2 | [`mimo-v2.5-pro-plan-mimo-v2.5-build-deepseek-review`](./details#mimo-v25-pro-plan-mimo-v25-build-deepseek-review) | DeepSeek V4 Pro | 84 | judged after review rejection | pass | $1.62 |
+| 3 | [`deepseek-v4-pro-plan-pro-build`](./details#deepseek-v4-pro-plan-pro-build) | none | 82 | completed | pass | $0.80 |
+| 4 | [`deepseek-v4-pro-plan-flash-build-mimo-review`](./details#deepseek-v4-pro-plan-flash-build-mimo-review) | Mimo v2.5 Pro | 78 | completed, review approved | pass | $0.65 |
 
 ## Takeaways
 
