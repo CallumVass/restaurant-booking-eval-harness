@@ -1,0 +1,6 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": ["src/main.tsx"],
+  "ignore": ["src/api/**", "orval.config.ts"],
+  "ignoreDependencies": ["orval", "tailwindcss"]
+}
