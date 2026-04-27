@@ -570,6 +570,10 @@ function commonSkills() {
   return { pinned: pinnedSkills, dynamic: false };
 }
 
+function dynamicSliceSkills() {
+  return { pinned: [], dynamic: true, max: 4 };
+}
+
 function deterministicPostHook() {
   return { commands: ["node .opencode/scripts/deterministic-checks.mjs"], maxRetries: 1 };
 }
@@ -696,7 +700,7 @@ function dynamicSliceExpansionStage(): PipelineStage {
         completion: "tool_signal",
         signals: ["complete"],
         fork: false,
-        skills: commonSkills(),
+        skills: dynamicSliceSkills(),
         prompt: [
           "Implement slice {{index}}: {{title}}.",
           "Read {{file}} and treat it as the slice contract.",
@@ -730,6 +734,10 @@ function finalIntegrationStage(): PipelineStage {
       "Perform the final integration pass for the requested task.",
       "Read .lattice/plans/restaurant-booking.md, .lattice/plans/slices/manifest.json, every referenced slice file, and every .lattice/summaries/slice-*.md file.",
       "Inspect the whole codebase for cross-slice integration bugs, stale generated clients or contracts, route/API mismatches, missing validations, broken error handling, weak UX where UI is required, dead code, and missing README instructions.",
+      "For user flows that cross backend, generated client, and UI, verify the actual values line up end-to-end. For example, if the backend returns selectable slots or IDs, the UI must submit those returned values without reformatting them into invalid requests.",
+      "For date/time or range-based business rules, verify both source and tests cover invalid values, past dates where invalid, outside-hours or out-of-range values, invalid granularity, edge non-overlap, and overlap/conflict behavior as required by the task.",
+      "For generated API clients, verify the generated paths, base URL/mutator configuration, request shapes, and response handling match the backend routes. Check for double prefixes, stale checked-in specs, or generated clients returning error responses as successful mutations.",
+      "For UI requirements, verify source evidence for required component systems and that the primary happy path and error paths are functionally connected, not just visually present.",
       "Ensure the final product satisfies the original scenario goal, not just the individual slice files.",
       "Run node .opencode/scripts/deterministic-checks.mjs or equivalent full verification commands and fix failures or warnings that should fail the requested quality bar.",
       "Do not call lattice_signal(status: \"complete\") until the full deterministic checker passes."

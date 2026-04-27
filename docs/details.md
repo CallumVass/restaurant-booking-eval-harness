@@ -98,27 +98,33 @@ const evals = [
     path: "run-archive/scenario-1/1777267827113-scenario-1-openai-gpt-5.5-plan-build-attempt-1/result.json"
   },
   {
-    id: "mimo-v25-pro-plan-mimo-v25-build-deepseek-review",
+    id: "deepseek-v4-pro-plan-flash-sliced-build-mimo-review-dynamic",
     scenario: "Scenario 1",
     rank: 2,
+    path: "run-archive/scenario-1/1777292815801-scenario-1-deepseek-v4-pro-plan-flash-sliced-build-mimo-review-attempt-1/result.json"
+  },
+  {
+    id: "mimo-v25-pro-plan-mimo-v25-build-deepseek-review",
+    scenario: "Scenario 1",
+    rank: 3,
     path: "run-archive/scenario-1/1777275063712-scenario-1-mimo-v2.5-pro-plan-mimo-v2.5-build-deepseek-review-attempt-1/result.json"
+  },
+  {
+    id: "deepseek-v4-pro-plan-flash-sliced-build-mimo-review-prior",
+    scenario: "Scenario 1",
+    rank: 4,
+    path: "run-archive/scenario-1/1777282060863-scenario-1-deepseek-v4-pro-plan-flash-sliced-build-mimo-review-attempt-1/result.json"
   },
   {
     id: "deepseek-v4-pro-plan-pro-build",
     scenario: "Scenario 1",
-    rank: 4,
+    rank: 5,
     path: "run-archive/scenario-1/1777270578875-scenario-1-deepseek-v4-pro-plan-pro-build-attempt-1/result.json"
-  },
-  {
-    id: "deepseek-v4-pro-plan-flash-sliced-build-mimo-review",
-    scenario: "Scenario 1",
-    rank: 3,
-    path: "run-archive/scenario-1/1777282060863-scenario-1-deepseek-v4-pro-plan-flash-sliced-build-mimo-review-attempt-1/result.json"
   },
   {
     id: "deepseek-v4-pro-plan-flash-build-mimo-review",
     scenario: "Scenario 1",
-    rank: 5,
+    rank: 6,
     path: "run-archive/scenario-1/1777268491502-scenario-1-deepseek-v4-pro-plan-flash-build-mimo-review-attempt-1/result.json"
   }
 ];
