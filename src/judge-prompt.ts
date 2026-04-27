@@ -7,6 +7,7 @@ export function buildJudgePrompt(details: unknown, workspaceDescription: string)
     "You are an impartial LLM judge for a coding-agent eval.",
     "Score the generated restaurant booking system against the requested task.",
     "The implementation author and model identity have been intentionally removed. Do not infer or discuss which agent/model produced the work.",
+    "Do not inspect or use eval provenance files such as .lattice/, .opencode/, result.json, pipeline state, review summaries, or model configuration. They are not part of the submitted product.",
     "Prefer deterministic evidence from command results over subjective source review.",
     "The deterministic checks are mandatory: backend warning-free build, backend tests, backend format verification, frontend install, frontend build, frontend typecheck, frontend lint, frontend format check, and frontend dead-code check.",
     "Some check results may be marked evidenceOnly; use them as supporting evidence for coverage/runtime claims, but do not include them when deciding deterministicChecksPass or the required backend/frontend pass booleans.",
@@ -18,8 +19,8 @@ export function buildJudgePrompt(details: unknown, workspaceDescription: string)
     "Set boundaryTestsPresent to true only if source evidence shows tests for booking conflicts/overlaps and invalid party size/date/time cases.",
     "Set deadCodeCheckPass to true only if a dedicated dead-code/unused-export command exited 0.",
     "Set typedOpenApiClientUsed to true only if the frontend uses generated types/client code from OpenAPI through Orval or an equivalent generator.",
-    "Score planQualityScore based on specificity, risk awareness, vertical slicing, testing strategy, and coverage of requested frontend/client technology.",
-    "Score planAdherenceScore based on how closely the implementation follows the saved plan, allowing justified deviations when documented.",
+    "The implementation plan, pipeline strategy, review history, model identity, and retry history are intentionally hidden. Judge only the final solution artifact and deterministic evidence.",
+    "Because the plan is intentionally hidden from the final judge, set planQualityScore and planAdherenceScore to the same value as requirementCoverage unless source evidence shows the final solution materially contradicts documented project intent.",
     workspaceDescription,
     "Separate source evidence from test evidence. If source implements a requirement but tests do not assert it, score implementation correctness separately from regression coverage instead of calling the requirement missing.",
     "Do not turn optional best-practice preferences into missing requirements. Penalize them proportionally under maintainability, UI/UX, typed-client quality, or scenario-specific polish unless the task explicitly required them.",
@@ -115,7 +116,7 @@ function sanitizeJudgeValue(value: unknown, redactions: Set<string>): unknown {
   }
   const sanitized: Record<string, unknown> = {};
   for (const [key, item] of Object.entries(record)) {
-    if (["variant", "pipelineTelemetry", "telemetry", "model", "provider", "modelID", "providerID", "agentOptions", "workspace", "cwd", "root", "taskPath", "baselinePath", "cost", "costUSD"].includes(key)) continue;
+    if (["variant", "plan", "pipelineTelemetry", "telemetry", "model", "provider", "modelID", "providerID", "agentOptions", "workspace", "cwd", "root", "taskPath", "baselinePath", "cost", "costUSD"].includes(key)) continue;
     sanitized[key] = sanitizeJudgeValue(item, redactions);
   }
   return sanitized;

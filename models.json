@@ -41,6 +41,30 @@
       }
     },
     {
+      "id": "deepseek-v4-pro-plan-flash-sliced-build-mimo-review",
+      "enabled": true,
+      "plan": {
+        "model": "opencode-go/deepseek-v4-pro",
+        "mode": "big",
+        "agentOptions": {
+          "reasoningEffort": "high"
+        }
+      },
+      "build": {
+        "model": "opencode-go/deepseek-v4-flash",
+        "mode": "sliced",
+        "agentOptions": {
+          "reasoningEffort": "medium"
+        }
+      },
+      "review": {
+        "model": "opencode-go/mimo-v2.5-pro",
+        "agentOptions": {
+          "reasoningEffort": "high"
+        }
+      }
+    },
+    {
       "id": "deepseek-v4-pro-plan-pro-build",
       "enabled": true,
       "plan": {

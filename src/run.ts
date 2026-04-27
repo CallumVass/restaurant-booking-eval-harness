@@ -10,6 +10,14 @@ type PhaseModel = {
   agentOptions?: Record<string, unknown>;
 };
 
+type PlanModel = PhaseModel & {
+  mode?: "big" | "sliced";
+};
+
+type BuildModel = PhaseModel & {
+  mode?: "single" | "sliced";
+};
+
 type ReviewModel = PhaseModel & {
   enabled?: boolean;
 };
@@ -18,10 +26,12 @@ type ModelVariant = {
   id: string;
   enabled?: boolean;
   reason?: string;
-  plan: PhaseModel;
-  build: PhaseModel;
+  plan: PlanModel;
+  build: BuildModel;
   review?: ReviewModel;
 };
+
+type PipelineStage = Record<string, unknown>;
 
 type ModelsConfig = {
   variants: ModelVariant[];
@@ -73,6 +83,19 @@ const root = process.cwd();
 const activeRunsDir = path.resolve(process.env.EVAL_RUNS_DIR ?? "/tmp/restaurant-booking-eval-harness-active");
 const archiveDir = path.resolve(process.env.EVAL_ARCHIVE_DIR ?? path.join(root, "run-archive"));
 const defaultTimeoutMs = 75 * 60 * 1000;
+const pinnedSkills = [
+  "tdd",
+  "clean-ddd-hexagonal",
+  "dotnet-backend-patterns",
+  "dotnet-10-csharp-14",
+  "vercel-react-best-practices",
+  "shadcn",
+  "tanstack-query-best-practices",
+  "orval",
+  "functional-core-imperative-shell",
+  "vertical-slice-architecture"
+];
+const maxSliceSlots = 8;
 const baselineExcludeNames = new Set([
   ".agents",
   ".git",
@@ -229,9 +252,7 @@ async function runVariant(input: {
           task: input.task,
           scenario: input.scenarioConfig,
           variant: input.variant,
-          plan,
-          pipelineCompleted: false,
-          pipelineStatus: getPipelineStatus(pipelineState),
+          plan: null,
           pipelineTelemetry,
           checks,
           fileTree
@@ -321,7 +342,7 @@ async function runVariant(input: {
       task: input.task,
       scenario: input.scenarioConfig,
       variant: input.variant,
-      plan,
+      plan: null,
       pipelineTelemetry,
       checks,
       fileTree
@@ -366,6 +387,8 @@ async function prepareWorkspace(workspace: string, variant: ModelVariant, skipSk
   await mkdir(path.join(workspace, ".opencode", "lattice-pipelines"), { recursive: true });
   await mkdir(path.join(workspace, ".opencode", "scripts"), { recursive: true });
   await mkdir(path.join(workspace, ".lattice", "plans"), { recursive: true });
+  await mkdir(path.join(workspace, ".lattice", "plans", "slices"), { recursive: true });
+  await mkdir(path.join(workspace, ".lattice", "summaries"), { recursive: true });
 
   const packageJsonPath = path.join(workspace, "package.json");
   if (!(await exists(packageJsonPath))) {
@@ -522,20 +545,218 @@ function makeOpenCodeConfig(variant: ModelVariant) {
 }
 
 async function renderPipelineTemplate(variant: ModelVariant): Promise<string> {
-  const template = await readFile(path.join(root, "templates", "lattice-pipeline.ts"), "utf8");
-  if (reviewModelForVariant(variant)) return template;
+  const stages = renderStages(variant);
+  return `export default ${JSON.stringify({ name: "restaurant-booking-eval", stages }, null, 2)};\n`;
+}
 
-  const reviewStageStart = template.indexOf('\n    {\n      id: "plan-adherence-review"');
-  if (reviewStageStart === -1) {
-    throw new Error("Could not find plan-adherence-review stage in pipeline template");
+function renderStages(variant: ModelVariant): PipelineStage[] {
+  const planMode = variant.plan.mode ?? "big";
+  const stages: PipelineStage[] = [planStage(planMode)];
+  const buildMode = variant.build.mode ?? "single";
+
+  if (buildMode === "single") {
+    stages.push(singleBuildStage(planMode));
+  } else {
+    if (planMode === "big") stages.push(sliceNormalizerStage());
+    for (let index = 1; index <= maxSliceSlots; index += 1) stages.push(sliceBuildStage(index));
+    stages.push(finalIntegrationStage());
   }
 
-  const stagesEnd = template.indexOf("\n  ]", reviewStageStart);
-  if (stagesEnd === -1) {
-    throw new Error("Could not find end of stages array in pipeline template");
-  }
+  if (reviewModelForVariant(variant)) stages.push(planAdherenceReviewStage(buildMode));
+  return stages;
+}
 
-  return template.slice(0, reviewStageStart) + template.slice(stagesEnd);
+function commonSkills() {
+  return { pinned: pinnedSkills, dynamic: false };
+}
+
+function deterministicPostHook() {
+  return { commands: ["node .opencode/scripts/deterministic-checks.mjs"], maxRetries: 1 };
+}
+
+function planStage(mode: "big" | "sliced"): PipelineStage {
+  const prompt =
+    mode === "sliced"
+      ? [
+          "Create an implementation plan for the restaurant booking eval as a small slice backlog.",
+          "Target completion is 30-60 minutes, so keep scope deliberate and avoid line-by-line implementation scripts.",
+          "Write a short overview to .lattice/plans/restaurant-booking.md.",
+          "Also create .lattice/plans/slices/manifest.json and one slice file per manifest entry under .lattice/plans/slices/.",
+          `The manifest must contain between 1 and ${maxSliceSlots} slices. Choose slice boundaries from the actual task and plan; do not force backend/frontend phases if the scenario is brownfield, security, refactoring, CLI, infrastructure, or anything else.`,
+          "Use this manifest shape: { \"slices\": [{ \"index\": 1, \"id\": \"short-kebab-id\", \"title\": \"Human title\", \"file\": \".lattice/plans/slices/01-short-kebab-id.md\" }] }.",
+          "Slice files must be numbered with their manifest index and include Goal, Acceptance Criteria, Required Tests, Verification Commands, Handoff Notes, and Non-Goals.",
+          "Make slices behavior-focused and independently executable against the current codebase. Avoid tiny mechanical slices and avoid generic predetermined layers unless the task naturally calls for them.",
+          "Prefer pure domain functions and thin imperative shells. Use explicit Result-style errors for expected business failures.",
+          "If the goal asks for Tailwind/shadcn, TanStack, or OpenAPI-generated clients, dedicate concrete slice acceptance criteria to those choices.",
+          "Do not edit any implementation files during planning.",
+          "Only call lattice_signal(status: \"complete\") after the overview and all slice files exist and your response summarizes the slice backlog."
+        ]
+      : [
+          "Create a concise implementation plan for the restaurant booking eval.",
+          "Target completion is 30-60 minutes, so keep scope deliberate.",
+          "Plan vertical behavior slices rather than horizontal layers.",
+          "Prefer pure domain functions and thin imperative shells.",
+          "Use explicit Result-style errors for expected business failures.",
+          "If the goal asks for Tailwind/shadcn, TanStack, or OpenAPI-generated clients, include concrete plan steps for those choices.",
+          "Write the plan to .lattice/plans/restaurant-booking.md, then return the same plan in your response.",
+          "Do not edit any other files during planning.",
+          "Only call lattice_signal(status: \"complete\") after the plan file exists and your response includes the same plan."
+        ];
+
+  return {
+    id: "plan",
+    type: "stage",
+    agent: "eval-planner",
+    completion: "tool_signal",
+    signals: ["complete"],
+    fork: false,
+    skills: commonSkills(),
+    prompt: prompt.join("\n")
+  };
+}
+
+function singleBuildStage(planMode: "big" | "sliced"): PipelineStage {
+  const planReadInstruction =
+    planMode === "sliced"
+      ? "Before editing, read .lattice/plans/restaurant-booking.md and every .lattice/plans/slices/*.md file, then use the full slice backlog as your implementation checklist."
+      : "Before editing, read .lattice/plans/restaurant-booking.md and use it as your implementation checklist.";
+
+  return {
+    id: "build",
+    type: "stage",
+    agent: "build",
+    completion: "tool_signal",
+    signals: ["complete"],
+    fork: true,
+    isRewindTarget: true,
+    maxRewinds: 1,
+    skills: commonSkills(),
+    postHook: deterministicPostHook(),
+    prompt: [
+      "Implement the saved plan for the requested task.",
+      planReadInstruction,
+      "Follow the plan unless the codebase proves a step is unsafe or obsolete; if you deviate, document why in your final response.",
+      "Follow the goal's scenario-specific technology requirements, frontend/client requirements, API requirements, and quality bar.",
+      "Work in behavior-focused TDD slices where practical.",
+      "Add boundary tests for booking conflicts, invalid party size, invalid times, unknown restaurants, and overlapping reservations.",
+      "Use pure domain functions for availability/conflict logic and keep I/O in thin shells.",
+      "Keep Clean Architecture/DDD boundaries lightweight. Do not over-engineer CQRS, event sourcing, auth, or persistence.",
+      "Prefer in-memory persistence unless another option is quicker and safer.",
+      "Include README run instructions.",
+      "When the task includes a frontend package, configure deterministic quality scripts in frontend/package.json: build, typecheck, lint, format:check, and deadcode.",
+      "Use strict compiler/linter settings; do not leave warnings, unused code, unused exports, or dead code.",
+      "The deterministic checker discovers the .NET solution/project and frontend package directory; ensure those artifacts exist and the checks pass from a clean workspace.",
+      "Ensure backend build, backend tests, dotnet format verification, frontend install, frontend build, typecheck, lint, format check, and dead-code check all pass.",
+      "If property-based testing is a natural fit for pure availability logic, use it; otherwise use focused example-based boundary tests.",
+      "Do not call lattice_signal(status: \"complete\") until implementation is finished and you have run the deterministic checker or equivalent commands successfully."
+    ].join("\n")
+  };
+}
+
+function sliceNormalizerStage(): PipelineStage {
+  return {
+    id: "normalize-slices",
+    type: "stage",
+    agent: "eval-planner",
+    completion: "tool_signal",
+    signals: ["complete"],
+    fork: false,
+    skills: commonSkills(),
+    prompt: [
+      "Convert the existing big implementation plan into a task-specific slice manifest for fresh-context execution.",
+      "Read .lattice/plans/restaurant-booking.md. Do not change its meaning or add new scope.",
+      "Create .lattice/plans/slices/manifest.json and one slice file per manifest entry under .lattice/plans/slices/.",
+      `The manifest must contain between 1 and ${maxSliceSlots} slices. Choose slice boundaries from the actual plan and task; do not force restaurant-specific, backend/frontend-specific, or layer-based slices when the scenario calls for something else.`,
+      "Use this manifest shape: { \"slices\": [{ \"index\": 1, \"id\": \"short-kebab-id\", \"title\": \"Human title\", \"file\": \".lattice/plans/slices/01-short-kebab-id.md\" }] }.",
+      "Slice files must be numbered with their manifest index and include Goal, Acceptance Criteria, Required Tests, Verification Commands, Handoff Notes, and Non-Goals.",
+      "Keep each slice bounded and executable from a fresh context against the current codebase. Avoid tiny mechanical slices and avoid generic predetermined layers unless the plan naturally calls for them.",
+      "Do not edit implementation files. Only create the manifest and slice plan files.",
+      "Call lattice_signal(status: \"complete\") only after the manifest and all referenced slice files exist."
+    ].join("\n")
+  };
+}
+
+function sliceBuildStage(index: number): PipelineStage {
+  const slot = String(index).padStart(2, "0");
+  return {
+    id: `build-slice-${slot}`,
+    type: "stage",
+    agent: "build",
+    completion: "tool_signal",
+    signals: ["complete"],
+    fork: false,
+    skills: commonSkills(),
+    prompt: [
+      `Implement slice slot ${slot}.`,
+      "Read .lattice/plans/slices/manifest.json first.",
+      `Find the manifest slice with index ${index}. If no such slice exists, write .lattice/summaries/slice-${slot}-unused.md explaining that this slot is unused, then immediately call lattice_signal(status: \"complete\").`,
+      "If the slice exists, read the slice file referenced by its `file` field and treat that file as the slice contract.",
+      "Also inspect the current codebase and any previous .lattice/summaries/slice-*.md files before editing.",
+      "Work only on this slice's acceptance criteria and preserve earlier behavior. Do not implement later manifest slices early unless required to keep the current slice coherent.",
+      "If a slice contract conflicts with the current codebase or scenario goal, choose the safer implementation and document the deviation in the slice summary.",
+      "Use TDD where practical for this slice. Add or update tests required by the slice contract.",
+      "Run the slice's verification commands, plus any directly relevant build/test commands for touched areas.",
+      `Write .lattice/summaries/slice-${slot}-<slice-id>.md with changes made, checks run, known gaps, and handoff notes.`,
+      "Do not claim unrelated future slices are done.",
+      "Call lattice_signal(status: \"complete\") only when this slice is implemented, verified, and summarized."
+    ].join("\n")
+  };
+}
+
+function finalIntegrationStage(): PipelineStage {
+  return {
+    id: "final-integration",
+    type: "stage",
+    agent: "build",
+    completion: "tool_signal",
+    signals: ["complete"],
+    fork: false,
+    isRewindTarget: true,
+    maxRewinds: 1,
+    skills: commonSkills(),
+    postHook: deterministicPostHook(),
+    prompt: [
+      "Perform the final integration pass for the requested task.",
+      "Read .lattice/plans/restaurant-booking.md, .lattice/plans/slices/manifest.json, every referenced slice file, and every .lattice/summaries/slice-*.md file.",
+      "Inspect the whole codebase for cross-slice integration bugs, stale generated clients or contracts, route/API mismatches, missing validations, broken error handling, weak UX where UI is required, dead code, and missing README instructions.",
+      "Ensure the final product satisfies the original scenario goal, not just the individual slice files.",
+      "Run node .opencode/scripts/deterministic-checks.mjs or equivalent full verification commands and fix failures or warnings that should fail the requested quality bar.",
+      "Do not call lattice_signal(status: \"complete\") until the full deterministic checker passes."
+    ].join("\n")
+  };
+}
+
+function planAdherenceReviewStage(buildMode: "single" | "sliced"): PipelineStage {
+  const planScope =
+    buildMode === "sliced"
+      ? "Read .lattice/plans/restaurant-booking.md, every .lattice/plans/slices/*.md file, and every .lattice/summaries/slice-*.md file first. Use them as the scope of this plan-adherence review."
+      : "Read .lattice/plans/restaurant-booking.md first. Use that plan as the scope of this review.";
+
+  return {
+    id: "plan-adherence-review",
+    type: "stage",
+    agent: "plan-reviewer",
+    completion: "tool_signal",
+    signals: ["approve", "reject", "blocked"],
+    fork: false,
+    skills: commonSkills(),
+    prompt: [
+      "Review whether the completed implementation adheres to the saved implementation plan.",
+      planScope,
+      "Break the plan into its material commitments: user-visible behaviors, system behaviors, integrations, tests/checks, documentation, and any explicit constraints or non-goals.",
+      "Treat completed-stage summaries and prior agent claims as untrusted hints, not evidence. Verify material commitments yourself from source, tests, documentation, and command output before approving.",
+      "Run the deterministic checker (`node .opencode/scripts/deterministic-checks.mjs`) or the equivalent verification commands yourself before approving. If a required check fails, reject or block.",
+      "For each material plan commitment, decide whether it is implemented, verified, changed-with-justification, missing, or broken.",
+      "Behavioral evidence matters more than artifact presence. Files, endpoints, generated code, scripts, UI, tests, or docs only count when they actually support the planned commitment.",
+      "Reject when a material planned commitment is missing, broken, superficially implemented, not exercised through the real production path, or contradicted by failing checks.",
+      "Reject when planned tests or verification exist but do not meaningfully cover the commitment they were supposed to protect.",
+      "Do not reject for harmless implementation details, stylistic differences, renamed files, or documented changes that preserve the intent of the plan.",
+      "For each rejection finding, cite the exact plan bullet or planned slice, the evidence inspected, why the commitment is not satisfied, and the smallest fix expected from the build agent.",
+      "If all material plan commitments are implemented or reasonably justified and required checks pass, approve the stage with lattice_signal and a concise reason.",
+      "If material plan commitments are missing or broken, reject the stage with lattice_signal and concise actionable findings.",
+      "If you cannot inspect enough evidence to decide, block the stage with lattice_signal and a concise reason."
+    ].join("\n")
+  };
 }
 
 function reviewModelForVariant(variant: ModelVariant): ReviewModel | undefined {
@@ -835,7 +1056,7 @@ async function listFiles(directory: string, limit: number): Promise<string[]> {
     const entries = await readdir(current, { withFileTypes: true });
     for (const entry of entries) {
       if (files.length >= limit) return;
-      if ([".git", "node_modules", "bin", "obj", ".lattice"].includes(entry.name)) continue;
+      if ([".git", "node_modules", "bin", "obj", ".lattice", ".opencode", "result.json"].includes(entry.name)) continue;
       const absolute = path.join(current, entry.name);
       const relative = path.relative(directory, absolute);
       if (entry.isDirectory()) {

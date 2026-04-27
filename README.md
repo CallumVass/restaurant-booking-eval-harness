@@ -49,10 +49,13 @@ The current default matrix is intentionally small. It reflects prior exploratory
 |---|---|---|---|---|
 | `openai-gpt-5.5-plan-build` | OpenAI GPT-5.5 | OpenAI GPT-5.5 | none | Proprietary quality reference. Review was not materially useful in prior OpenAI runs. |
 | `deepseek-v4-pro-plan-flash-build-mimo-review` | DeepSeek V4 Pro | DeepSeek V4 Flash | Mimo v2.5 Pro | Tests whether cheap DeepSeek implementation plus independent open-model review beats paying for Pro implementation. |
+| `deepseek-v4-pro-plan-flash-sliced-build-mimo-review` | DeepSeek V4 Pro big plan | DeepSeek V4 Flash sliced execution | Mimo v2.5 Pro | A/B test for whether fresh-context sliced execution improves the current DeepSeek Flash implementation gap while keeping the same planner/reviewer. |
 | `deepseek-v4-pro-plan-pro-build` | DeepSeek V4 Pro | DeepSeek V4 Pro | none | Open-model quality ceiling/control without review overhead. |
 | `mimo-v2.5-pro-plan-mimo-v2.5-build-deepseek-review` | Mimo v2.5 Pro | Mimo v2.5 | DeepSeek V4 Pro | Tests Mimo planning/building with independent DeepSeek review. |
 
 The `review` field in `models.json` is optional. When a variant omits `review`, the generated workspace pipeline excludes the `plan-adherence-review` stage. When present, the review stage is included and uses the configured review model/options.
+
+`plan.mode` and `build.mode` are optional. Defaults preserve the original behavior: `plan.mode: "big"` and `build.mode: "single"`. A sliced build keeps the big plan available, normalizes it into a task-specific `.lattice/plans/slices/manifest.json` plus referenced slice files, runs generic numbered slice slots in fresh subagent contexts, then runs a final integration stage before optional review. The slice names, count, order, and acceptance criteria come from the generated plan, not from restaurant-specific harness phases.
 
 ## Review Strategy
 
