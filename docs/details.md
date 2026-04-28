@@ -144,7 +144,7 @@ const evals = [
     id: "scenario-2-deepseek-v4-pro-plan-flash-sliced-build-mimo-review",
     scenario: "Scenario 2",
     rank: 4,
-    path: "run-archive/scenario-2/1777301480794-scenario-2-deepseek-v4-pro-plan-flash-sliced-build-mimo-review-attempt-1/result.json"
+    path: "run-archive/scenario-2/1777393256500-scenario-2-deepseek-v4-pro-plan-flash-sliced-build-mimo-review-attempt-1/result.json"
   },
   {
     id: "scenario-2-deepseek-v4-pro-plan-pro-build",

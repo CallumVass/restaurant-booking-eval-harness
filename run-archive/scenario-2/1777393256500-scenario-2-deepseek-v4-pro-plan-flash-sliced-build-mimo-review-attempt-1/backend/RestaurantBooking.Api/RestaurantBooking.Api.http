@@ -1,0 +1,55 @@
+@RestaurantBooking.Api_HostAddress = http://localhost:5177
+
+### Register a new user
+POST {{RestaurantBooking.Api_HostAddress}}/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Avery Stone",
+  "email": "avery@example.com",
+  "password": "Demo1234!"
+}
+
+### Login as seeded demo user
+POST {{RestaurantBooking.Api_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "demo@example.com",
+  "password": "Demo1234!"
+}
+
+### Get current user
+GET {{RestaurantBooking.Api_HostAddress}}/api/auth/me
+
+### Get CSRF token
+GET {{RestaurantBooking.Api_HostAddress}}/api/auth/csrf
+
+### Logout
+POST {{RestaurantBooking.Api_HostAddress}}/api/auth/logout
+
+### List all restaurants
+GET {{RestaurantBooking.Api_HostAddress}}/api/restaurants
+
+### List all bookings (public)
+GET {{RestaurantBooking.Api_HostAddress}}/api/bookings
+
+### List availability
+GET {{RestaurantBooking.Api_HostAddress}}/api/restaurants/ember-table/availability?date=2026-04-28&partySize=2
+
+### Create a booking (authenticated with CSRF token)
+POST {{RestaurantBooking.Api_HostAddress}}/api/bookings
+Content-Type: application/json
+X-CSRF-TOKEN: {{csrfToken}}
+
+{
+  "restaurantId": "ember-table",
+  "date": "2026-04-28",
+  "time": "17:00",
+  "partySize": 2,
+  "guestName": "Avery Stone",
+  "guestEmail": "avery@example.com"
+}
+
+### Get my bookings (authenticated)
+GET {{RestaurantBooking.Api_HostAddress}}/api/bookings/mine
