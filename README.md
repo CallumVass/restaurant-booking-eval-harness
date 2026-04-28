@@ -74,7 +74,7 @@ For future comparisons, keep no-review and review variants distinct in `models.j
 ## Useful Options
 
 ```bash
-npm start -- --variant moonshot-kimi-k2.6-high-plan-medium-build --timeoutMs 4500000
+npm start -- --variant moonshot-kimi-k2.6-high-plan-medium-build --timeoutMs 7200000
 npm start -- --1 --variant moonshot-kimi-k2.6-high-plan-medium-build --runRetries 2
 npm start -- --1 --skipSkills
 npm start -- --scenario 2 --models ./models.json
@@ -89,6 +89,8 @@ The scenario argument is required. Use `--1`, `--2`, `--scenario 1`, or `--scena
 `--skipSkills` is useful for smoke-testing the harness wiring. Real eval runs should keep skills enabled.
 
 `--runRetries` controls whole-run retries for transient pipeline failures. It defaults to `1`, so each variant gets up to two attempts. Retries only happen when the pipeline fails or times out and deterministic checks do not already pass.
+
+`--timeoutMs` controls the per-attempt pipeline wait timeout. It defaults to `7200000` (120 minutes), which gives sliced/reviewed runs enough headroom.
 
 ## Brownfield Scenarios
 

@@ -45,11 +45,23 @@ type TokenTelemetry = {
   tokensCacheRead: number;
   tokensCacheWrite: number;
   costUSD: number;
+  estimatedCostUSD?: number;
   messageCount: number;
 };
 
 type TelemetrySummary = TokenTelemetry & {
-  stages: Array<TokenTelemetry & { id: string; agent?: string; model?: string; provider?: string }>;
+  stages: Array<
+    TokenTelemetry & {
+      id: string;
+      agent?: string;
+      model?: string;
+      provider?: string;
+      configuredModel?: string;
+      configuredProvider?: string;
+      observedModel?: string;
+      observedProvider?: string;
+    }
+  >;
   judge?: TokenTelemetry & { model?: string; provider?: string };
 };
 
@@ -82,7 +94,14 @@ type RunSummary = {
 const root = process.cwd();
 const activeRunsDir = path.resolve(process.env.EVAL_RUNS_DIR ?? "/tmp/restaurant-booking-eval-harness-active");
 const archiveDir = path.resolve(process.env.EVAL_ARCHIVE_DIR ?? path.join(root, "run-archive"));
-const defaultTimeoutMs = 75 * 60 * 1000;
+const defaultTimeoutMs = 120 * 60 * 1000;
+const publicModelPrices = [
+  { match: "gpt-5.5", input: 0.000005, output: 0.00003, cacheRead: 0.0000005 },
+  { match: "deepseek-v4-pro", input: 0.000000435, output: 0.00000087, cacheRead: 0.000000003625 },
+  { match: "deepseek-v4-flash", input: 0.00000014, output: 0.00000028, cacheRead: 0.0000000028 },
+  { match: "mimo-v2.5-pro", input: 0.000001, output: 0.000003, cacheRead: 0.0000002 },
+  { match: "mimo-v2.5", input: 0.0000004, output: 0.000002, cacheRead: 0.00000008 }
+] as const;
 const pinnedSkills = [
   "tdd",
   "clean-ddd-hexagonal",
@@ -876,18 +895,58 @@ function planReviewRejectionSummary(state: unknown): string | null {
 
 async function retryPausedPipeline(client: any, sessionId: string, findings: string): Promise<void> {
   log("Pipeline: invoking /lattice-retry with plan-review findings");
-  await client.session.command({
-    path: { id: sessionId },
-    body: {
-      command: "lattice-retry",
-      arguments: [
-        "Retry the build stage and address these plan-adherence review findings before signaling complete again:",
-        "",
-        findings
-      ].join("\n")
-    }
+  await withTransientSdkRetry("/lattice-retry", async () => {
+    await client.session.command({
+      path: { id: sessionId },
+      body: {
+        command: "lattice-retry",
+        arguments: [
+          "Retry the build stage and address these plan-adherence review findings before signaling complete again:",
+          "",
+          findings
+        ].join("\n")
+      }
+    });
   });
   log("Pipeline: /lattice-retry command completed");
+}
+
+async function withTransientSdkRetry<T>(label: string, action: () => Promise<T>, maxAttempts = 4): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await action();
+    } catch (error) {
+      lastError = error;
+      if (!isTransientSdkError(error) || attempt === maxAttempts) break;
+      const delayMs = Math.min(30_000, 2_000 * 2 ** (attempt - 1));
+      log(`${label}: transient SDK error on attempt ${attempt}/${maxAttempts}; retrying in ${Math.round(delayMs / 1000)}s (${errorSummary(error)})`);
+      await sleep(delayMs);
+    }
+  }
+  throw lastError;
+}
+
+function isTransientSdkError(error: unknown): boolean {
+  const text = errorSummary(error).toLowerCase();
+  return [
+    "fetch failed",
+    "headers timeout",
+    "und_err_headers_timeout",
+    "body timeout",
+    "econnreset",
+    "econnrefused",
+    "socket hang up",
+    "terminated"
+  ].some((needle) => text.includes(needle));
+}
+
+function errorSummary(error: unknown): string {
+  if (error instanceof Error) {
+    const cause = (error as Error & { cause?: unknown }).cause;
+    return cause instanceof Error ? `${error.message}: ${cause.message}` : error.message;
+  }
+  return String(error);
 }
 
 function completedPipelineAnomaly(state: unknown): string | null {
@@ -960,7 +1019,21 @@ function addTelemetry(total: TokenTelemetry, telemetry: Partial<TokenTelemetry> 
   total.tokensCacheRead += telemetry.tokensCacheRead ?? 0;
   total.tokensCacheWrite += telemetry.tokensCacheWrite ?? 0;
   total.costUSD += telemetry.costUSD ?? 0;
+  total.estimatedCostUSD = (total.estimatedCostUSD ?? 0) + (telemetry.estimatedCostUSD ?? 0);
   total.messageCount += telemetry.messageCount ?? 0;
+}
+
+function estimatePublicCost(telemetry: Partial<TokenTelemetry>, model: string | undefined): number | undefined {
+  if (!model) return undefined;
+  const normalized = model.toLowerCase();
+  const price = publicModelPrices.find((entry) => normalized.includes(entry.match));
+  if (!price) return undefined;
+  const outputTokens = (telemetry.tokensOut ?? 0) + (telemetry.tokensReasoning ?? 0);
+  return (
+    (telemetry.tokensIn ?? 0) * price.input +
+    outputTokens * price.output +
+    (telemetry.tokensCacheRead ?? 0) * price.cacheRead
+  );
 }
 
 function summarizeTelemetry(state: unknown, judge?: TelemetrySummary["judge"]): TelemetrySummary {
@@ -981,19 +1054,35 @@ function extractStageTelemetry(state: unknown): TelemetrySummary["stages"] {
     const stageRecord = stage as { id?: unknown; agent?: unknown; telemetry?: unknown };
     const telemetry = stageRecord.telemetry;
     if (!telemetry || typeof telemetry !== "object") return [];
-    const telemetryRecord = telemetry as Partial<TokenTelemetry> & { model?: unknown; provider?: unknown };
+    const telemetryRecord = telemetry as Partial<TokenTelemetry> & {
+      model?: unknown;
+      provider?: unknown;
+      configuredModel?: unknown;
+      configuredProvider?: unknown;
+      observedModel?: unknown;
+      observedProvider?: unknown;
+    };
+    const model = typeof telemetryRecord.model === "string" ? telemetryRecord.model : undefined;
+    const observedModel = typeof telemetryRecord.observedModel === "string" ? telemetryRecord.observedModel : undefined;
+    const estimatedCostUSD = estimatePublicCost(telemetryRecord, observedModel ?? model);
     return [
       {
         id: typeof stageRecord.id === "string" ? stageRecord.id : "unknown",
         agent: typeof stageRecord.agent === "string" ? stageRecord.agent : undefined,
-        model: typeof telemetryRecord.model === "string" ? telemetryRecord.model : undefined,
+        model,
         provider: typeof telemetryRecord.provider === "string" ? telemetryRecord.provider : undefined,
+        configuredModel: typeof telemetryRecord.configuredModel === "string" ? telemetryRecord.configuredModel : undefined,
+        configuredProvider:
+          typeof telemetryRecord.configuredProvider === "string" ? telemetryRecord.configuredProvider : undefined,
+        observedModel,
+        observedProvider: typeof telemetryRecord.observedProvider === "string" ? telemetryRecord.observedProvider : undefined,
         tokensIn: telemetryRecord.tokensIn ?? 0,
         tokensOut: telemetryRecord.tokensOut ?? 0,
         tokensReasoning: telemetryRecord.tokensReasoning ?? 0,
         tokensCacheRead: telemetryRecord.tokensCacheRead ?? 0,
         tokensCacheWrite: telemetryRecord.tokensCacheWrite ?? 0,
         costUSD: telemetryRecord.costUSD ?? 0,
+        ...(estimatedCostUSD !== undefined ? { estimatedCostUSD } : {}),
         messageCount: telemetryRecord.messageCount ?? 0
       }
     ];
@@ -1054,7 +1143,7 @@ async function judgeRun(
 }
 
 function telemetryFromAssistantInfo(info: any): TokenTelemetry & { model?: string; provider?: string } {
-  return {
+  const telemetry = {
     model: typeof info?.modelID === "string" ? info.modelID : undefined,
     provider: typeof info?.providerID === "string" ? info.providerID : undefined,
     tokensIn: info?.tokens?.input ?? 0,
@@ -1065,6 +1154,8 @@ function telemetryFromAssistantInfo(info: any): TokenTelemetry & { model?: strin
     costUSD: info?.cost ?? 0,
     messageCount: 1
   };
+  const estimatedCostUSD = estimatePublicCost(telemetry, telemetry.model);
+  return { ...telemetry, ...(estimatedCostUSD !== undefined ? { estimatedCostUSD } : {}) };
 }
 
 async function listFiles(directory: string, limit: number): Promise<string[]> {

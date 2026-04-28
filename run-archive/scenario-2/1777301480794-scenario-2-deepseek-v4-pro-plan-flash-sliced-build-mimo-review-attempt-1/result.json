@@ -1,0 +1,909 @@
+{
+  "variant": "deepseek-v4-pro-plan-flash-sliced-build-mimo-review",
+  "scenario": "2",
+  "attempt": 1,
+  "maxAttempts": 2,
+  "retryable": false,
+  "baseline": "/home/callu/dev/restaurant-booking-eval-harness/baselines/scenario-2",
+  "workspace": "/home/callu/dev/restaurant-booking-eval-harness/run-archive/scenario-2/1777301480794-scenario-2-deepseek-v4-pro-plan-flash-sliced-build-mimo-review-attempt-1",
+  "startedAt": "2026-04-27T14:51:20.794Z",
+  "completedAt": "2026-04-27T15:46:31.848Z",
+  "durationMs": 3311054,
+  "pipelineState": {
+    "id": "18ab2476-878d-4328-8713-8724ed4375b1",
+    "pipelineName": "restaurant-booking-eval",
+    "goal": "# Add Authenticated Booking Accounts\n\nExtend the existing restaurant booking app so bookings belong to authenticated users. Treat this as a normal change request against the current codebase: inspect the existing backend, frontend, tests, OpenAPI/client generation, scripts, and README before changing anything.\n\nDo not rebuild the app from scratch. Preserve existing behavior unless this request explicitly requires a change.\n\n## Existing Issues To Fix\n\n- Add backend HTTP/OpenAPI-level tests for the existing restaurant, availability, booking, and error-mapping behavior rather than only testing domain rules.\n- Add focused frontend UI/integration tests for the core booking flows where practical, including form submission, API error handling, and booking confirmation/history display.\n- Strengthen the generated client workflow so frontend server-state code uses generated TanStack Query hooks where supported, rather than wrapping generated fetch functions by hand.\n- Improve the UI polish beyond the current compact single-page card/form/list experience while preserving the existing visual language.\n\nKeep fixes focused. Preserve the existing architecture, generated API client workflow, TanStack Query usage, Tailwind/shadcn setup, and deterministic scripts.\n\n## Authentication\n\n- Add local email/password authentication using ASP.NET Core Identity or an equivalent first-party .NET auth approach.\n- Do not use external hosted auth providers, OAuth apps, or services requiring secrets.\n- A user must be authenticated to create a booking.\n- A user can view their own booking history at restaurants.\n- Users must not be able to view another user's booking history.\n- Keep auth suitable for local development and automated verification; seeded/demo users are acceptable if documented.\n\n## Cookie Auth Security\n\n- Use HTTP-only cookies for authentication.\n- Because auth uses cookies, implement local-development appropriate CSRF/anti-forgery protection for state-changing requests.\n- The SPA must fetch and send the CSRF token for login, logout, booking creation, and other booking mutations.\n- Configure CORS and credentialed requests deliberately for the local frontend/backend origins.\n- Do not store auth tokens in localStorage or sessionStorage.\n\n## Backend Requirements\n\n- Keep using .NET 10 Web API.\n- Keep existing restaurants, tables, availability, and booking behavior working.\n- Protect booking creation so unauthenticated users cannot create bookings.\n- Associate each booking with the authenticated user that created it.\n- Add authenticated booking-history endpoints scoped to the current user.\n- Preserve useful validation errors for invalid party size, invalid dates/times, unknown restaurants, and overlapping reservations.\n- Keep OpenAPI/Swagger usable for frontend client generation, including auth-related endpoints and protected booking behavior.\n\n## Frontend Requirements\n\n- Keep using the existing React SPA, Tailwind CSS, shadcn/ui approach, TanStack Query, and generated OpenAPI client workflow.\n- Add login, registration, logout, and authenticated-user state to the existing UI.\n- Require login before creating a booking and show a clear path to authenticate.\n- Show the authenticated user's booking history at restaurants.\n- Use generated TanStack Query hooks where the OpenAPI generator supports them; otherwise use generated typed operations with thin, typed TanStack Query/mutation calls.\n- Avoid hand-written, stringly typed fetch wrappers when an OpenAPI-generated typed client is available.\n- Keep the UI polished, responsive, accessible, and consistent with the existing visual language.\n\n## Tests And Quality Gates\n\n- Work in small slices: inspect, test, change, verify.\n- Prefer minimal focused edits over replacing existing structure.\n- Prefer pure domain functions and thin imperative shells for booking/conflict logic.\n- Use explicit Result-style errors for expected business failures where the existing app does so.\n- Keep Clean Architecture boundaries lightweight and consistent with the existing app.\n- Include backend tests for auth boundaries, user-scoped booking history, invalid auth attempts, atomic conflict prevention, invalid party size, invalid times, overlapping reservations, HTTP endpoint behavior, OpenAPI availability, and error mapping.\n- Include frontend tests for the main auth, booking creation, booking-history, confirmation, and API error-display flows where practical.\n- Keep backend and frontend formatted, linted, warning-free, and free of dead code or unused exports.\n- Update README run instructions for auth, seeded/demo users, CSRF behavior, and any new scripts.\n\n## Constraints\n\n- Keep scope realistic for a focused implementation pass.\n- Do not introduce external services, hosted databases, OAuth providers, or secrets.\n- Prefer in-memory or lightweight local persistence unless the existing app already uses another approach.\n- Ensure backend build passes with warnings treated as errors.\n- Ensure backend tests pass without rebuilding after the build step and include the required auth/conflict boundary tests.\n- Ensure backend formatting verification passes.\n- Ensure frontend dependencies install and `build`, `typecheck`, `lint`, `format:check`, and `deadcode` scripts pass.\n- Ensure typed-client generation remains reproducible from source, either as part of frontend setup/build or via a documented script used by the build.\n- Follow the saved implementation plan closely; if changing direction, document why in the README or final notes.",
+    "status": "completed",
+    "currentStageIndex": 7,
+    "stages": [
+      {
+        "id": "plan",
+        "agent": "eval-planner",
+        "status": "completed",
+        "startedAt": "2026-04-27T14:52:10.320Z",
+        "telemetry": {
+          "tokensIn": 29429,
+          "tokensOut": 9574,
+          "tokensReasoning": 1977,
+          "tokensCacheRead": 297344,
+          "tokensCacheWrite": 0,
+          "costUSD": 0.09571542799999999,
+          "messageCount": 14,
+          "model": "deepseek-v4-pro",
+          "provider": "opencode-go"
+        },
+        "completedAt": "2026-04-27T14:58:01.789Z",
+        "summary": "Plan written to .lattice/plans/restaurant-booking.md covering 4 vertical slices: backend auth foundation with user-scoped bookings, CSRF protection + frontend auth UI + client regeneration, UI polish + frontend tests, and final verification + README. Preserves all existing architecture patterns (functional core / imperative shell, Result-style errors, in-memory stores, minimal APIs, orval client generation, TanStack Query, shadcn/ui)."
+      },
+      {
+        "id": "normalize-slices",
+        "agent": "eval-planner",
+        "status": "completed",
+        "startedAt": "2026-04-27T14:58:01.793Z",
+        "telemetry": {
+          "tokensIn": 28188,
+          "tokensOut": 6955,
+          "tokensReasoning": 869,
+          "tokensCacheRead": 254464,
+          "tokensCacheWrite": 0,
+          "costUSD": 0.07996436800000001,
+          "messageCount": 12,
+          "model": "deepseek-v4-pro",
+          "provider": "opencode-go"
+        },
+        "completedAt": "2026-04-27T15:02:08.764Z",
+        "summary": "Created manifest.json with 4 slices and all 4 slice plan files under .lattice/plans/slices/. Slices: (1) Backend Auth Foundation + User-Scoped Bookings, (2) CSRF Protection + Frontend Auth UI + Client Regeneration, (3) UI Polish + Backend HTTP Tests + Frontend Tests, (4) End-to-End Integration Verification + README. Each slice has Goal, Acceptance Criteria, Required Tests, Verification Commands, Handoff Notes, and Non-Goals. Boundaries align with the original plan's natural vertical slices."
+      },
+      {
+        "id": "build-slice-1-backend-auth-foundation",
+        "agent": "build",
+        "status": "completed",
+        "startedAt": "2026-04-27T15:02:08.779Z",
+        "telemetry": {
+          "tokensIn": 65732,
+          "tokensOut": 13858,
+          "tokensReasoning": 13804,
+          "tokensCacheRead": 1801856,
+          "tokensCacheWrite": 0,
+          "costUSD": 0.021993036800000004,
+          "messageCount": 40,
+          "model": "deepseek-v4-flash",
+          "provider": "opencode-go"
+        },
+        "completedAt": "2026-04-27T15:09:41.549Z",
+        "summary": "Slice 1 implemented: cookie auth infrastructure (register/login/logout/me endpoints), user-scoped bookings (UserId on Booking, GET /api/bookings/mine), booking creation protected behind RequireAuthorization(), CORS with AllowCredentials to localhost:5173, seeded demo users (alice/bob), 18 new HTTP integration tests covering auth boundaries, booking auth scoping, and existing validation error mappings. All 26 tests pass."
+      },
+      {
+        "id": "build-slice-2-csrf-frontend-auth",
+        "agent": "build",
+        "status": "completed",
+        "startedAt": "2026-04-27T15:09:41.552Z",
+        "telemetry": {
+          "tokensIn": 83975,
+          "tokensOut": 29063,
+          "tokensReasoning": 27648,
+          "tokensCacheRead": 3911040,
+          "tokensCacheWrite": 0,
+          "costUSD": 0.03858649200000001,
+          "messageCount": 56,
+          "model": "deepseek-v4-flash",
+          "provider": "opencode-go"
+        },
+        "completedAt": "2026-04-27T15:23:49.978Z",
+        "summary": "Slice 2 implemented: CSRF protection via UseAntiforgery middleware + GET /api/auth/csrf-token, frontend auth UI (NavHeader, AuthDialog, MyBookings), orval switched to react-query client with generated TanStack Query hooks, booking form gated behind auth, CSRF token fetched on mount and sent with mutations (no localStorage). All 27 backend tests pass, all frontend checks pass (typecheck, lint, format:check, deadcode, build)."
+      },
+      {
+        "id": "build-slice-3-ui-polish-tests",
+        "agent": "build",
+        "status": "completed",
+        "startedAt": "2026-04-27T15:23:49.982Z",
+        "telemetry": {
+          "tokensIn": 128097,
+          "tokensOut": 26613,
+          "tokensReasoning": 7764,
+          "tokensCacheRead": 4111360,
+          "tokensCacheWrite": 0,
+          "costUSD": 0.039070947999999994,
+          "messageCount": 57,
+          "model": "deepseek-v4-flash",
+          "provider": "opencode-go"
+        },
+        "completedAt": "2026-04-27T15:33:19.704Z",
+        "summary": "Slice 3 implemented: 8 new backend HTTP tests (OpenAPI reachability, error mappings, date validation, capacity limits, adjacent non-overlapping), extracted PageShell and BookingForm components for testability, created 14 frontend integration tests (App, AuthDialog, BookingForm, MyBookings) with MSW mocking, polished UI (empty states, responsive grid, consistent layout). All 35 backend tests pass, all 14 frontend tests pass, all quality gates pass (build, typecheck, lint, format, deadcode)."
+      },
+      {
+        "id": "build-slice-4-integration-verification",
+        "agent": "build",
+        "status": "completed",
+        "startedAt": "2026-04-27T15:33:19.710Z",
+        "telemetry": {
+          "tokensIn": 56626,
+          "tokensOut": 5859,
+          "tokensReasoning": 1643,
+          "tokensCacheRead": 361600,
+          "tokensCacheWrite": 0,
+          "costUSD": 0.011040679999999999,
+          "messageCount": 16,
+          "model": "deepseek-v4-flash",
+          "provider": "opencode-go"
+        },
+        "completedAt": "2026-04-27T15:35:39.421Z",
+        "summary": "Slice 4: Updated README with auth docs, seeded users table, CSRF behavior, endpoint tables, error mappings, smoke test checklist, and run instructions. Fixed knip config hint. Verified all backend (35/35 tests, build, format) and frontend (build, typecheck, lint, format, deadcode, 14/14 tests) quality gates pass cleanly. No code changes beyond README and knip.json per slice contract."
+      },
+      {
+        "id": "final-integration",
+        "agent": "build",
+        "status": "completed",
+        "startedAt": "2026-04-27T15:35:39.433Z",
+        "telemetry": {
+          "tokensIn": 134012,
+          "tokensOut": 8278,
+          "tokensReasoning": 10652,
+          "tokensCacheRead": 3391488,
+          "tokensCacheWrite": 0,
+          "costUSD": 0.0335582464,
+          "messageCount": 46,
+          "model": "deepseek-v4-flash",
+          "provider": "opencode-go"
+        },
+        "completedAt": "2026-04-27T15:42:00.392Z",
+        "summary": "Final integration pass verified all 9 quality gates pass (dotnet build/test/format, npm build/typecheck/lint/format/deadcode/vitest). Fixed missing `userId` field in OpenAPI Booking schema (was returned by backend but absent from spec/generated client) and regenerated client. Confirmed end-to-end: route paths match backend/spec/client, CSRF token flows correctly, auth cookie is HTTP-only with no localStorage, generated TanStack Query hooks used for GET endpoints, discriminated union responses handle errors, Vite proxy handles CORS transparently. 35 backend tests and 14 frontend tests all pass."
+      },
+      {
+        "id": "plan-adherence-review",
+        "agent": "plan-reviewer",
+        "status": "completed",
+        "startedAt": "2026-04-27T15:42:00.402Z",
+        "telemetry": {
+          "tokensIn": 70231,
+          "tokensOut": 4524,
+          "tokensReasoning": 2290,
+          "tokensCacheRead": 534464,
+          "tokensCacheWrite": 0,
+          "costUSD": 0.19756579999999999,
+          "messageCount": 14,
+          "model": "mimo-v2.5-pro",
+          "provider": "opencode-go"
+        },
+        "completedAt": "2026-04-27T15:44:43.945Z",
+        "summary": "All 9 deterministic checks pass. All material plan commitments verified from source: cookie auth with register/login/logout/me, user-scoped bookings with UserId, CSRF protection via antiforgery middleware, generated TanStack Query hooks (28 exports), auth-gated booking form, NavHeader/AuthDialog/MyBookings/PageShell components, 35 backend tests and 14 frontend tests all passing, no localStorage/sessionStorage auth tokens, README with full documentation. Minor harmless deviations (useCsrf merged into useAuth, /api/auth/me listed as public in README but correctly requires auth).",
+        "verdict": "approve"
+      }
+    ],
+    "createdAt": "2026-04-27T14:52:08.085Z",
+    "updatedAt": "2026-04-27T15:44:43.945Z",
+    "runtimeStages": [
+      {
+        "id": "plan",
+        "agent": "eval-planner",
+        "type": "stage",
+        "completion": "tool_signal",
+        "signals": [
+          "complete"
+        ],
+        "fork": false,
+        "skills": {
+          "dynamic": false,
+          "pinned": [
+            "tdd",
+            "clean-ddd-hexagonal",
+            "dotnet-backend-patterns",
+            "dotnet-10-csharp-14",
+            "vercel-react-best-practices",
+            "shadcn",
+            "tanstack-query-best-practices",
+            "orval",
+            "functional-core-imperative-shell",
+            "vertical-slice-architecture"
+          ],
+          "max": 4
+        },
+        "prompt": "Create a concise implementation plan for the restaurant booking eval.\nTarget completion is 30-60 minutes, so keep scope deliberate.\nPlan vertical behavior slices rather than horizontal layers.\nPrefer pure domain functions and thin imperative shells.\nUse explicit Result-style errors for expected business failures.\nIf the goal asks for Tailwind/shadcn, TanStack, or OpenAPI-generated clients, include concrete plan steps for those choices.\nWrite the plan to .lattice/plans/restaurant-booking.md, then return the same plan in your response.\nDo not edit any other files during planning.\nOnly call lattice_signal(status: \"complete\") after the plan file exists and your response includes the same plan.",
+        "pauseAfter": false,
+        "isRewindTarget": false
+      },
+      {
+        "id": "normalize-slices",
+        "agent": "eval-planner",
+        "type": "stage",
+        "completion": "tool_signal",
+        "signals": [
+          "complete"
+        ],
+        "fork": false,
+        "skills": {
+          "dynamic": false,
+          "pinned": [
+            "tdd",
+            "clean-ddd-hexagonal",
+            "dotnet-backend-patterns",
+            "dotnet-10-csharp-14",
+            "vercel-react-best-practices",
+            "shadcn",
+            "tanstack-query-best-practices",
+            "orval",
+            "functional-core-imperative-shell",
+            "vertical-slice-architecture"
+          ],
+          "max": 4
+        },
+        "prompt": "Convert the existing big implementation plan into a task-specific slice manifest for fresh-context execution.\nRead .lattice/plans/restaurant-booking.md. Do not change its meaning or add new scope.\nCreate .lattice/plans/slices/manifest.json and one slice file per manifest entry under .lattice/plans/slices/.\nThe manifest must contain between 1 and 8 slices. Choose slice boundaries from the actual plan and task; do not force restaurant-specific, backend/frontend-specific, or layer-based slices when the scenario calls for something else.\nUse this manifest shape: { \"slices\": [{ \"index\": 1, \"id\": \"short-kebab-id\", \"title\": \"Human title\", \"file\": \".lattice/plans/slices/01-short-kebab-id.md\" }] }.\nSlice files must be numbered with their manifest index and include Goal, Acceptance Criteria, Required Tests, Verification Commands, Handoff Notes, and Non-Goals.\nKeep each slice bounded and executable from a fresh context against the current codebase. Avoid tiny mechanical slices and avoid generic predetermined layers unless the plan naturally calls for them.\nDo not edit implementation files. Only create the manifest and slice plan files.\nCall lattice_signal(status: \"complete\") only after the manifest and all referenced slice files exist.",
+        "pauseAfter": false,
+        "isRewindTarget": false
+      },
+      {
+        "id": "build-slice-1-backend-auth-foundation",
+        "agent": "build",
+        "type": "stage",
+        "completion": "tool_signal",
+        "signals": [
+          "complete"
+        ],
+        "fork": false,
+        "skills": {
+          "dynamic": true,
+          "pinned": [],
+          "max": 4
+        },
+        "prompt": "Implement slice 1: Backend Auth Foundation + User-Scoped Bookings.\nRead .lattice/plans/slices/01-backend-auth-foundation.md and treat it as the slice contract.\nAlso inspect the current codebase and any previous .lattice/summaries/slice-*.md files before editing.\nWork only on this slice's acceptance criteria and preserve earlier behavior. Do not implement later manifest slices early unless required to keep the current slice coherent.\nIf a slice contract conflicts with the current codebase or scenario goal, choose the safer implementation and document the deviation in the slice summary.\nUse TDD where practical for this slice. Add or update tests required by the slice contract.\nRun the slice's verification commands, plus any directly relevant build/test commands for touched areas.\nWrite .lattice/summaries/slice-1-backend-auth-foundation.md with changes made, checks run, known gaps, and handoff notes.\nDo not claim unrelated future slices are done.\nCall lattice_signal(status: \"complete\") only when this slice is implemented, verified, and summarized.",
+        "pauseAfter": false,
+        "isRewindTarget": false
+      },
+      {
+        "id": "build-slice-2-csrf-frontend-auth",
+        "agent": "build",
+        "type": "stage",
+        "completion": "tool_signal",
+        "signals": [
+          "complete"
+        ],
+        "fork": false,
+        "skills": {
+          "dynamic": true,
+          "pinned": [],
+          "max": 4
+        },
+        "prompt": "Implement slice 2: CSRF Protection + Frontend Auth UI + Client Regeneration.\nRead .lattice/plans/slices/02-csrf-frontend-auth.md and treat it as the slice contract.\nAlso inspect the current codebase and any previous .lattice/summaries/slice-*.md files before editing.\nWork only on this slice's acceptance criteria and preserve earlier behavior. Do not implement later manifest slices early unless required to keep the current slice coherent.\nIf a slice contract conflicts with the current codebase or scenario goal, choose the safer implementation and document the deviation in the slice summary.\nUse TDD where practical for this slice. Add or update tests required by the slice contract.\nRun the slice's verification commands, plus any directly relevant build/test commands for touched areas.\nWrite .lattice/summaries/slice-2-csrf-frontend-auth.md with changes made, checks run, known gaps, and handoff notes.\nDo not claim unrelated future slices are done.\nCall lattice_signal(status: \"complete\") only when this slice is implemented, verified, and summarized.",
+        "pauseAfter": false,
+        "isRewindTarget": false
+      },
+      {
+        "id": "build-slice-3-ui-polish-tests",
+        "agent": "build",
+        "type": "stage",
+        "completion": "tool_signal",
+        "signals": [
+          "complete"
+        ],
+        "fork": false,
+        "skills": {
+          "dynamic": true,
+          "pinned": [],
+          "max": 4
+        },
+        "prompt": "Implement slice 3: UI Polish + Backend HTTP Tests + Frontend Tests.\nRead .lattice/plans/slices/03-ui-polish-tests.md and treat it as the slice contract.\nAlso inspect the current codebase and any previous .lattice/summaries/slice-*.md files before editing.\nWork only on this slice's acceptance criteria and preserve earlier behavior. Do not implement later manifest slices early unless required to keep the current slice coherent.\nIf a slice contract conflicts with the current codebase or scenario goal, choose the safer implementation and document the deviation in the slice summary.\nUse TDD where practical for this slice. Add or update tests required by the slice contract.\nRun the slice's verification commands, plus any directly relevant build/test commands for touched areas.\nWrite .lattice/summaries/slice-3-ui-polish-tests.md with changes made, checks run, known gaps, and handoff notes.\nDo not claim unrelated future slices are done.\nCall lattice_signal(status: \"complete\") only when this slice is implemented, verified, and summarized.",
+        "pauseAfter": false,
+        "isRewindTarget": false
+      },
+      {
+        "id": "build-slice-4-integration-verification",
+        "agent": "build",
+        "type": "stage",
+        "completion": "tool_signal",
+        "signals": [
+          "complete"
+        ],
+        "fork": false,
+        "skills": {
+          "dynamic": true,
+          "pinned": [],
+          "max": 4
+        },
+        "prompt": "Implement slice 4: End-to-End Integration Verification + README.\nRead .lattice/plans/slices/04-integration-verification.md and treat it as the slice contract.\nAlso inspect the current codebase and any previous .lattice/summaries/slice-*.md files before editing.\nWork only on this slice's acceptance criteria and preserve earlier behavior. Do not implement later manifest slices early unless required to keep the current slice coherent.\nIf a slice contract conflicts with the current codebase or scenario goal, choose the safer implementation and document the deviation in the slice summary.\nUse TDD where practical for this slice. Add or update tests required by the slice contract.\nRun the slice's verification commands, plus any directly relevant build/test commands for touched areas.\nWrite .lattice/summaries/slice-4-integration-verification.md with changes made, checks run, known gaps, and handoff notes.\nDo not claim unrelated future slices are done.\nCall lattice_signal(status: \"complete\") only when this slice is implemented, verified, and summarized.",
+        "pauseAfter": false,
+        "isRewindTarget": false
+      },
+      {
+        "id": "final-integration",
+        "agent": "build",
+        "type": "stage",
+        "completion": "tool_signal",
+        "signals": [
+          "complete"
+        ],
+        "fork": false,
+        "skills": {
+          "dynamic": false,
+          "pinned": [
+            "tdd",
+            "clean-ddd-hexagonal",
+            "dotnet-backend-patterns",
+            "dotnet-10-csharp-14",
+            "vercel-react-best-practices",
+            "shadcn",
+            "tanstack-query-best-practices",
+            "orval",
+            "functional-core-imperative-shell",
+            "vertical-slice-architecture"
+          ],
+          "max": 4
+        },
+        "prompt": "Perform the final integration pass for the requested task.\nRead .lattice/plans/restaurant-booking.md, .lattice/plans/slices/manifest.json, every referenced slice file, and every .lattice/summaries/slice-*.md file.\nInspect the whole codebase for cross-slice integration bugs, stale generated clients or contracts, route/API mismatches, missing validations, broken error handling, weak UX where UI is required, dead code, and missing README instructions.\nFor user flows that cross backend, generated client, and UI, verify the actual values line up end-to-end. For example, if the backend returns selectable slots or IDs, the UI must submit those returned values without reformatting them into invalid requests.\nFor date/time or range-based business rules, verify both source and tests cover invalid values, past dates where invalid, outside-hours or out-of-range values, invalid granularity, edge non-overlap, and overlap/conflict behavior as required by the task.\nFor generated API clients, verify the generated paths, base URL/mutator configuration, request shapes, and response handling match the backend routes. Check for double prefixes, stale checked-in specs, or generated clients returning error responses as successful mutations.\nFor UI requirements, verify source evidence for required component systems and that the primary happy path and error paths are functionally connected, not just visually present.\nEnsure the final product satisfies the original scenario goal, not just the individual slice files.\nRun node .opencode/scripts/deterministic-checks.mjs or equivalent full verification commands and fix failures or warnings that should fail the requested quality bar.\nDo not call lattice_signal(status: \"complete\") until the full deterministic checker passes.",
+        "pauseAfter": false,
+        "postHook": {
+          "commands": [
+            "node .opencode/scripts/deterministic-checks.mjs"
+          ],
+          "maxRetries": 1
+        },
+        "isRewindTarget": true,
+        "maxRewinds": 1
+      },
+      {
+        "id": "plan-adherence-review",
+        "agent": "plan-reviewer",
+        "type": "stage",
+        "completion": "tool_signal",
+        "signals": [
+          "approve",
+          "reject",
+          "blocked"
+        ],
+        "fork": false,
+        "skills": {
+          "dynamic": false,
+          "pinned": [
+            "tdd",
+            "clean-ddd-hexagonal",
+            "dotnet-backend-patterns",
+            "dotnet-10-csharp-14",
+            "vercel-react-best-practices",
+            "shadcn",
+            "tanstack-query-best-practices",
+            "orval",
+            "functional-core-imperative-shell",
+            "vertical-slice-architecture"
+          ],
+          "max": 4
+        },
+        "prompt": "Review whether the completed implementation adheres to the saved implementation plan.\nRead .lattice/plans/restaurant-booking.md, every .lattice/plans/slices/*.md file, and every .lattice/summaries/slice-*.md file first. Use them as the scope of this plan-adherence review.\nBreak the plan into its material commitments: user-visible behaviors, system behaviors, integrations, tests/checks, documentation, and any explicit constraints or non-goals.\nTreat completed-stage summaries and prior agent claims as untrusted hints, not evidence. Verify material commitments yourself from source, tests, documentation, and command output before approving.\nRun the deterministic checker (`node .opencode/scripts/deterministic-checks.mjs`) or the equivalent verification commands yourself before approving. If a required check fails, reject or block.\nFor each material plan commitment, decide whether it is implemented, verified, changed-with-justification, missing, or broken.\nBehavioral evidence matters more than artifact presence. Files, endpoints, generated code, scripts, UI, tests, or docs only count when they actually support the planned commitment.\nReject when a material planned commitment is missing, broken, superficially implemented, not exercised through the real production path, or contradicted by failing checks.\nReject when planned tests or verification exist but do not meaningfully cover the commitment they were supposed to protect.\nDo not reject for harmless implementation details, stylistic differences, renamed files, or documented changes that preserve the intent of the plan.\nFor each rejection finding, cite the exact plan bullet or planned slice, the evidence inspected, why the commitment is not satisfied, and the smallest fix expected from the build agent.\nIf all material plan commitments are implemented or reasonably justified and required checks pass, approve the stage with lattice_signal and a concise reason.\nIf material plan commitments are missing or broken, reject the stage with lattice_signal and concise actionable findings.\nIf you cannot inspect enough evidence to decide, block the stage with lattice_signal and a concise reason.",
+        "pauseAfter": false,
+        "isRewindTarget": false
+      }
+    ]
+  },
+  "plan": "# Restaurant Booking — Authenticated Booking Accounts Plan\n\n## Summary\n\nAdd local cookie-based auth, user-scoped bookings, CSRF protection, backend HTTP tests, frontend integration tests, generated TanStack Query hooks, and UI polish. Deliver in 5 vertical slices.\n\n---\n\n## Slice 1: Backend Auth Foundation + User-Scoped Bookings\n\n### Goal\nAdd cookie authentication, user model, registration/login/logout endpoints, associate bookings with users, enforce auth on booking creation, and add user-scoped booking history.\n\n### Backend changes\n\n1. **Add auth packages to `RestaurantBooking.Api.csproj`:**\n   - `Microsoft.AspNetCore.Authentication.Cookies` (built-in, no extra NuGet needed)\n   - Add `Microsoft.Extensions.Identity.Core` for `IPasswordHasher<TUser>` (non-EF, lightweight)\n\n2. **Add user model and in-memory store (`AuthStore.cs`):**\n   - `AppUser` record: `Id`, `Email`, `PasswordHash`, `DisplayName`\n   - `RegisterRequest` record: `Email`, `Password`, `DisplayName`\n   - `LoginRequest` record: `Email`, `Password`\n   - `AuthStore` class: lock-protected `ConcurrentDictionary<string, AppUser>`, seeded with 2 demo users\n   - Seed users: `alice@example.com` / `Demo1234!` and `bob@example.com` / `Demo1234!`\n\n3. **Extend `Booking` record in `Domain.cs`:**\n   - Add `UserId` field (nullable for backward compat, set at creation time)\n\n4. **Add auth error types to `Domain.cs`:**\n   - `AuthError` enum: `InvalidCredentials`, `EmailAlreadyRegistered`, `Unauthenticated`\n   - `AuthResult<T>` (similar to `BookingResult<T>`)\n\n5. **Add auth endpoints in `Program.cs`:**\n   - `POST /api/auth/register` — create user, sign in via cookie\n   - `POST /api/auth/login` — validate credentials, sign in via cookie\n   - `POST /api/auth/logout` — sign out\n   - `GET /api/auth/me` — return current user info (or null if unauthenticated)\n\n6. **Configure cookie auth in `Program.cs`:**\n   - `builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(...)`\n   - Cookie options: `HttpOnly = true`, `SameSite = SameSiteMode.Strict`, `SecurePolicy = None` (local dev)\n   - `builder.Services.AddAuthorization()`\n   - `app.UseAuthentication()` + `app.UseAuthorization()` (before `MapOpenApi`)\n\n7. **Protect endpoints:**\n   - `POST /api/bookings` → `RequireAuthorization()` — unauthenticated returns 401\n   - On create, extract `UserId` from `HttpContext.User` and pass to `BookingStore.TryCreate`\n   - `GET /api/bookings/mine` → new endpoint, `RequireAuthorization()`, returns current user's bookings only\n   - Existing `GET /api/bookings` remains public (for demo, shows all; documented in README)\n   - `GET /api/restaurants` and `GET /api/restaurants/{id}/availability` remain public\n\n8. **Update `BookingStore.cs`:**\n   - `TryCreate` accepts optional `userId` parameter\n   - `GetUserBookings(string userId)` method\n   - Existing `Bookings` property remains for compatibility\n\n9. **Update CORS in `Program.cs`:**\n   - Replace `AllowAnyOrigin` with specific origin `http://localhost:5173` (Vite default)\n   - Add `AllowCredentials()`\n\n### OpenAPI spec update\n\n10. **Update `frontend/openapi/restaurant-booking.json`:**\n    - Add `/api/auth/register`, `/api/auth/login`, `/api/auth/logout`, `/api/auth/me` paths\n    - Add `GET /api/bookings/mine` path (auth-protected)\n    - Add schemas: `RegisterRequest`, `LoginRequest`, `AppUser`, `AuthError`\n    - Add `security` scheme for cookie auth on protected routes\n    - Add `401` response to `POST /api/bookings`\n\n11. **Regenerate client:**\n    - Run `npm run generate:api` after spec update\n\n### Tests (backend)\n\n12. **Add `Microsoft.AspNetCore.Mvc.Testing` to test project**\n13. **Create `AuthEndpointsTests.cs`:**\n    - Register new user → 200 OK, cookie set\n    - Register duplicate email → 409 Conflict\n    - Login with valid credentials → 200 OK, cookie set\n    - Login with wrong password → 401 Unauthorized\n    - Login with unknown email → 401 Unauthorized\n    - GET /api/auth/me authenticated → 200 with user info\n    - GET /api/auth/me unauthenticated → 401\n    - Logout → clears cookie\n\n14. **Create `BookingEndpointsTests.cs`:**\n    - Create booking authenticated → 201 Created, booking has UserId\n    - Create booking unauthenticated → 401 Unauthorized\n    - GET /api/bookings/mine authenticated → 200, only own bookings\n    - GET /api/bookings/mine unauthenticated → 401\n    - User A cannot see User B's bookings via /mine\n    - Existing validation errors still work (invalid party size → 400, unknown restaurant → 404, conflict → 409)\n    - Available slots still work (public endpoint)\n    - Restaurant list still works (public endpoint)\n\n### Verification\n- `dotnet build RestaurantBooking.slnx` passes with TreatWarningsAsErrors\n- `dotnet test RestaurantBooking.slnx --no-build` passes\n- `dotnet format RestaurantBooking.slnx --verify-no-changes` passes\n\n---\n\n## Slice 2: CSRF Protection + Frontend Auth UI + Client Regeneration\n\n### Goal\nAdd CSRF protection for cookie auth, build login/registration/logout UI, regenerate the typed client with TanStack Query hooks, and guard the booking flow behind auth.\n\n### Backend changes\n\n1. **Add antiforgery in `Program.cs`:**\n   - `builder.Services.AddAntiforgery(options => { options.HeaderName = \"X-CSRF-TOKEN\"; })`\n   - Add `GET /api/auth/csrf-token` endpoint — returns CSRF token cookie + token value in response body\n\n2. **Add `ValidateAntiForgeryToken` filter to mutation endpoints:**\n   - Apply to `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout`, `POST /api/bookings`\n\n### Frontend changes\n\n3. **Update `orval.config.ts`:**\n   - Change `client: \"fetch\"` to `client: \"react-query\"` (orval generates TanStack Query hooks)\n   - Generate query hooks for GET endpoints, mutation hooks for POST endpoints\n\n4. **Regenerate client:**\n   - `npm run generate:api`\n\n5. **Create auth hook/context (`src/hooks/useAuth.ts`):**\n   - `useCurrentUser()` — TanStack Query hook using generated `useGetAuthMe`\n   - `useLogin()` — TanStack mutation using generated `usePostAuthLogin`\n   - `useRegister()` — TanStack mutation using generated `usePostAuthRegister`\n   - `useLogout()` — TanStack mutation using generated `usePostAuthLogout`\n\n6. **Create auth components (`src/components/AuthDialog.tsx`):**\n   - Login form: email + password + submit, error display\n   - Register form: email + password + display name + submit, error display\n   - Toggle between login/register\n   - Styled with existing Card/Button/Input/Field components\n\n7. **Create `src/components/NavHeader.tsx`:**\n   - App title/branding\n   - Auth section: \"Sign in\" button (unauthenticated) or user display name + \"Sign out\" (authenticated)\n   - Tab navigation: \"Restaurants\" / \"My Bookings\"\n\n8. **Create `src/components/MyBookings.tsx`:**\n   - Uses generated `useGetBookingsMine` query hook\n   - Shows current user's booking history in a card list\n   - Empty state when no bookings\n\n9. **Update `App.tsx`:**\n   - Add `NavHeader` at top\n   - Add tab state for \"Restaurants\" / \"My Bookings\"\n   - Guard booking form: if not authenticated, show auth prompt instead of form\n   - Replace manual `listBookings` call with generated TanStack Query hook\n   - Replace manual `createBooking` call with generated mutation hook\n   - Use generated hooks for `listRestaurants` and `listAvailableSlots`\n\n10. **CSRF token fetching:**\n    - Fetch CSRF token on app load (before any mutations)\n    - Attach `X-CSRF-TOKEN` header to all POST mutation calls\n    - Configure fetch/axios via orval's mutator or request interceptors\n\n### Verification\n- `cd frontend && npm run generate:api` succeeds\n- `npm run build` passes\n- `npm run typecheck` passes\n- `npm run lint` passes\n- `npm run format:check` passes\n- `npm run deadcode` passes (update knip.json entries if needed)\n\n---\n\n## Slice 3: UI Polish + Backend HTTP Tests + Frontend Tests\n\n### Goal\nImprove visual layout, add frontend integration tests, and add remaining backend HTTP-level tests.\n\n### Backend changes\n\n1. **Add HTTP integration tests (`BookingHttpTests.cs`):**\n   - Use `WebApplicationFactory<Program>` to test the full HTTP pipeline\n   - Test that OpenAPI endpoint is reachable at `/openapi/v1.json`\n   - Test error mapping: 400 for invalid party size, 404 for unknown restaurant, 409 for conflicts\n   - Test date/time validation via HTTP\n   - Test adjacent non-overlapping bookings via HTTP\n   - Test capacity limits via HTTP\n   - These complement the existing pure domain `BookingRulesTests`\n\n### Frontend changes\n\n2. **UI layout improvements in `App.tsx`:**\n   - Replace single-column layout with proper tabbed navigation\n   - \"Restaurants\" tab: existing restaurant selection + booking form\n   - \"My Bookings\" tab: user's booking history (auth-gated)\n   - Better responsive grid at all breakpoints\n   - Smooth transition between tabs\n\n3. **Add `src/components/PageShell.tsx`:**\n   - Max-width container, padding, consistent section spacing\n   - Extracted from inline layout in App.tsx\n\n4. **Polish booking confirmation:**\n   - Animated checkmark or transition on confirmation card\n   - Clearer success state messaging with booking details\n\n5. **Polish empty/error states:**\n   - Consistent empty state illustrations or icons\n   - Better error card styling\n\n### Frontend tests\n\n6. **Add test dependencies to frontend:**\n   - `vitest`, `@testing-library/react`, `@testing-library/jest-dom`, `@testing-library/user-event`, `msw`\n   - `jsdom` for DOM environment\n\n7. **Create test setup (`src/test/setup.ts`):**\n   - MSW server with handlers for auth + booking endpoints\n   - Mock service worker configuration\n\n8. **Create `src/App.test.tsx`:**\n   - Renders restaurant list\n   - Renders header with sign-in button when unauthenticated\n   - Shows auth dialog when clicking sign in\n\n9. **Create `src/components/AuthDialog.test.tsx`:**\n   - Login form submission with valid credentials\n   - Login error display on invalid credentials\n   - Toggle between login and register forms\n\n10. **Create `src/components/BookingForm.test.tsx`:**\n    - Date/party size/time selection\n    - Guest name/email input\n    - Form submission with valid data\n    - Error message display on API errors (conflict, validation)\n    - Confirmation message after successful booking\n\n11. **Create `src/components/MyBookings.test.tsx`:**\n    - Shows booking history when authenticated\n    - Shows empty state when no bookings\n    - Shows loading state\n\n### Verification\n- All frontend quality scripts pass\n- `cd frontend && npx vitest run` passes\n\n---\n\n## Slice 4: End-to-End Integration Verification\n\n### Goal\nEnsure the full stack works together: auth flow, booking creation with user association, CSRF tokens, booking history scoping.\n\n### Tasks\n\n1. **Manual smoke test script or checklist in README:**\n   - Start backend, start frontend\n   - Register a user\n   - Log out, log in\n   - Create a booking at a restaurant\n   - View own booking history\n   - Confirm another user cannot see the first user's bookings\n   - Try creating a booking while logged out (should see auth prompt)\n   - Verify CSRF tokens are sent on mutations\n\n2. **README updates:**\n   - Document seeded demo users (alice@example.com / Demo1234!, bob@example.com / Demo1234!)\n   - Document auth flow, CSRF behavior\n   - Document new endpoints\n   - Update run instructions\n\n3. **Final quality gate:**\n   - `dotnet build RestaurantBooking.slnx` — clean\n   - `dotnet test RestaurantBooking.slnx --no-build` — all pass\n   - `dotnet format RestaurantBooking.slnx --verify-no-changes` — clean\n   - `cd frontend && npm run build` — clean\n   - `cd frontend && npm run typecheck` — clean\n   - `cd frontend && npm run lint` — clean\n   - `cd frontend && npm run format:check` — clean\n   - `cd frontend && npm run deadcode` — clean\n\n---\n\n## Architecture Principles\n\n- **Functional Core / Imperative Shell**: `BookingRules` remains pure domain logic. `BookingStore`, `AuthStore`, and HTTP endpoints are imperative shells.\n- **Result-style errors**: `BookingResult<T>` for business errors, `AuthResult<T>` for auth errors. Mapped to HTTP status codes in the shell.\n- **Clean Architecture boundaries**: Domain types in `Domain.cs`, stores in separate files, endpoints in `Program.cs` (minimal API pattern preserved).\n- **No external services**: All in-memory persistence, no hosted databases, no OAuth, no secrets.\n- **Preserve existing behavior**: All existing endpoints, validation rules, and error mappings remain intact.\n\n---\n\n## File Manifest\n\n### New backend files\n- `backend/RestaurantBooking.Api/AuthStore.cs` — User model + in-memory store\n- `backend/RestaurantBooking.Api/AuthDomain.cs` — Auth request/response/result types\n\n### Modified backend files\n- `backend/RestaurantBooking.Api/Program.cs` — Add auth config, auth endpoints, antiforgery, CORS update\n- `backend/RestaurantBooking.Api/Domain.cs` — Add `UserId` to Booking, optional auth error types\n- `backend/RestaurantBooking.Api/BookingStore.cs` — Add `UserId` support, `GetUserBookings`\n- `backend/RestaurantBooking.Api/RestaurantBooking.Api.csproj` — Add Identity packages\n\n### New test files\n- `backend/RestaurantBooking.Tests/AuthEndpointsTests.cs` — Auth HTTP integration tests\n- `backend/RestaurantBooking.Tests/BookingEndpointsTests.cs` — Booking HTTP integration tests\n\n### Modified test files\n- `backend/RestaurantBooking.Tests/RestaurantBooking.Tests.csproj` — Add WebApplicationFactory package\n\n### New frontend files\n- `frontend/src/components/AuthDialog.tsx` — Login/register modal\n- `frontend/src/components/NavHeader.tsx` — App header with auth state + tab nav\n- `frontend/src/components/MyBookings.tsx` — User's booking history\n- `frontend/src/components/PageShell.tsx` — Layout wrapper\n- `frontend/src/hooks/useAuth.ts` — Auth context/hooks\n- `frontend/src/hooks/useCsrf.ts` — CSRF token management\n- `frontend/src/test/setup.ts` — Test setup with MSW\n- `frontend/src/App.test.tsx` — App-level integration tests\n- `frontend/src/components/AuthDialog.test.tsx`\n- `frontend/src/components/BookingForm.test.tsx`\n- `frontend/src/components/MyBookings.test.tsx`\n\n### Modified frontend files\n- `frontend/orval.config.ts` — Switch to `client: \"react-query\"`\n- `frontend/openapi/restaurant-booking.json` — Add auth endpoints and schemas\n- `frontend/src/App.tsx` — Add auth gating, use generated hooks, tab layout\n- `frontend/src/main.tsx` — Add auth provider/context if needed\n- `frontend/package.json` — Add vitest, testing-library, msw, jsdom\n- `frontend/vite.config.ts` — Add test config\n- `frontend/knip.json` — Update entries for new files\n- `frontend/tsconfig.app.json` — Add vitest/globals types if needed\n\n### Modified root files\n- `README.md` — Auth docs, seeded users, CSRF, updated run instructions\n",
+  "telemetry": {
+    "tokensIn": 601111,
+    "tokensOut": 105985,
+    "tokensReasoning": 67163,
+    "tokensCacheRead": 14725952,
+    "tokensCacheWrite": 0,
+    "costUSD": 0.5174949992,
+    "messageCount": 256,
+    "stages": [
+      {
+        "id": "plan",
+        "agent": "eval-planner",
+        "model": "deepseek-v4-pro",
+        "provider": "opencode-go",
+        "tokensIn": 29429,
+        "tokensOut": 9574,
+        "tokensReasoning": 1977,
+        "tokensCacheRead": 297344,
+        "tokensCacheWrite": 0,
+        "costUSD": 0.09571542799999999,
+        "messageCount": 14
+      },
+      {
+        "id": "normalize-slices",
+        "agent": "eval-planner",
+        "model": "deepseek-v4-pro",
+        "provider": "opencode-go",
+        "tokensIn": 28188,
+        "tokensOut": 6955,
+        "tokensReasoning": 869,
+        "tokensCacheRead": 254464,
+        "tokensCacheWrite": 0,
+        "costUSD": 0.07996436800000001,
+        "messageCount": 12
+      },
+      {
+        "id": "build-slice-1-backend-auth-foundation",
+        "agent": "build",
+        "model": "deepseek-v4-flash",
+        "provider": "opencode-go",
+        "tokensIn": 65732,
+        "tokensOut": 13858,
+        "tokensReasoning": 13804,
+        "tokensCacheRead": 1801856,
+        "tokensCacheWrite": 0,
+        "costUSD": 0.021993036800000004,
+        "messageCount": 40
+      },
+      {
+        "id": "build-slice-2-csrf-frontend-auth",
+        "agent": "build",
+        "model": "deepseek-v4-flash",
+        "provider": "opencode-go",
+        "tokensIn": 83975,
+        "tokensOut": 29063,
+        "tokensReasoning": 27648,
+        "tokensCacheRead": 3911040,
+        "tokensCacheWrite": 0,
+        "costUSD": 0.03858649200000001,
+        "messageCount": 56
+      },
+      {
+        "id": "build-slice-3-ui-polish-tests",
+        "agent": "build",
+        "model": "deepseek-v4-flash",
+        "provider": "opencode-go",
+        "tokensIn": 128097,
+        "tokensOut": 26613,
+        "tokensReasoning": 7764,
+        "tokensCacheRead": 4111360,
+        "tokensCacheWrite": 0,
+        "costUSD": 0.039070947999999994,
+        "messageCount": 57
+      },
+      {
+        "id": "build-slice-4-integration-verification",
+        "agent": "build",
+        "model": "deepseek-v4-flash",
+        "provider": "opencode-go",
+        "tokensIn": 56626,
+        "tokensOut": 5859,
+        "tokensReasoning": 1643,
+        "tokensCacheRead": 361600,
+        "tokensCacheWrite": 0,
+        "costUSD": 0.011040679999999999,
+        "messageCount": 16
+      },
+      {
+        "id": "final-integration",
+        "agent": "build",
+        "model": "deepseek-v4-flash",
+        "provider": "opencode-go",
+        "tokensIn": 134012,
+        "tokensOut": 8278,
+        "tokensReasoning": 10652,
+        "tokensCacheRead": 3391488,
+        "tokensCacheWrite": 0,
+        "costUSD": 0.0335582464,
+        "messageCount": 46
+      },
+      {
+        "id": "plan-adherence-review",
+        "agent": "plan-reviewer",
+        "model": "mimo-v2.5-pro",
+        "provider": "opencode-go",
+        "tokensIn": 70231,
+        "tokensOut": 4524,
+        "tokensReasoning": 2290,
+        "tokensCacheRead": 534464,
+        "tokensCacheWrite": 0,
+        "costUSD": 0.19756579999999999,
+        "messageCount": 14
+      }
+    ],
+    "judge": {
+      "model": "gpt-5.5",
+      "provider": "openai",
+      "tokensIn": 4821,
+      "tokensOut": 1261,
+      "tokensReasoning": 516,
+      "tokensCacheRead": 62336,
+      "tokensCacheWrite": 0,
+      "costUSD": 0,
+      "messageCount": 1
+    }
+  },
+  "checks": [
+    {
+      "command": "dotnet build RestaurantBooking.slnx -p:TreatWarningsAsErrors=true",
+      "exitCode": 0,
+      "durationMs": 1552,
+      "stdout": "  Determining projects to restore...\n  All projects are up-to-date for restore.\n  RestaurantBooking.Api -> /tmp/restaurant-booking-eval-harness-active/1777301480794-scenario-2-deepseek-v4-pro-plan-flash-sliced-build-mimo-review-attempt-1/backend/RestaurantBooking.Api/bin/Debug/net10.0/RestaurantBooking.Api.dll\n  RestaurantBooking.Tests -> /tmp/restaurant-booking-eval-harness-active/1777301480794-scenario-2-deepseek-v4-pro-plan-flash-sliced-build-mimo-review-attempt-1/backend/RestaurantBooking.Tests/bin/Debug/net10.0/RestaurantBooking.Tests.dll\n\nBuild succeeded.\n    0 Warning(s)\n    0 Error(s)\n\nTime Elapsed 00:00:01.37\n",
+      "stderr": ""
+    },
+    {
+      "command": "dotnet test RestaurantBooking.slnx --no-build",
+      "exitCode": 0,
+      "durationMs": 2866,
+      "stdout": "Test run for /tmp/restaurant-booking-eval-harness-active/1777301480794-scenario-2-deepseek-v4-pro-plan-flash-sliced-build-mimo-review-attempt-1/backend/RestaurantBooking.Tests/bin/Debug/net10.0/RestaurantBooking.Tests.dll (.NETCoreApp,Version=v10.0)\nVSTest version 18.0.2 (x64)\n\nStarting test execution, please wait...\nA total of 1 test files matched the specified pattern.\n\nPassed!  - Failed:     0, Passed:    35, Skipped:     0, Total:    35, Duration: 1 s - RestaurantBooking.Tests.dll (net10.0)\n",
+      "stderr": ""
+    },
+    {
+      "command": "dotnet format RestaurantBooking.slnx --verify-no-changes",
+      "exitCode": 0,
+      "durationMs": 9995,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": "npm --prefix frontend install",
+      "exitCode": 0,
+      "durationMs": 1065,
+      "stdout": "\nup to date, audited 429 packages in 942ms\n\n116 packages are looking for funding\n  run `npm fund` for details\n\nfound 0 vulnerabilities\n",
+      "stderr": ""
+    },
+    {
+      "command": "npm --prefix frontend run build",
+      "exitCode": 0,
+      "durationMs": 3937,
+      "stdout": "\n> frontend@0.0.0 build\n> npm run generate:api && tsc -b && vite build\n\n\n> frontend@0.0.0 generate:api\n> orval --config orval.config.ts\n\n🍻 orval v8.8.1 - A swagger client generator for typescript\nbooking Cleaning output folder\n🎉 booking - Your OpenAPI spec has been converted into ready to use orval!\nvite v8.0.10 building client environment for production...\n\u001b[2K\rtransforming...✓ 1791 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/index.html                   0.45 kB │ gzip:  0.29 kB\ndist/assets/index-CzQOlfX5.css   19.65 kB │ gzip:  4.55 kB\ndist/assets/index-BSTnPBYG.js   279.92 kB │ gzip: 86.03 kB\n\n✓ built in 320ms\n",
+      "stderr": ""
+    },
+    {
+      "command": "npm --prefix frontend run typecheck",
+      "exitCode": 0,
+      "durationMs": 2383,
+      "stdout": "\n> frontend@0.0.0 typecheck\n> tsc -b\n\n",
+      "stderr": ""
+    },
+    {
+      "command": "npm --prefix frontend run lint",
+      "exitCode": 0,
+      "durationMs": 1838,
+      "stdout": "\n> frontend@0.0.0 lint\n> eslint .\n\n",
+      "stderr": ""
+    },
+    {
+      "command": "npm --prefix frontend run format:check",
+      "exitCode": 0,
+      "durationMs": 824,
+      "stdout": "\n> frontend@0.0.0 format:check\n> prettier . --check\n\nChecking formatting...\nAll matched files use Prettier code style!\n",
+      "stderr": ""
+    },
+    {
+      "command": "npm --prefix frontend run deadcode",
+      "exitCode": 0,
+      "durationMs": 923,
+      "stdout": "\n> frontend@0.0.0 deadcode\n> knip --include files,dependencies,unlisted,binaries,unresolved,duplicates\n\n",
+      "stderr": ""
+    }
+  ],
+  "fileTree": [
+    ".agents/skills/clean-ddd-hexagonal/SKILL.md",
+    ".agents/skills/clean-ddd-hexagonal/references/CHEATSHEET.md",
+    ".agents/skills/clean-ddd-hexagonal/references/CQRS-EVENTS.md",
+    ".agents/skills/clean-ddd-hexagonal/references/DDD-STRATEGIC.md",
+    ".agents/skills/clean-ddd-hexagonal/references/DDD-TACTICAL.md",
+    ".agents/skills/clean-ddd-hexagonal/references/HEXAGONAL.md",
+    ".agents/skills/clean-ddd-hexagonal/references/LAYERS.md",
+    ".agents/skills/clean-ddd-hexagonal/references/TESTING.md",
+    ".agents/skills/dotnet-10-csharp-14/SKILL.md",
+    ".agents/skills/dotnet-10-csharp-14/anti-patterns.md",
+    ".agents/skills/dotnet-10-csharp-14/csharp-14.md",
+    ".agents/skills/dotnet-10-csharp-14/infrastructure.md",
+    ".agents/skills/dotnet-10-csharp-14/libraries.md",
+    ".agents/skills/dotnet-10-csharp-14/minimal-apis.md",
+    ".agents/skills/dotnet-10-csharp-14/security.md",
+    ".agents/skills/dotnet-10-csharp-14/testing.md",
+    ".agents/skills/dotnet-backend-patterns/SKILL.md",
+    ".agents/skills/dotnet-backend-patterns/assets/repository-template.cs",
+    ".agents/skills/dotnet-backend-patterns/assets/service-template.cs",
+    ".agents/skills/dotnet-backend-patterns/references/dapper-patterns.md",
+    ".agents/skills/dotnet-backend-patterns/references/ef-core-best-practices.md",
+    ".agents/skills/functional-core-imperative-shell/SKILL.md",
+    ".agents/skills/orval/SKILL.md",
+    ".agents/skills/orval/advanced-config.md",
+    ".agents/skills/orval/angular.md",
+    ".agents/skills/orval/custom-http-clients.md",
+    ".agents/skills/orval/hono.md",
+    ".agents/skills/orval/mocking-msw.md",
+    ".agents/skills/orval/solid-start.md",
+    ".agents/skills/orval/tanstack-query.md",
+    ".agents/skills/orval/tooling-workflow.md",
+    ".agents/skills/orval/zod-validation.md",
+    ".agents/skills/shadcn/SKILL.md",
+    ".agents/skills/shadcn/agents/openai.yml",
+    ".agents/skills/shadcn/assets/shadcn-small.png",
+    ".agents/skills/shadcn/assets/shadcn.png",
+    ".agents/skills/shadcn/cli.md",
+    ".agents/skills/shadcn/customization.md",
+    ".agents/skills/shadcn/evals/evals.json",
+    ".agents/skills/shadcn/mcp.md",
+    ".agents/skills/shadcn/rules/base-vs-radix.md",
+    ".agents/skills/shadcn/rules/composition.md",
+    ".agents/skills/shadcn/rules/forms.md",
+    ".agents/skills/shadcn/rules/icons.md",
+    ".agents/skills/shadcn/rules/styling.md",
+    ".agents/skills/tanstack-query-best-practices/SKILL.md",
+    ".agents/skills/tanstack-query-best-practices/rules/cache-gc-time.md",
+    ".agents/skills/tanstack-query-best-practices/rules/cache-invalidation.md",
+    ".agents/skills/tanstack-query-best-practices/rules/cache-placeholder-vs-initial.md",
+    ".agents/skills/tanstack-query-best-practices/rules/cache-stale-time.md",
+    ".agents/skills/tanstack-query-best-practices/rules/err-error-boundaries.md",
+    ".agents/skills/tanstack-query-best-practices/rules/inf-page-params.md",
+    ".agents/skills/tanstack-query-best-practices/rules/mut-invalidate-queries.md",
+    ".agents/skills/tanstack-query-best-practices/rules/mut-mutation-state.md",
+    ".agents/skills/tanstack-query-best-practices/rules/mut-optimistic-updates.md",
+    ".agents/skills/tanstack-query-best-practices/rules/network-mode.md",
+    ".agents/skills/tanstack-query-best-practices/rules/parallel-use-queries.md",
+    ".agents/skills/tanstack-query-best-practices/rules/perf-select-transform.md",
+    ".agents/skills/tanstack-query-best-practices/rules/persist-queries.md",
+    ".agents/skills/tanstack-query-best-practices/rules/pf-intent-prefetch.md",
+    ".agents/skills/tanstack-query-best-practices/rules/qk-array-structure.md",
+    ".agents/skills/tanstack-query-best-practices/rules/qk-factory-pattern.md",
+    ".agents/skills/tanstack-query-best-practices/rules/qk-hierarchical-organization.md",
+    ".agents/skills/tanstack-query-best-practices/rules/qk-include-dependencies.md",
+    ".agents/skills/tanstack-query-best-practices/rules/qk-serializable.md",
+    ".agents/skills/tanstack-query-best-practices/rules/query-cancellation.md",
+    ".agents/skills/tanstack-query-best-practices/rules/ssr-dehydration.md",
+    ".agents/skills/tdd/SKILL.md",
+    ".agents/skills/tdd/deep-modules.md",
+    ".agents/skills/tdd/interface-design.md",
+    ".agents/skills/tdd/mocking.md",
+    ".agents/skills/tdd/refactoring.md",
+    ".agents/skills/tdd/tests.md",
+    ".agents/skills/vercel-react-best-practices/AGENTS.md",
+    ".agents/skills/vercel-react-best-practices/README.md",
+    ".agents/skills/vercel-react-best-practices/SKILL.md",
+    ".agents/skills/vercel-react-best-practices/metadata.json",
+    ".agents/skills/vercel-react-best-practices/rules/_sections.md",
+    ".agents/skills/vercel-react-best-practices/rules/_template.md",
+    ".agents/skills/vercel-react-best-practices/rules/advanced-effect-event-deps.md",
+    ".agents/skills/vercel-react-best-practices/rules/advanced-event-handler-refs.md",
+    ".agents/skills/vercel-react-best-practices/rules/advanced-init-once.md",
+    ".agents/skills/vercel-react-best-practices/rules/advanced-use-latest.md",
+    ".agents/skills/vercel-react-best-practices/rules/async-api-routes.md",
+    ".agents/skills/vercel-react-best-practices/rules/async-cheap-condition-before-await.md",
+    ".agents/skills/vercel-react-best-practices/rules/async-defer-await.md",
+    ".agents/skills/vercel-react-best-practices/rules/async-dependencies.md",
+    ".agents/skills/vercel-react-best-practices/rules/async-parallel.md",
+    ".agents/skills/vercel-react-best-practices/rules/async-suspense-boundaries.md",
+    ".agents/skills/vercel-react-best-practices/rules/bundle-analyzable-paths.md",
+    ".agents/skills/vercel-react-best-practices/rules/bundle-barrel-imports.md",
+    ".agents/skills/vercel-react-best-practices/rules/bundle-conditional.md",
+    ".agents/skills/vercel-react-best-practices/rules/bundle-defer-third-party.md",
+    ".agents/skills/vercel-react-best-practices/rules/bundle-dynamic-imports.md",
+    ".agents/skills/vercel-react-best-practices/rules/bundle-preload.md",
+    ".agents/skills/vercel-react-best-practices/rules/client-event-listeners.md",
+    ".agents/skills/vercel-react-best-practices/rules/client-localstorage-schema.md",
+    ".agents/skills/vercel-react-best-practices/rules/client-passive-event-listeners.md",
+    ".agents/skills/vercel-react-best-practices/rules/client-swr-dedup.md",
+    ".agents/skills/vercel-react-best-practices/rules/js-batch-dom-css.md",
+    ".agents/skills/vercel-react-best-practices/rules/js-cache-function-results.md",
+    ".agents/skills/vercel-react-best-practices/rules/js-cache-property-access.md",
+    ".agents/skills/vercel-react-best-practices/rules/js-cache-storage.md",
+    ".agents/skills/vercel-react-best-practices/rules/js-combine-iterations.md",
+    ".agents/skills/vercel-react-best-practices/rules/js-early-exit.md",
+    ".agents/skills/vercel-react-best-practices/rules/js-flatmap-filter.md",
+    ".agents/skills/vercel-react-best-practices/rules/js-hoist-regexp.md",
+    ".agents/skills/vercel-react-best-practices/rules/js-index-maps.md",
+    ".agents/skills/vercel-react-best-practices/rules/js-length-check-first.md",
+    ".agents/skills/vercel-react-best-practices/rules/js-min-max-loop.md",
+    ".agents/skills/vercel-react-best-practices/rules/js-request-idle-callback.md",
+    ".agents/skills/vercel-react-best-practices/rules/js-set-map-lookups.md",
+    ".agents/skills/vercel-react-best-practices/rules/js-tosorted-immutable.md",
+    ".agents/skills/vercel-react-best-practices/rules/rendering-activity.md",
+    ".agents/skills/vercel-react-best-practices/rules/rendering-animate-svg-wrapper.md",
+    ".agents/skills/vercel-react-best-practices/rules/rendering-conditional-render.md",
+    ".agents/skills/vercel-react-best-practices/rules/rendering-content-visibility.md",
+    ".agents/skills/vercel-react-best-practices/rules/rendering-hoist-jsx.md",
+    ".agents/skills/vercel-react-best-practices/rules/rendering-hydration-no-flicker.md",
+    ".agents/skills/vercel-react-best-practices/rules/rendering-hydration-suppress-warning.md",
+    ".agents/skills/vercel-react-best-practices/rules/rendering-resource-hints.md",
+    ".agents/skills/vercel-react-best-practices/rules/rendering-script-defer-async.md",
+    ".agents/skills/vercel-react-best-practices/rules/rendering-svg-precision.md",
+    ".agents/skills/vercel-react-best-practices/rules/rendering-usetransition-loading.md",
+    ".agents/skills/vercel-react-best-practices/rules/rerender-defer-reads.md",
+    ".agents/skills/vercel-react-best-practices/rules/rerender-dependencies.md",
+    ".agents/skills/vercel-react-best-practices/rules/rerender-derived-state-no-effect.md",
+    ".agents/skills/vercel-react-best-practices/rules/rerender-derived-state.md",
+    ".agents/skills/vercel-react-best-practices/rules/rerender-functional-setstate.md",
+    ".agents/skills/vercel-react-best-practices/rules/rerender-lazy-state-init.md",
+    ".agents/skills/vercel-react-best-practices/rules/rerender-memo-with-default-value.md",
+    ".agents/skills/vercel-react-best-practices/rules/rerender-memo.md",
+    ".agents/skills/vercel-react-best-practices/rules/rerender-move-effect-to-event.md",
+    ".agents/skills/vercel-react-best-practices/rules/rerender-no-inline-components.md",
+    ".agents/skills/vercel-react-best-practices/rules/rerender-simple-expression-in-memo.md",
+    ".agents/skills/vercel-react-best-practices/rules/rerender-split-combined-hooks.md",
+    ".agents/skills/vercel-react-best-practices/rules/rerender-transitions.md",
+    ".agents/skills/vercel-react-best-practices/rules/rerender-use-deferred-value.md",
+    ".agents/skills/vercel-react-best-practices/rules/rerender-use-ref-transient-values.md",
+    ".agents/skills/vercel-react-best-practices/rules/server-after-nonblocking.md",
+    ".agents/skills/vercel-react-best-practices/rules/server-auth-actions.md",
+    ".agents/skills/vercel-react-best-practices/rules/server-cache-lru.md",
+    ".agents/skills/vercel-react-best-practices/rules/server-cache-react.md",
+    ".agents/skills/vercel-react-best-practices/rules/server-dedup-props.md",
+    ".agents/skills/vercel-react-best-practices/rules/server-hoist-static-io.md",
+    ".agents/skills/vercel-react-best-practices/rules/server-no-shared-module-state.md",
+    ".agents/skills/vercel-react-best-practices/rules/server-parallel-fetching.md",
+    ".agents/skills/vercel-react-best-practices/rules/server-parallel-nested-fetching.md",
+    ".agents/skills/vercel-react-best-practices/rules/server-serialization.md",
+    ".agents/skills/vertical-slice-architecture/SKILL.md",
+    ".agents/skills/vertical-slice-architecture/references/patterns-by-language.md",
+    ".agents/skills/vertical-slice-architecture/references/principles.md",
+    ".agents/skills/vertical-slice-architecture/references/testing.md",
+    ".gitignore",
+    "README.md",
+    "RestaurantBooking.slnx",
+    "backend/RestaurantBooking.Api/AuthDomain.cs",
+    "backend/RestaurantBooking.Api/AuthStore.cs",
+    "backend/RestaurantBooking.Api/BookingStore.cs",
+    "backend/RestaurantBooking.Api/Domain.cs",
+    "backend/RestaurantBooking.Api/Program.cs",
+    "backend/RestaurantBooking.Api/Properties/launchSettings.json",
+    "backend/RestaurantBooking.Api/RestaurantBooking.Api.csproj",
+    "backend/RestaurantBooking.Api/RestaurantBooking.Api.http",
+    "backend/RestaurantBooking.Api/appsettings.Development.json",
+    "backend/RestaurantBooking.Api/appsettings.json",
+    "backend/RestaurantBooking.Tests/AuthEndpointsTests.cs",
+    "backend/RestaurantBooking.Tests/BookingEndpointsTests.cs",
+    "backend/RestaurantBooking.Tests/BookingHttpTests.cs",
+    "backend/RestaurantBooking.Tests/BookingRulesTests.cs",
+    "backend/RestaurantBooking.Tests/RestaurantBooking.Tests.csproj",
+    "frontend/.gitignore",
+    "frontend/.prettierignore",
+    "frontend/README.md",
+    "frontend/components.json",
+    "frontend/dist/assets/index-BSTnPBYG.js",
+    "frontend/dist/assets/index-CzQOlfX5.css",
+    "frontend/dist/favicon.svg",
+    "frontend/dist/icons.svg",
+    "frontend/dist/index.html",
+    "frontend/eslint.config.js",
+    "frontend/index.html",
+    "frontend/knip.json",
+    "frontend/openapi/restaurant-booking.json",
+    "frontend/orval.config.ts",
+    "frontend/package-lock.json",
+    "frontend/package.json",
+    "frontend/public/favicon.svg",
+    "frontend/public/icons.svg",
+    "frontend/src/App.test.tsx",
+    "frontend/src/App.tsx",
+    "frontend/src/components/AuthDialog.test.tsx",
+    "frontend/src/components/AuthDialog.tsx",
+    "frontend/src/components/BookingForm.test.tsx",
+    "frontend/src/components/BookingForm.tsx",
+    "frontend/src/components/MyBookings.test.tsx",
+    "frontend/src/components/MyBookings.tsx",
+    "frontend/src/components/NavHeader.tsx",
+    "frontend/src/components/PageShell.tsx",
+    "frontend/src/components/ui/badge.tsx",
+    "frontend/src/components/ui/button.tsx",
+    "frontend/src/components/ui/card.tsx",
+    "frontend/src/components/ui/field.tsx",
+    "frontend/src/components/ui/input.tsx",
+    "frontend/src/generated/booking-client.ts",
+    "frontend/src/hooks/useAuth.tsx",
+    "frontend/src/index.css",
+    "frontend/src/lib/utils.ts",
+    "frontend/src/main.tsx",
+    "frontend/src/test/mocks.ts",
+    "frontend/src/test/setup.ts",
+    "frontend/src/test/test-utils.tsx",
+    "frontend/tsconfig.app.json",
+    "frontend/tsconfig.json",
+    "frontend/tsconfig.node.json",
+    "frontend/vite.config.ts",
+    "opencode.json",
+    "package.json",
+    "skills-lock.json"
+  ],
+  "judge": {
+    "parentID": "msg_dcf9dccbe001sTokc4f14rlah6",
+    "role": "assistant",
+    "mode": "build",
+    "agent": "build",
+    "path": {
+      "cwd": "/tmp/restaurant-booking-eval-harness-active/1777301480794-scenario-2-deepseek-v4-pro-plan-flash-sliced-build-mimo-review-attempt-1",
+      "root": "/"
+    },
+    "cost": 0,
+    "tokens": {
+      "total": 68934,
+      "input": 4821,
+      "output": 1261,
+      "reasoning": 516,
+      "cache": {
+        "write": 0,
+        "read": 62336
+      }
+    },
+    "modelID": "gpt-5.5",
+    "providerID": "openai",
+    "time": {
+      "created": 1777304773276,
+      "completed": 1777304791845
+    },
+    "finish": "tool-calls",
+    "structured": {
+      "overallScore": 76,
+      "requirementCoverage": 76,
+      "backendScore": 78,
+      "frontendScore": 77,
+      "correctnessScore": 74,
+      "testQualityScore": 72,
+      "maintainabilityScore": 80,
+      "architectureScore": 80,
+      "functionalCoreScore": 82,
+      "uiUxScore": 78,
+      "typedClientScore": 86,
+      "planQualityScore": 76,
+      "planAdherenceScore": 76,
+      "scenarioScores": [
+        {
+          "name": "authCorrectness",
+          "score": 80
+        },
+        {
+          "name": "authSecurity",
+          "score": 58
+        },
+        {
+          "name": "bookingOwnership",
+          "score": 55
+        },
+        {
+          "name": "httpOpenApiCoverage",
+          "score": 78
+        },
+        {
+          "name": "frontendFlowCoverage",
+          "score": 55
+        },
+        {
+          "name": "generatedQueryIntegration",
+          "score": 86
+        },
+        {
+          "name": "brownfieldIntegration",
+          "score": 82
+        },
+        {
+          "name": "regressionCoverage",
+          "score": 70
+        }
+      ],
+      "deterministicChecksPass": true,
+      "backendBuildPass": true,
+      "backendTestsPass": true,
+      "backendFormatPass": true,
+      "frontendBuildPass": true,
+      "frontendTypecheckPass": true,
+      "frontendLintPass": true,
+      "frontendFormatPass": true,
+      "deadCodeCheckPass": true,
+      "tailwindShadcnUsed": true,
+      "tanstackUsed": true,
+      "typedOpenApiClientUsed": true,
+      "boundaryTestsPresent": true,
+      "runnable": true,
+      "majorIssues": [
+        "CSRF is not convincingly enforced for JSON mutation endpoints: Program.cs configures AddAntiforgery and UseAntiforgery, and the SPA sends X-CSRF-TOKEN, but the POST /api/auth/register, /api/auth/login, /api/auth/logout, and /api/bookings endpoints do not have endpoint metadata requiring antiforgery validation, and backend tests do not assert missing/invalid token rejection.",
+        "Booking ownership is undermined by Program.cs keeping GET /api/bookings public and returning store.Bookings, which includes all users' bookings and userId values. README.md also documents this as a public demo/diagnostic endpoint.",
+        "Frontend flow tests are present and pass when run from frontend with `npm exec vitest run`, but they are shallow: they do not assert successful login/register submission, successful booking creation confirmation after form submission, API mutation error display, logout behavior, or auth-gated history error states."
+      ],
+      "missingRequirements": [
+        "State-changing cookie-auth requests lack source/test evidence of enforced CSRF rejection for missing or invalid tokens.",
+        "Users must not be able to view another user's booking history, but the public all-bookings endpoint exposes all booking records.",
+        "README claims UseAntiforgery validates every non-idempotent request and that CSRF token validation is covered, but source/tests do not substantiate that behavior."
+      ],
+      "notableStrengths": [
+        "All provided deterministic checks passed: backend warning-free build, backend tests, backend format verification, frontend install/build/typecheck/lint/format/deadcode.",
+        "Backend creates authenticated bookings with the current user's id and provides a scoped GET /api/bookings/mine endpoint with tests for unauthenticated access and per-user filtering.",
+        "Orval generates a TanStack Query client during frontend build, and the frontend uses generated hooks for restaurants, availability, booking creation, and user booking history.",
+        "Backend tests cover HTTP endpoints, OpenAPI availability, invalid party size/date/time, unknown restaurants, overlapping reservations, capacity limits, and auth boundaries.",
+        "UI was extended with auth dialog, navigation, hero layout, booking form gating, confirmation display, and booking history while preserving the existing React/Tailwind/shadcn-style stack."
+      ],
+      "scenarioFindings": [
+        "authCorrectness: unauthenticated POST /api/bookings returns 401 in tests, login/register/me/logout endpoints exist, and bookings are associated with authenticated user ids.",
+        "authSecurity: HTTP-only SameSite cookies and no localStorage/sessionStorage auth token use are good, but CSRF enforcement is not proven in backend source/tests despite token fetching/sending.",
+        "bookingOwnership: GET /api/bookings/mine scopes to the current user, but public GET /api/bookings exposes all bookings.",
+        "httpOpenApiCoverage: backend tests exercise multiple HTTP endpoints and /openapi/v1.json availability, but OpenAPI assertions are minimal and do not validate auth/CSRF documentation accuracy.",
+        "frontendFlowCoverage: component tests exist and pass from the frontend directory, but they mostly check rendering and do not cover full auth, booking success/error, logout, and history flows.",
+        "generatedQueryIntegration: Orval React Query hooks are generated and used for server-state operations; auth uses generated typed operations with thin wrappers.",
+        "brownfieldIntegration: implementation is focused and preserves the lightweight minimal API, in-memory store, React SPA, TanStack Query, Tailwind/shadcn approach, and deterministic scripts.",
+        "regressionCoverage: backend regression coverage is solid, but missing CSRF rejection tests and shallow frontend integration tests leave important scenario risks."
+      ],
+      "summary": "The solution is runnable and passes all mandatory deterministic gates, with a generally good brownfield integration of cookie auth, user-scoped booking history, generated Orval/TanStack usage, and expanded backend HTTP tests. The main correctness/security deductions are that CSRF protection is token-sent but not clearly enforced for JSON mutations, and the public all-bookings endpoint still exposes other users' bookings."
+    },
+    "id": "msg_dcf9ea29c0010agIy7ZnijEIA3",
+    "sessionID": "ses_230623352ffem1RxkAwbTXqwfi"
+  }
+}
