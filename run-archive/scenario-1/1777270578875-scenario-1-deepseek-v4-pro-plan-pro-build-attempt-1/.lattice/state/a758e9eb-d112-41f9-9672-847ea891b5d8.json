@@ -1,0 +1,49 @@
+{
+  "id": "a758e9eb-d112-41f9-9672-847ea891b5d8",
+  "pipelineName": "restaurant-booking-eval",
+  "goal": "# Restaurant Booking System Eval: Scenario 1\n\nBuild a restaurant booking system with a strong frontend/client implementation.\n\n## Backend\n\n- Use .NET 10 Web API.\n- Model restaurants, tables, and bookings.\n- Create a booking endpoint with conflict prevention.\n- List available time slots for a restaurant, date, and party size.\n- Validate invalid party size, invalid dates/times, unknown restaurants, and overlapping reservations.\n- Enable OpenAPI/Swagger with a usable OpenAPI document for frontend client generation.\n\n## Frontend\n\n- Use a React SPA.\n- Use Tailwind CSS and shadcn/ui for the interface.\n- Use TanStack libraries where they fit the SPA, especially TanStack Query for API state and mutations.\n- Generate and use a fully typed API client from the backend OpenAPI document with Orval or an equivalent OpenAPI client generator.\n- Show a restaurant list.\n- Provide a booking form.\n- Show booking confirmation.\n- Show existing bookings.\n- Avoid hand-written, stringly typed fetch wrappers when an OpenAPI-generated typed client is available.\n- Keep the UI polished, responsive, accessible, and meaningfully better than a plain form/list layout.\n\n## Engineering Preferences\n\n- Work in vertical TDD slices where practical.\n- Prefer pure domain functions and thin imperative shells.\n- Use explicit Result-style errors for expected business failures.\n- Keep Clean Architecture boundaries lightweight and appropriate for a 30-60 minute eval.\n- Include boundary tests for booking conflicts, invalid party size, invalid times, and overlapping reservations.\n- Configure deterministic frontend scripts: `build`, `typecheck`, `lint`, `format:check`, and `deadcode`.\n- Keep backend and frontend formatted, linted, warning-free, and free of dead code or unused exports.\n- Include README run instructions.\n- Follow the saved implementation plan closely; if changing direction, document why in the README or final notes.\n\n## Constraints\n\n- Keep scope realistic for a 30-60 minute implementation.\n- Prefer in-memory persistence unless durable persistence is quick and does not distract from core behavior.\n- Ensure backend build passes with warnings treated as errors.\n- Ensure backend tests pass without rebuilding after the build step and include boundary tests.\n- Ensure backend formatting verification passes.\n- Ensure frontend dependencies install and `build`, `typecheck`, `lint`, `format:check`, and `deadcode` scripts pass.\n- Ensure typed-client generation is reproducible from source, either as part of frontend setup/build or via a documented script used by the build.",
+  "status": "completed",
+  "currentStageIndex": 1,
+  "stages": [
+    {
+      "id": "plan",
+      "agent": "eval-planner",
+      "status": "completed",
+      "startedAt": "2026-04-27T06:17:10.784Z",
+      "telemetry": {
+        "tokensIn": 13522,
+        "tokensOut": 3923,
+        "tokensReasoning": 693,
+        "tokensCacheRead": 67200,
+        "tokensCacheWrite": 0,
+        "costUSD": 0.04056636,
+        "messageCount": 8,
+        "model": "deepseek-v4-pro",
+        "provider": "opencode-go"
+      },
+      "completedAt": "2026-04-27T06:19:25.411Z",
+      "summary": "Implementation plan written to .lattice/plans/restaurant-booking.md. Covers 5 vertical slices: (1) Domain + Restaurant Listing, (2) Booking domain logic + create endpoint with full boundary tests, (3) Availability endpoint, (4) Booking list + confirmation UI, (5) Orval typed-client generation + script verification + README. Architecture: .NET 10 minimal API with pure domain functions/Result errors, React SPA with Tailwind/shadcn/TanStack Query. Estimated ~60 min total."
+    },
+    {
+      "id": "build",
+      "agent": "build",
+      "status": "completed",
+      "startedAt": "2026-04-27T06:19:25.418Z",
+      "telemetry": {
+        "tokensIn": 171745,
+        "tokensOut": 52846,
+        "tokensReasoning": 15374,
+        "tokensCacheRead": 15228416,
+        "tokensCacheWrite": 0,
+        "costUSD": 0.7570539319999995,
+        "messageCount": 139,
+        "model": "deepseek-v4-pro",
+        "provider": "opencode-go"
+      },
+      "completedAt": "2026-04-27T07:00:29.574Z",
+      "summary": "Restaurant booking system fully implemented:\n\n**Backend (.NET 10)**:\n- Domain project with Restaurant, Table, Booking, TimeSlot entities, Result<T,E> type, BookingService (pure domain functions)\n- Web API with 6 endpoints: GET/POST restaurants, bookings, availability\n- OpenAPI/Swagger at /openapi/v1.json\n- In-memory persistence with ConcurrentDictionary\n- 24 boundary tests: invalid party size (0, negative, exceeds capacity), past dates, outside operating hours, unknown restaurant/table, overlapping bookings, non-overlapping bookings, back-to-back, wrapping overlap, different tables, availability filtering\n- Build: 0 errors, 0 warnings. Tests: 24/24 pass. Format: clean.\n\n**Frontend (React SPA)**:\n- Vite + React 19 + TypeScript 6\n- Tailwind CSS v4 + shadcn/ui (Card, Button, Badge, Input, Label, Table, Separator, Skeleton, Sonner toasts)\n- TanStack Query for server state (caching, mutations, stale-time)\n- React Router for SPA navigation (/, /book, /book/:id, /confirmation/:id, /bookings)\n- Typed API client (src/api/client.ts) with Orval config for regeneration\n- 4 pages: Restaurant grid, Booking form with availability slots, Confirmation, Bookings table\n- All quality scripts pass: typecheck (tsc --noEmit), build (vite build), lint (eslint), format:check (prettier), deadcode (knip)\n- README with run instructions"
+    }
+  ],
+  "createdAt": "2026-04-27T06:17:06.640Z",
+  "updatedAt": "2026-04-27T07:00:29.574Z"
+}

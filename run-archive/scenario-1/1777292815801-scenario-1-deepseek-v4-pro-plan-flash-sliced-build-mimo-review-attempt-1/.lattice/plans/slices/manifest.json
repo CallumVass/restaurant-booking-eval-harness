@@ -1,0 +1,28 @@
+{
+  "slices": [
+    {
+      "index": 1,
+      "id": "backend-domain-api",
+      "title": "Backend Domain Models, Booking Logic, API Endpoints, and Boundary Tests",
+      "file": ".lattice/plans/slices/01-backend-domain-api.md"
+    },
+    {
+      "index": 2,
+      "id": "frontend-foundation",
+      "title": "Frontend Scaffold, Tailwind + shadcn/ui, Orval Typed Client, TanStack Query Setup",
+      "file": ".lattice/plans/slices/02-frontend-foundation.md"
+    },
+    {
+      "index": 3,
+      "id": "frontend-features",
+      "title": "Frontend Pages: Restaurant List, Booking Form, Confirmation, Bookings List, Navigation",
+      "file": ".lattice/plans/slices/03-frontend-features.md"
+    },
+    {
+      "index": 4,
+      "id": "polish-verification",
+      "title": "Deterministic Scripts, Dead Code Check, README, and Final Verification",
+      "file": ".lattice/plans/slices/04-polish-verification.md"
+    }
+  ]
+}

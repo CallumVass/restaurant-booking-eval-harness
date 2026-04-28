@@ -1,13 +1,16 @@
-# Keep archived eval solutions publishable without committing generated dependencies, build outputs, or runtime state.
+# Keep archived eval solutions publishable without committing generated dependencies or build outputs.
+# .lattice plans/state/summaries and lightweight .opencode scripts are useful run evidence.
 **/node_modules/
 **/dist/
 **/build/
 **/coverage/
 **/bin/
 **/obj/
-**/.lattice/
-**/.opencode/
-**/.agents/
+**/.opencode/node_modules/
+**/.opencode/package.json
+**/.opencode/package-lock.json
+**/.opencode/skills/
+**/.agents/skills/
 **/.env
 **/.env.*
 **/*.user

@@ -1,0 +1,80 @@
+{
+  "id": "736923e0-0091-4e69-9e16-d5ee213f43af",
+  "pipelineName": "restaurant-booking-eval",
+  "goal": "# Add Authenticated Booking Accounts\n\nExtend the existing restaurant booking app so bookings belong to authenticated users. Treat this as a normal change request against the current codebase: inspect the existing backend, frontend, tests, OpenAPI/client generation, scripts, and README before changing anything.\n\nDo not rebuild the app from scratch. Preserve existing behavior unless this request explicitly requires a change.\n\n## Existing Issues To Fix\n\n- Add backend HTTP/OpenAPI-level tests for the existing restaurant, availability, booking, and error-mapping behavior rather than only testing domain rules.\n- Add focused frontend UI/integration tests for the core booking flows where practical, including form submission, API error handling, and booking confirmation/history display.\n- Strengthen the generated client workflow so frontend server-state code uses generated TanStack Query hooks where supported, rather than wrapping generated fetch functions by hand.\n- Improve the UI polish beyond the current compact single-page card/form/list experience while preserving the existing visual language.\n\nKeep fixes focused. Preserve the existing architecture, generated API client workflow, TanStack Query usage, Tailwind/shadcn setup, and deterministic scripts.\n\n## Authentication\n\n- Add local email/password authentication using ASP.NET Core Identity or an equivalent first-party .NET auth approach.\n- Do not use external hosted auth providers, OAuth apps, or services requiring secrets.\n- A user must be authenticated to create a booking.\n- A user can view their own booking history at restaurants.\n- Users must not be able to view another user's booking history.\n- Keep auth suitable for local development and automated verification; seeded/demo users are acceptable if documented.\n\n## Cookie Auth Security\n\n- Use HTTP-only cookies for authentication.\n- Because auth uses cookies, implement local-development appropriate CSRF/anti-forgery protection for state-changing requests.\n- The SPA must fetch and send the CSRF token for login, logout, booking creation, and other booking mutations.\n- Configure CORS and credentialed requests deliberately for the local frontend/backend origins.\n- Do not store auth tokens in localStorage or sessionStorage.\n\n## Backend Requirements\n\n- Keep using .NET 10 Web API.\n- Keep existing restaurants, tables, availability, and booking behavior working.\n- Protect booking creation so unauthenticated users cannot create bookings.\n- Associate each booking with the authenticated user that created it.\n- Add authenticated booking-history endpoints scoped to the current user.\n- Preserve useful validation errors for invalid party size, invalid dates/times, unknown restaurants, and overlapping reservations.\n- Keep OpenAPI/Swagger usable for frontend client generation, including auth-related endpoints and protected booking behavior.\n\n## Frontend Requirements\n\n- Keep using the existing React SPA, Tailwind CSS, shadcn/ui approach, TanStack Query, and generated OpenAPI client workflow.\n- Add login, registration, logout, and authenticated-user state to the existing UI.\n- Require login before creating a booking and show a clear path to authenticate.\n- Show the authenticated user's booking history at restaurants.\n- Use generated TanStack Query hooks where the OpenAPI generator supports them; otherwise use generated typed operations with thin, typed TanStack Query/mutation calls.\n- Avoid hand-written, stringly typed fetch wrappers when an OpenAPI-generated typed client is available.\n- Keep the UI polished, responsive, accessible, and consistent with the existing visual language.\n\n## Tests And Quality Gates\n\n- Work in small slices: inspect, test, change, verify.\n- Prefer minimal focused edits over replacing existing structure.\n- Prefer pure domain functions and thin imperative shells for booking/conflict logic.\n- Use explicit Result-style errors for expected business failures where the existing app does so.\n- Keep Clean Architecture boundaries lightweight and consistent with the existing app.\n- Include backend tests for auth boundaries, user-scoped booking history, invalid auth attempts, atomic conflict prevention, invalid party size, invalid times, overlapping reservations, HTTP endpoint behavior, OpenAPI availability, and error mapping.\n- Include frontend tests for the main auth, booking creation, booking-history, confirmation, and API error-display flows where practical.\n- Keep backend and frontend formatted, linted, warning-free, and free of dead code or unused exports.\n- Update README run instructions for auth, seeded/demo users, CSRF behavior, and any new scripts.\n\n## Constraints\n\n- Keep scope realistic for a focused implementation pass.\n- Do not introduce external services, hosted databases, OAuth providers, or secrets.\n- Prefer in-memory or lightweight local persistence unless the existing app already uses another approach.\n- Ensure backend build passes with warnings treated as errors.\n- Ensure backend tests pass without rebuilding after the build step and include the required auth/conflict boundary tests.\n- Ensure backend formatting verification passes.\n- Ensure frontend dependencies install and `build`, `typecheck`, `lint`, `format:check`, and `deadcode` scripts pass.\n- Ensure typed-client generation remains reproducible from source, either as part of frontend setup/build or via a documented script used by the build.\n- Follow the saved implementation plan closely; if changing direction, document why in the README or final notes.",
+  "status": "completed",
+  "currentStageIndex": 2,
+  "stages": [
+    {
+      "id": "plan",
+      "agent": "eval-planner",
+      "status": "completed",
+      "startedAt": "2026-04-28T09:04:26.963Z",
+      "telemetry": {
+        "tokensIn": 34107,
+        "tokensOut": 5333,
+        "tokensReasoning": 341,
+        "tokensCacheRead": 236864,
+        "tokensCacheWrite": 0,
+        "costUSD": 0.0985018,
+        "messageCount": 13,
+        "observedModel": "mimo-v2.5-pro",
+        "observedProvider": "opencode-go",
+        "model": "mimo-v2.5-pro",
+        "provider": "opencode-go"
+      },
+      "completedAt": "2026-04-28T09:06:31.924Z",
+      "summary": "Plan created at .lattice/plans/restaurant-booking.md. 5 implementation slices: (1) Backend auth infrastructure — ASP.NET Core Identity with cookie auth, CSRF antiforgery, CORS with credentials, auth endpoints at /api/auth/*, protect booking creation, add UserId to Booking, user-scoped history endpoint; (2) Backend HTTP-level integration tests using WebApplicationFactory covering auth boundaries, booking errors, and all endpoints; (3) Frontend auth UI — update OpenAPI spec, regenerate client, add auth hooks with CSRF token management, login/register page, user nav, auth-gated App.tsx with user-scoped booking history; (4) Frontend tests with Vitest + React Testing Library; (5) Polish and README update with seeded users and CSRF docs."
+    },
+    {
+      "id": "build",
+      "agent": "build",
+      "status": "completed",
+      "startedAt": "2026-04-28T09:29:14.833Z",
+      "telemetry": {
+        "tokensIn": 180475,
+        "tokensOut": 48485,
+        "tokensReasoning": 6731,
+        "tokensCacheRead": 13131136,
+        "tokensCacheWrite": 0,
+        "costUSD": 1.2331128800000004,
+        "messageCount": 117,
+        "observedModel": "mimo-v2.5",
+        "observedProvider": "opencode-go",
+        "model": "mimo-v2.5",
+        "provider": "opencode-go"
+      },
+      "completedAt": "2026-04-28T09:35:27.773Z",
+      "summary": "All 3 missing frontend test files have been added with meaningful coverage: App.test.tsx (3 tests: auth gate unauthenticated→auth page, loading state, authenticated→booking UI), BookingForm.test.tsx (5 tests: form fields, time slots, validation error, submission, confirmation display), BookingHistory.test.tsx (3 tests: empty state, booking display, loading state). All 20 frontend tests pass. All quality gates pass: backend build, 27 tests, format; frontend build, typecheck, lint, format, deadcode, 20 tests.",
+      "rewindsUsed": 1
+    },
+    {
+      "id": "plan-adherence-review",
+      "agent": "plan-reviewer",
+      "status": "completed",
+      "startedAt": "2026-04-28T09:35:27.778Z",
+      "telemetry": {
+        "tokensIn": 102269,
+        "tokensOut": 8448,
+        "tokensReasoning": 10783,
+        "tokensCacheRead": 949760,
+        "tokensCacheWrite": 0,
+        "costUSD": 0.25864346000000005,
+        "messageCount": 30,
+        "observedModel": "deepseek-v4-pro",
+        "observedProvider": "opencode-go",
+        "model": "deepseek-v4-pro",
+        "provider": "opencode-go"
+      },
+      "completedAt": "2026-04-28T09:42:05.832Z",
+      "summary": "All 5 plan slices verified against source, tests, and deterministic checks. Backend: Identity+cookie auth, CSRF, CORS, 5 auth endpoints, protected bookings, user-scoped /mine, 27 passing tests. Frontend: auth gate, login/register/logout UI, CSRF on mutations, user-scoped booking history, 20 passing tests. OpenAPI spec updated with auth schemas, client generation reproducible. README documents auth, demo user, CSRF. All quality gates pass (build, test, format, typecheck, lint, deadcode). No material plan commitments missing or broken.",
+      "verdict": "approve"
+    }
+  ],
+  "createdAt": "2026-04-28T09:04:22.233Z",
+  "updatedAt": "2026-04-28T09:42:05.832Z",
+  "userRetryToken": {
+    "issuedAt": "2026-04-28T09:34:04.965Z",
+    "sessionId": "ses_22cab129affeekwVnQ5n6ziAJ1"
+  }
+}

@@ -1,0 +1,363 @@
+{
+  "id": "18ab2476-878d-4328-8713-8724ed4375b1",
+  "pipelineName": "restaurant-booking-eval",
+  "goal": "# Add Authenticated Booking Accounts\n\nExtend the existing restaurant booking app so bookings belong to authenticated users. Treat this as a normal change request against the current codebase: inspect the existing backend, frontend, tests, OpenAPI/client generation, scripts, and README before changing anything.\n\nDo not rebuild the app from scratch. Preserve existing behavior unless this request explicitly requires a change.\n\n## Existing Issues To Fix\n\n- Add backend HTTP/OpenAPI-level tests for the existing restaurant, availability, booking, and error-mapping behavior rather than only testing domain rules.\n- Add focused frontend UI/integration tests for the core booking flows where practical, including form submission, API error handling, and booking confirmation/history display.\n- Strengthen the generated client workflow so frontend server-state code uses generated TanStack Query hooks where supported, rather than wrapping generated fetch functions by hand.\n- Improve the UI polish beyond the current compact single-page card/form/list experience while preserving the existing visual language.\n\nKeep fixes focused. Preserve the existing architecture, generated API client workflow, TanStack Query usage, Tailwind/shadcn setup, and deterministic scripts.\n\n## Authentication\n\n- Add local email/password authentication using ASP.NET Core Identity or an equivalent first-party .NET auth approach.\n- Do not use external hosted auth providers, OAuth apps, or services requiring secrets.\n- A user must be authenticated to create a booking.\n- A user can view their own booking history at restaurants.\n- Users must not be able to view another user's booking history.\n- Keep auth suitable for local development and automated verification; seeded/demo users are acceptable if documented.\n\n## Cookie Auth Security\n\n- Use HTTP-only cookies for authentication.\n- Because auth uses cookies, implement local-development appropriate CSRF/anti-forgery protection for state-changing requests.\n- The SPA must fetch and send the CSRF token for login, logout, booking creation, and other booking mutations.\n- Configure CORS and credentialed requests deliberately for the local frontend/backend origins.\n- Do not store auth tokens in localStorage or sessionStorage.\n\n## Backend Requirements\n\n- Keep using .NET 10 Web API.\n- Keep existing restaurants, tables, availability, and booking behavior working.\n- Protect booking creation so unauthenticated users cannot create bookings.\n- Associate each booking with the authenticated user that created it.\n- Add authenticated booking-history endpoints scoped to the current user.\n- Preserve useful validation errors for invalid party size, invalid dates/times, unknown restaurants, and overlapping reservations.\n- Keep OpenAPI/Swagger usable for frontend client generation, including auth-related endpoints and protected booking behavior.\n\n## Frontend Requirements\n\n- Keep using the existing React SPA, Tailwind CSS, shadcn/ui approach, TanStack Query, and generated OpenAPI client workflow.\n- Add login, registration, logout, and authenticated-user state to the existing UI.\n- Require login before creating a booking and show a clear path to authenticate.\n- Show the authenticated user's booking history at restaurants.\n- Use generated TanStack Query hooks where the OpenAPI generator supports them; otherwise use generated typed operations with thin, typed TanStack Query/mutation calls.\n- Avoid hand-written, stringly typed fetch wrappers when an OpenAPI-generated typed client is available.\n- Keep the UI polished, responsive, accessible, and consistent with the existing visual language.\n\n## Tests And Quality Gates\n\n- Work in small slices: inspect, test, change, verify.\n- Prefer minimal focused edits over replacing existing structure.\n- Prefer pure domain functions and thin imperative shells for booking/conflict logic.\n- Use explicit Result-style errors for expected business failures where the existing app does so.\n- Keep Clean Architecture boundaries lightweight and consistent with the existing app.\n- Include backend tests for auth boundaries, user-scoped booking history, invalid auth attempts, atomic conflict prevention, invalid party size, invalid times, overlapping reservations, HTTP endpoint behavior, OpenAPI availability, and error mapping.\n- Include frontend tests for the main auth, booking creation, booking-history, confirmation, and API error-display flows where practical.\n- Keep backend and frontend formatted, linted, warning-free, and free of dead code or unused exports.\n- Update README run instructions for auth, seeded/demo users, CSRF behavior, and any new scripts.\n\n## Constraints\n\n- Keep scope realistic for a focused implementation pass.\n- Do not introduce external services, hosted databases, OAuth providers, or secrets.\n- Prefer in-memory or lightweight local persistence unless the existing app already uses another approach.\n- Ensure backend build passes with warnings treated as errors.\n- Ensure backend tests pass without rebuilding after the build step and include the required auth/conflict boundary tests.\n- Ensure backend formatting verification passes.\n- Ensure frontend dependencies install and `build`, `typecheck`, `lint`, `format:check`, and `deadcode` scripts pass.\n- Ensure typed-client generation remains reproducible from source, either as part of frontend setup/build or via a documented script used by the build.\n- Follow the saved implementation plan closely; if changing direction, document why in the README or final notes.",
+  "status": "completed",
+  "currentStageIndex": 7,
+  "stages": [
+    {
+      "id": "plan",
+      "agent": "eval-planner",
+      "status": "completed",
+      "startedAt": "2026-04-27T14:52:10.320Z",
+      "telemetry": {
+        "tokensIn": 29429,
+        "tokensOut": 9574,
+        "tokensReasoning": 1977,
+        "tokensCacheRead": 297344,
+        "tokensCacheWrite": 0,
+        "costUSD": 0.09571542799999999,
+        "messageCount": 14,
+        "model": "deepseek-v4-pro",
+        "provider": "opencode-go"
+      },
+      "completedAt": "2026-04-27T14:58:01.789Z",
+      "summary": "Plan written to .lattice/plans/restaurant-booking.md covering 4 vertical slices: backend auth foundation with user-scoped bookings, CSRF protection + frontend auth UI + client regeneration, UI polish + frontend tests, and final verification + README. Preserves all existing architecture patterns (functional core / imperative shell, Result-style errors, in-memory stores, minimal APIs, orval client generation, TanStack Query, shadcn/ui)."
+    },
+    {
+      "id": "normalize-slices",
+      "agent": "eval-planner",
+      "status": "completed",
+      "startedAt": "2026-04-27T14:58:01.793Z",
+      "telemetry": {
+        "tokensIn": 28188,
+        "tokensOut": 6955,
+        "tokensReasoning": 869,
+        "tokensCacheRead": 254464,
+        "tokensCacheWrite": 0,
+        "costUSD": 0.07996436800000001,
+        "messageCount": 12,
+        "model": "deepseek-v4-pro",
+        "provider": "opencode-go"
+      },
+      "completedAt": "2026-04-27T15:02:08.764Z",
+      "summary": "Created manifest.json with 4 slices and all 4 slice plan files under .lattice/plans/slices/. Slices: (1) Backend Auth Foundation + User-Scoped Bookings, (2) CSRF Protection + Frontend Auth UI + Client Regeneration, (3) UI Polish + Backend HTTP Tests + Frontend Tests, (4) End-to-End Integration Verification + README. Each slice has Goal, Acceptance Criteria, Required Tests, Verification Commands, Handoff Notes, and Non-Goals. Boundaries align with the original plan's natural vertical slices."
+    },
+    {
+      "id": "build-slice-1-backend-auth-foundation",
+      "agent": "build",
+      "status": "completed",
+      "startedAt": "2026-04-27T15:02:08.779Z",
+      "telemetry": {
+        "tokensIn": 65732,
+        "tokensOut": 13858,
+        "tokensReasoning": 13804,
+        "tokensCacheRead": 1801856,
+        "tokensCacheWrite": 0,
+        "costUSD": 0.021993036800000004,
+        "messageCount": 40,
+        "model": "deepseek-v4-flash",
+        "provider": "opencode-go"
+      },
+      "completedAt": "2026-04-27T15:09:41.549Z",
+      "summary": "Slice 1 implemented: cookie auth infrastructure (register/login/logout/me endpoints), user-scoped bookings (UserId on Booking, GET /api/bookings/mine), booking creation protected behind RequireAuthorization(), CORS with AllowCredentials to localhost:5173, seeded demo users (alice/bob), 18 new HTTP integration tests covering auth boundaries, booking auth scoping, and existing validation error mappings. All 26 tests pass."
+    },
+    {
+      "id": "build-slice-2-csrf-frontend-auth",
+      "agent": "build",
+      "status": "completed",
+      "startedAt": "2026-04-27T15:09:41.552Z",
+      "telemetry": {
+        "tokensIn": 83975,
+        "tokensOut": 29063,
+        "tokensReasoning": 27648,
+        "tokensCacheRead": 3911040,
+        "tokensCacheWrite": 0,
+        "costUSD": 0.03858649200000001,
+        "messageCount": 56,
+        "model": "deepseek-v4-flash",
+        "provider": "opencode-go"
+      },
+      "completedAt": "2026-04-27T15:23:49.978Z",
+      "summary": "Slice 2 implemented: CSRF protection via UseAntiforgery middleware + GET /api/auth/csrf-token, frontend auth UI (NavHeader, AuthDialog, MyBookings), orval switched to react-query client with generated TanStack Query hooks, booking form gated behind auth, CSRF token fetched on mount and sent with mutations (no localStorage). All 27 backend tests pass, all frontend checks pass (typecheck, lint, format:check, deadcode, build)."
+    },
+    {
+      "id": "build-slice-3-ui-polish-tests",
+      "agent": "build",
+      "status": "completed",
+      "startedAt": "2026-04-27T15:23:49.982Z",
+      "telemetry": {
+        "tokensIn": 128097,
+        "tokensOut": 26613,
+        "tokensReasoning": 7764,
+        "tokensCacheRead": 4111360,
+        "tokensCacheWrite": 0,
+        "costUSD": 0.039070947999999994,
+        "messageCount": 57,
+        "model": "deepseek-v4-flash",
+        "provider": "opencode-go"
+      },
+      "completedAt": "2026-04-27T15:33:19.704Z",
+      "summary": "Slice 3 implemented: 8 new backend HTTP tests (OpenAPI reachability, error mappings, date validation, capacity limits, adjacent non-overlapping), extracted PageShell and BookingForm components for testability, created 14 frontend integration tests (App, AuthDialog, BookingForm, MyBookings) with MSW mocking, polished UI (empty states, responsive grid, consistent layout). All 35 backend tests pass, all 14 frontend tests pass, all quality gates pass (build, typecheck, lint, format, deadcode)."
+    },
+    {
+      "id": "build-slice-4-integration-verification",
+      "agent": "build",
+      "status": "completed",
+      "startedAt": "2026-04-27T15:33:19.710Z",
+      "telemetry": {
+        "tokensIn": 56626,
+        "tokensOut": 5859,
+        "tokensReasoning": 1643,
+        "tokensCacheRead": 361600,
+        "tokensCacheWrite": 0,
+        "costUSD": 0.011040679999999999,
+        "messageCount": 16,
+        "model": "deepseek-v4-flash",
+        "provider": "opencode-go"
+      },
+      "completedAt": "2026-04-27T15:35:39.421Z",
+      "summary": "Slice 4: Updated README with auth docs, seeded users table, CSRF behavior, endpoint tables, error mappings, smoke test checklist, and run instructions. Fixed knip config hint. Verified all backend (35/35 tests, build, format) and frontend (build, typecheck, lint, format, deadcode, 14/14 tests) quality gates pass cleanly. No code changes beyond README and knip.json per slice contract."
+    },
+    {
+      "id": "final-integration",
+      "agent": "build",
+      "status": "completed",
+      "startedAt": "2026-04-27T15:35:39.433Z",
+      "telemetry": {
+        "tokensIn": 134012,
+        "tokensOut": 8278,
+        "tokensReasoning": 10652,
+        "tokensCacheRead": 3391488,
+        "tokensCacheWrite": 0,
+        "costUSD": 0.0335582464,
+        "messageCount": 46,
+        "model": "deepseek-v4-flash",
+        "provider": "opencode-go"
+      },
+      "completedAt": "2026-04-27T15:42:00.392Z",
+      "summary": "Final integration pass verified all 9 quality gates pass (dotnet build/test/format, npm build/typecheck/lint/format/deadcode/vitest). Fixed missing `userId` field in OpenAPI Booking schema (was returned by backend but absent from spec/generated client) and regenerated client. Confirmed end-to-end: route paths match backend/spec/client, CSRF token flows correctly, auth cookie is HTTP-only with no localStorage, generated TanStack Query hooks used for GET endpoints, discriminated union responses handle errors, Vite proxy handles CORS transparently. 35 backend tests and 14 frontend tests all pass."
+    },
+    {
+      "id": "plan-adherence-review",
+      "agent": "plan-reviewer",
+      "status": "completed",
+      "startedAt": "2026-04-27T15:42:00.402Z",
+      "telemetry": {
+        "tokensIn": 70231,
+        "tokensOut": 4524,
+        "tokensReasoning": 2290,
+        "tokensCacheRead": 534464,
+        "tokensCacheWrite": 0,
+        "costUSD": 0.19756579999999999,
+        "messageCount": 14,
+        "model": "mimo-v2.5-pro",
+        "provider": "opencode-go"
+      },
+      "completedAt": "2026-04-27T15:44:43.945Z",
+      "summary": "All 9 deterministic checks pass. All material plan commitments verified from source: cookie auth with register/login/logout/me, user-scoped bookings with UserId, CSRF protection via antiforgery middleware, generated TanStack Query hooks (28 exports), auth-gated booking form, NavHeader/AuthDialog/MyBookings/PageShell components, 35 backend tests and 14 frontend tests all passing, no localStorage/sessionStorage auth tokens, README with full documentation. Minor harmless deviations (useCsrf merged into useAuth, /api/auth/me listed as public in README but correctly requires auth).",
+      "verdict": "approve"
+    }
+  ],
+  "createdAt": "2026-04-27T14:52:08.085Z",
+  "updatedAt": "2026-04-27T15:44:43.945Z",
+  "runtimeStages": [
+    {
+      "id": "plan",
+      "agent": "eval-planner",
+      "type": "stage",
+      "completion": "tool_signal",
+      "signals": [
+        "complete"
+      ],
+      "fork": false,
+      "skills": {
+        "dynamic": false,
+        "pinned": [
+          "tdd",
+          "clean-ddd-hexagonal",
+          "dotnet-backend-patterns",
+          "dotnet-10-csharp-14",
+          "vercel-react-best-practices",
+          "shadcn",
+          "tanstack-query-best-practices",
+          "orval",
+          "functional-core-imperative-shell",
+          "vertical-slice-architecture"
+        ],
+        "max": 4
+      },
+      "prompt": "Create a concise implementation plan for the restaurant booking eval.\nTarget completion is 30-60 minutes, so keep scope deliberate.\nPlan vertical behavior slices rather than horizontal layers.\nPrefer pure domain functions and thin imperative shells.\nUse explicit Result-style errors for expected business failures.\nIf the goal asks for Tailwind/shadcn, TanStack, or OpenAPI-generated clients, include concrete plan steps for those choices.\nWrite the plan to .lattice/plans/restaurant-booking.md, then return the same plan in your response.\nDo not edit any other files during planning.\nOnly call lattice_signal(status: \"complete\") after the plan file exists and your response includes the same plan.",
+      "pauseAfter": false,
+      "isRewindTarget": false
+    },
+    {
+      "id": "normalize-slices",
+      "agent": "eval-planner",
+      "type": "stage",
+      "completion": "tool_signal",
+      "signals": [
+        "complete"
+      ],
+      "fork": false,
+      "skills": {
+        "dynamic": false,
+        "pinned": [
+          "tdd",
+          "clean-ddd-hexagonal",
+          "dotnet-backend-patterns",
+          "dotnet-10-csharp-14",
+          "vercel-react-best-practices",
+          "shadcn",
+          "tanstack-query-best-practices",
+          "orval",
+          "functional-core-imperative-shell",
+          "vertical-slice-architecture"
+        ],
+        "max": 4
+      },
+      "prompt": "Convert the existing big implementation plan into a task-specific slice manifest for fresh-context execution.\nRead .lattice/plans/restaurant-booking.md. Do not change its meaning or add new scope.\nCreate .lattice/plans/slices/manifest.json and one slice file per manifest entry under .lattice/plans/slices/.\nThe manifest must contain between 1 and 8 slices. Choose slice boundaries from the actual plan and task; do not force restaurant-specific, backend/frontend-specific, or layer-based slices when the scenario calls for something else.\nUse this manifest shape: { \"slices\": [{ \"index\": 1, \"id\": \"short-kebab-id\", \"title\": \"Human title\", \"file\": \".lattice/plans/slices/01-short-kebab-id.md\" }] }.\nSlice files must be numbered with their manifest index and include Goal, Acceptance Criteria, Required Tests, Verification Commands, Handoff Notes, and Non-Goals.\nKeep each slice bounded and executable from a fresh context against the current codebase. Avoid tiny mechanical slices and avoid generic predetermined layers unless the plan naturally calls for them.\nDo not edit implementation files. Only create the manifest and slice plan files.\nCall lattice_signal(status: \"complete\") only after the manifest and all referenced slice files exist.",
+      "pauseAfter": false,
+      "isRewindTarget": false
+    },
+    {
+      "id": "build-slice-1-backend-auth-foundation",
+      "agent": "build",
+      "type": "stage",
+      "completion": "tool_signal",
+      "signals": [
+        "complete"
+      ],
+      "fork": false,
+      "skills": {
+        "dynamic": true,
+        "pinned": [],
+        "max": 4
+      },
+      "prompt": "Implement slice 1: Backend Auth Foundation + User-Scoped Bookings.\nRead .lattice/plans/slices/01-backend-auth-foundation.md and treat it as the slice contract.\nAlso inspect the current codebase and any previous .lattice/summaries/slice-*.md files before editing.\nWork only on this slice's acceptance criteria and preserve earlier behavior. Do not implement later manifest slices early unless required to keep the current slice coherent.\nIf a slice contract conflicts with the current codebase or scenario goal, choose the safer implementation and document the deviation in the slice summary.\nUse TDD where practical for this slice. Add or update tests required by the slice contract.\nRun the slice's verification commands, plus any directly relevant build/test commands for touched areas.\nWrite .lattice/summaries/slice-1-backend-auth-foundation.md with changes made, checks run, known gaps, and handoff notes.\nDo not claim unrelated future slices are done.\nCall lattice_signal(status: \"complete\") only when this slice is implemented, verified, and summarized.",
+      "pauseAfter": false,
+      "isRewindTarget": false
+    },
+    {
+      "id": "build-slice-2-csrf-frontend-auth",
+      "agent": "build",
+      "type": "stage",
+      "completion": "tool_signal",
+      "signals": [
+        "complete"
+      ],
+      "fork": false,
+      "skills": {
+        "dynamic": true,
+        "pinned": [],
+        "max": 4
+      },
+      "prompt": "Implement slice 2: CSRF Protection + Frontend Auth UI + Client Regeneration.\nRead .lattice/plans/slices/02-csrf-frontend-auth.md and treat it as the slice contract.\nAlso inspect the current codebase and any previous .lattice/summaries/slice-*.md files before editing.\nWork only on this slice's acceptance criteria and preserve earlier behavior. Do not implement later manifest slices early unless required to keep the current slice coherent.\nIf a slice contract conflicts with the current codebase or scenario goal, choose the safer implementation and document the deviation in the slice summary.\nUse TDD where practical for this slice. Add or update tests required by the slice contract.\nRun the slice's verification commands, plus any directly relevant build/test commands for touched areas.\nWrite .lattice/summaries/slice-2-csrf-frontend-auth.md with changes made, checks run, known gaps, and handoff notes.\nDo not claim unrelated future slices are done.\nCall lattice_signal(status: \"complete\") only when this slice is implemented, verified, and summarized.",
+      "pauseAfter": false,
+      "isRewindTarget": false
+    },
+    {
+      "id": "build-slice-3-ui-polish-tests",
+      "agent": "build",
+      "type": "stage",
+      "completion": "tool_signal",
+      "signals": [
+        "complete"
+      ],
+      "fork": false,
+      "skills": {
+        "dynamic": true,
+        "pinned": [],
+        "max": 4
+      },
+      "prompt": "Implement slice 3: UI Polish + Backend HTTP Tests + Frontend Tests.\nRead .lattice/plans/slices/03-ui-polish-tests.md and treat it as the slice contract.\nAlso inspect the current codebase and any previous .lattice/summaries/slice-*.md files before editing.\nWork only on this slice's acceptance criteria and preserve earlier behavior. Do not implement later manifest slices early unless required to keep the current slice coherent.\nIf a slice contract conflicts with the current codebase or scenario goal, choose the safer implementation and document the deviation in the slice summary.\nUse TDD where practical for this slice. Add or update tests required by the slice contract.\nRun the slice's verification commands, plus any directly relevant build/test commands for touched areas.\nWrite .lattice/summaries/slice-3-ui-polish-tests.md with changes made, checks run, known gaps, and handoff notes.\nDo not claim unrelated future slices are done.\nCall lattice_signal(status: \"complete\") only when this slice is implemented, verified, and summarized.",
+      "pauseAfter": false,
+      "isRewindTarget": false
+    },
+    {
+      "id": "build-slice-4-integration-verification",
+      "agent": "build",
+      "type": "stage",
+      "completion": "tool_signal",
+      "signals": [
+        "complete"
+      ],
+      "fork": false,
+      "skills": {
+        "dynamic": true,
+        "pinned": [],
+        "max": 4
+      },
+      "prompt": "Implement slice 4: End-to-End Integration Verification + README.\nRead .lattice/plans/slices/04-integration-verification.md and treat it as the slice contract.\nAlso inspect the current codebase and any previous .lattice/summaries/slice-*.md files before editing.\nWork only on this slice's acceptance criteria and preserve earlier behavior. Do not implement later manifest slices early unless required to keep the current slice coherent.\nIf a slice contract conflicts with the current codebase or scenario goal, choose the safer implementation and document the deviation in the slice summary.\nUse TDD where practical for this slice. Add or update tests required by the slice contract.\nRun the slice's verification commands, plus any directly relevant build/test commands for touched areas.\nWrite .lattice/summaries/slice-4-integration-verification.md with changes made, checks run, known gaps, and handoff notes.\nDo not claim unrelated future slices are done.\nCall lattice_signal(status: \"complete\") only when this slice is implemented, verified, and summarized.",
+      "pauseAfter": false,
+      "isRewindTarget": false
+    },
+    {
+      "id": "final-integration",
+      "agent": "build",
+      "type": "stage",
+      "completion": "tool_signal",
+      "signals": [
+        "complete"
+      ],
+      "fork": false,
+      "skills": {
+        "dynamic": false,
+        "pinned": [
+          "tdd",
+          "clean-ddd-hexagonal",
+          "dotnet-backend-patterns",
+          "dotnet-10-csharp-14",
+          "vercel-react-best-practices",
+          "shadcn",
+          "tanstack-query-best-practices",
+          "orval",
+          "functional-core-imperative-shell",
+          "vertical-slice-architecture"
+        ],
+        "max": 4
+      },
+      "prompt": "Perform the final integration pass for the requested task.\nRead .lattice/plans/restaurant-booking.md, .lattice/plans/slices/manifest.json, every referenced slice file, and every .lattice/summaries/slice-*.md file.\nInspect the whole codebase for cross-slice integration bugs, stale generated clients or contracts, route/API mismatches, missing validations, broken error handling, weak UX where UI is required, dead code, and missing README instructions.\nFor user flows that cross backend, generated client, and UI, verify the actual values line up end-to-end. For example, if the backend returns selectable slots or IDs, the UI must submit those returned values without reformatting them into invalid requests.\nFor date/time or range-based business rules, verify both source and tests cover invalid values, past dates where invalid, outside-hours or out-of-range values, invalid granularity, edge non-overlap, and overlap/conflict behavior as required by the task.\nFor generated API clients, verify the generated paths, base URL/mutator configuration, request shapes, and response handling match the backend routes. Check for double prefixes, stale checked-in specs, or generated clients returning error responses as successful mutations.\nFor UI requirements, verify source evidence for required component systems and that the primary happy path and error paths are functionally connected, not just visually present.\nEnsure the final product satisfies the original scenario goal, not just the individual slice files.\nRun node .opencode/scripts/deterministic-checks.mjs or equivalent full verification commands and fix failures or warnings that should fail the requested quality bar.\nDo not call lattice_signal(status: \"complete\") until the full deterministic checker passes.",
+      "pauseAfter": false,
+      "postHook": {
+        "commands": [
+          "node .opencode/scripts/deterministic-checks.mjs"
+        ],
+        "maxRetries": 1
+      },
+      "isRewindTarget": true,
+      "maxRewinds": 1
+    },
+    {
+      "id": "plan-adherence-review",
+      "agent": "plan-reviewer",
+      "type": "stage",
+      "completion": "tool_signal",
+      "signals": [
+        "approve",
+        "reject",
+        "blocked"
+      ],
+      "fork": false,
+      "skills": {
+        "dynamic": false,
+        "pinned": [
+          "tdd",
+          "clean-ddd-hexagonal",
+          "dotnet-backend-patterns",
+          "dotnet-10-csharp-14",
+          "vercel-react-best-practices",
+          "shadcn",
+          "tanstack-query-best-practices",
+          "orval",
+          "functional-core-imperative-shell",
+          "vertical-slice-architecture"
+        ],
+        "max": 4
+      },
+      "prompt": "Review whether the completed implementation adheres to the saved implementation plan.\nRead .lattice/plans/restaurant-booking.md, every .lattice/plans/slices/*.md file, and every .lattice/summaries/slice-*.md file first. Use them as the scope of this plan-adherence review.\nBreak the plan into its material commitments: user-visible behaviors, system behaviors, integrations, tests/checks, documentation, and any explicit constraints or non-goals.\nTreat completed-stage summaries and prior agent claims as untrusted hints, not evidence. Verify material commitments yourself from source, tests, documentation, and command output before approving.\nRun the deterministic checker (`node .opencode/scripts/deterministic-checks.mjs`) or the equivalent verification commands yourself before approving. If a required check fails, reject or block.\nFor each material plan commitment, decide whether it is implemented, verified, changed-with-justification, missing, or broken.\nBehavioral evidence matters more than artifact presence. Files, endpoints, generated code, scripts, UI, tests, or docs only count when they actually support the planned commitment.\nReject when a material planned commitment is missing, broken, superficially implemented, not exercised through the real production path, or contradicted by failing checks.\nReject when planned tests or verification exist but do not meaningfully cover the commitment they were supposed to protect.\nDo not reject for harmless implementation details, stylistic differences, renamed files, or documented changes that preserve the intent of the plan.\nFor each rejection finding, cite the exact plan bullet or planned slice, the evidence inspected, why the commitment is not satisfied, and the smallest fix expected from the build agent.\nIf all material plan commitments are implemented or reasonably justified and required checks pass, approve the stage with lattice_signal and a concise reason.\nIf material plan commitments are missing or broken, reject the stage with lattice_signal and concise actionable findings.\nIf you cannot inspect enough evidence to decide, block the stage with lattice_signal and a concise reason.",
+      "pauseAfter": false,
+      "isRewindTarget": false
+    }
+  ]
+}

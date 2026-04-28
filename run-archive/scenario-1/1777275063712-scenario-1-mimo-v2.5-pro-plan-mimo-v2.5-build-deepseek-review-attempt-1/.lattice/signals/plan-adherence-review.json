@@ -1,0 +1,1 @@
+{"status":"complete","reason":"Added missing boundary test for unknown restaurant: CreateBooking_NonExistingRestaurant_ReturnsBadRequest in ApiTests.cs. All 26 tests pass (15 domain + 11 API), 0 warnings, dotnet format clean."}

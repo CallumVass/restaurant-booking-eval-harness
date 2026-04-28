@@ -1,0 +1,74 @@
+{
+  "id": "dea43290-5689-4340-82b4-b21f3fbfc7bf",
+  "pipelineName": "restaurant-booking-eval",
+  "goal": "# Restaurant Booking System Eval: Scenario 1\n\nBuild a restaurant booking system with a strong frontend/client implementation.\n\n## Backend\n\n- Use .NET 10 Web API.\n- Model restaurants, tables, and bookings.\n- Create a booking endpoint with conflict prevention.\n- List available time slots for a restaurant, date, and party size.\n- Validate invalid party size, invalid dates/times, unknown restaurants, and overlapping reservations.\n- Enable OpenAPI/Swagger with a usable OpenAPI document for frontend client generation.\n\n## Frontend\n\n- Use a React SPA.\n- Use Tailwind CSS and shadcn/ui for the interface.\n- Use TanStack libraries where they fit the SPA, especially TanStack Query for API state and mutations.\n- Generate and use a fully typed API client from the backend OpenAPI document with Orval or an equivalent OpenAPI client generator.\n- Show a restaurant list.\n- Provide a booking form.\n- Show booking confirmation.\n- Show existing bookings.\n- Avoid hand-written, stringly typed fetch wrappers when an OpenAPI-generated typed client is available.\n- Keep the UI polished, responsive, accessible, and meaningfully better than a plain form/list layout.\n\n## Engineering Preferences\n\n- Work in vertical TDD slices where practical.\n- Prefer pure domain functions and thin imperative shells.\n- Use explicit Result-style errors for expected business failures.\n- Keep Clean Architecture boundaries lightweight and appropriate for a 30-60 minute eval.\n- Include boundary tests for booking conflicts, invalid party size, invalid times, and overlapping reservations.\n- Configure deterministic frontend scripts: `build`, `typecheck`, `lint`, `format:check`, and `deadcode`.\n- Keep backend and frontend formatted, linted, warning-free, and free of dead code or unused exports.\n- Include README run instructions.\n- Follow the saved implementation plan closely; if changing direction, document why in the README or final notes.\n\n## Constraints\n\n- Keep scope realistic for a 30-60 minute implementation.\n- Prefer in-memory persistence unless durable persistence is quick and does not distract from core behavior.\n- Ensure backend build passes with warnings treated as errors.\n- Ensure backend tests pass without rebuilding after the build step and include boundary tests.\n- Ensure backend formatting verification passes.\n- Ensure frontend dependencies install and `build`, `typecheck`, `lint`, `format:check`, and `deadcode` scripts pass.\n- Ensure typed-client generation is reproducible from source, either as part of frontend setup/build or via a documented script used by the build.",
+  "status": "paused",
+  "currentStageIndex": 2,
+  "stages": [
+    {
+      "id": "plan",
+      "agent": "eval-planner",
+      "status": "completed",
+      "startedAt": "2026-04-27T07:31:44.156Z",
+      "telemetry": {
+        "tokensIn": 39805,
+        "tokensOut": 3007,
+        "tokensReasoning": 435,
+        "tokensCacheRead": 186240,
+        "tokensCacheWrite": 0,
+        "costUSD": 0.087379,
+        "messageCount": 9,
+        "model": "mimo-v2.5",
+        "provider": "opencode-go"
+      },
+      "completedAt": "2026-04-27T07:33:06.247Z",
+      "summary": "Implementation plan written to .lattice/plans/restaurant-booking.md with 5 vertical slices covering backend (.NET 10 minimal API, domain models, availability/conflict logic, boundary tests) and frontend (React/Vite, Orval-generated typed client, TanStack Query, shadcn/ui, restaurant list, booking form, confirmation, bookings list). Includes FCIS architecture, deterministic scripts, and verification steps."
+    },
+    {
+      "id": "build",
+      "agent": "build",
+      "status": "completed",
+      "startedAt": "2026-04-27T07:54:38.112Z",
+      "telemetry": {
+        "tokensIn": 137427,
+        "tokensOut": 44236,
+        "tokensReasoning": 9188,
+        "tokensCacheRead": 13630720,
+        "tokensCacheWrite": 0,
+        "costUSD": 1.2522763999999995,
+        "messageCount": 146,
+        "model": "mimo-v2.5",
+        "provider": "opencode-go"
+      },
+      "completedAt": "2026-04-27T07:58:00.902Z",
+      "summary": "Fixed both plan-adherence review findings: (1) Added react-hook-form + zod with a BookingFormData schema, wired into the booking form with validation and error display. (2) Updated RestaurantListPage to use shadcn Card/Badge/Button components, and BookingsListPage to use shadcn Table/Card components. All verification passes: backend build (0 warnings), 25 tests pass, dotnet format clean, frontend build/typecheck/lint/format:check/deadcode all pass.",
+      "rewindsUsed": 1
+    },
+    {
+      "id": "plan-adherence-review",
+      "agent": "plan-reviewer",
+      "status": "rejected",
+      "startedAt": "2026-04-27T07:58:00.907Z",
+      "telemetry": {
+        "tokensIn": 109764,
+        "tokensOut": 9607,
+        "tokensReasoning": 12066,
+        "tokensCacheRead": 1058944,
+        "tokensCacheWrite": 0,
+        "costUSD": 0.28176608799999997,
+        "messageCount": 32,
+        "model": "mimo-v2.5",
+        "provider": "opencode-go"
+      },
+      "completedAt": "2026-04-27T08:05:15.240Z",
+      "summary": "Missing boundary test from Slice 3 plan: \"Unknown restaurant → RestaurantNotFound\" for booking creation. The plan lists this under \"Tests (boundary — critical)\". The BookingService pure function can't test this (it receives a Restaurant object), so it must be an API-level integration test. The `POST /api/bookings` endpoint correctly checks `restaurant is null` and returns RestaurantNotFound (Program.cs:62-64), but no test in `backend/tests/RestaurantBooking.Api.Tests/ApiTests.cs` exercises this path. All other plan commitments are met and all 7 deterministic checks pass. Fix: add a single API test that POSTs to /api/bookings with a non-existent restaurantId and asserts 400 with RestaurantNotFound.",
+      "verdict": "reject"
+    }
+  ],
+  "createdAt": "2026-04-27T07:31:42.007Z",
+  "updatedAt": "2026-04-27T08:05:15.240Z",
+  "userRetryToken": {
+    "issuedAt": "2026-04-27T07:54:26.966Z",
+    "sessionId": "ses_23226325effe1b6IQvZsiuHys1"
+  }
+}

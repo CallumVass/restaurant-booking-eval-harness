@@ -415,7 +415,21 @@ async function prepareWorkspace(workspace: string, variant: ModelVariant, skipSk
   }
   const gitignorePath = path.join(workspace, ".gitignore");
   if (!(await exists(gitignorePath))) {
-    await writeFile(gitignorePath, [".lattice/", "node_modules/", "bin/", "obj/", "frontend/node_modules/", ""].join("\n"));
+    await writeFile(
+      gitignorePath,
+      [
+        "node_modules/",
+        "bin/",
+        "obj/",
+        "frontend/node_modules/",
+        ".opencode/node_modules/",
+        ".opencode/package.json",
+        ".opencode/package-lock.json",
+        ".opencode/skills/",
+        ".agents/skills/",
+        ""
+      ].join("\n")
+    );
   }
   await writeFile(path.join(workspace, "opencode.json"), `${JSON.stringify(makeOpenCodeConfig(variant), null, 2)}\n`);
   await writeFile(

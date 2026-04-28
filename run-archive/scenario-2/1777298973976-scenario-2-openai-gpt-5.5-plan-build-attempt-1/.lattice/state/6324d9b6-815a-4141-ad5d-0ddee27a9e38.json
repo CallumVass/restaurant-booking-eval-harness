@@ -1,0 +1,49 @@
+{
+  "id": "6324d9b6-815a-4141-ad5d-0ddee27a9e38",
+  "pipelineName": "restaurant-booking-eval",
+  "goal": "# Add Authenticated Booking Accounts\n\nExtend the existing restaurant booking app so bookings belong to authenticated users. Treat this as a normal change request against the current codebase: inspect the existing backend, frontend, tests, OpenAPI/client generation, scripts, and README before changing anything.\n\nDo not rebuild the app from scratch. Preserve existing behavior unless this request explicitly requires a change.\n\n## Existing Issues To Fix\n\n- Add backend HTTP/OpenAPI-level tests for the existing restaurant, availability, booking, and error-mapping behavior rather than only testing domain rules.\n- Add focused frontend UI/integration tests for the core booking flows where practical, including form submission, API error handling, and booking confirmation/history display.\n- Strengthen the generated client workflow so frontend server-state code uses generated TanStack Query hooks where supported, rather than wrapping generated fetch functions by hand.\n- Improve the UI polish beyond the current compact single-page card/form/list experience while preserving the existing visual language.\n\nKeep fixes focused. Preserve the existing architecture, generated API client workflow, TanStack Query usage, Tailwind/shadcn setup, and deterministic scripts.\n\n## Authentication\n\n- Add local email/password authentication using ASP.NET Core Identity or an equivalent first-party .NET auth approach.\n- Do not use external hosted auth providers, OAuth apps, or services requiring secrets.\n- A user must be authenticated to create a booking.\n- A user can view their own booking history at restaurants.\n- Users must not be able to view another user's booking history.\n- Keep auth suitable for local development and automated verification; seeded/demo users are acceptable if documented.\n\n## Cookie Auth Security\n\n- Use HTTP-only cookies for authentication.\n- Because auth uses cookies, implement local-development appropriate CSRF/anti-forgery protection for state-changing requests.\n- The SPA must fetch and send the CSRF token for login, logout, booking creation, and other booking mutations.\n- Configure CORS and credentialed requests deliberately for the local frontend/backend origins.\n- Do not store auth tokens in localStorage or sessionStorage.\n\n## Backend Requirements\n\n- Keep using .NET 10 Web API.\n- Keep existing restaurants, tables, availability, and booking behavior working.\n- Protect booking creation so unauthenticated users cannot create bookings.\n- Associate each booking with the authenticated user that created it.\n- Add authenticated booking-history endpoints scoped to the current user.\n- Preserve useful validation errors for invalid party size, invalid dates/times, unknown restaurants, and overlapping reservations.\n- Keep OpenAPI/Swagger usable for frontend client generation, including auth-related endpoints and protected booking behavior.\n\n## Frontend Requirements\n\n- Keep using the existing React SPA, Tailwind CSS, shadcn/ui approach, TanStack Query, and generated OpenAPI client workflow.\n- Add login, registration, logout, and authenticated-user state to the existing UI.\n- Require login before creating a booking and show a clear path to authenticate.\n- Show the authenticated user's booking history at restaurants.\n- Use generated TanStack Query hooks where the OpenAPI generator supports them; otherwise use generated typed operations with thin, typed TanStack Query/mutation calls.\n- Avoid hand-written, stringly typed fetch wrappers when an OpenAPI-generated typed client is available.\n- Keep the UI polished, responsive, accessible, and consistent with the existing visual language.\n\n## Tests And Quality Gates\n\n- Work in small slices: inspect, test, change, verify.\n- Prefer minimal focused edits over replacing existing structure.\n- Prefer pure domain functions and thin imperative shells for booking/conflict logic.\n- Use explicit Result-style errors for expected business failures where the existing app does so.\n- Keep Clean Architecture boundaries lightweight and consistent with the existing app.\n- Include backend tests for auth boundaries, user-scoped booking history, invalid auth attempts, atomic conflict prevention, invalid party size, invalid times, overlapping reservations, HTTP endpoint behavior, OpenAPI availability, and error mapping.\n- Include frontend tests for the main auth, booking creation, booking-history, confirmation, and API error-display flows where practical.\n- Keep backend and frontend formatted, linted, warning-free, and free of dead code or unused exports.\n- Update README run instructions for auth, seeded/demo users, CSRF behavior, and any new scripts.\n\n## Constraints\n\n- Keep scope realistic for a focused implementation pass.\n- Do not introduce external services, hosted databases, OAuth providers, or secrets.\n- Prefer in-memory or lightweight local persistence unless the existing app already uses another approach.\n- Ensure backend build passes with warnings treated as errors.\n- Ensure backend tests pass without rebuilding after the build step and include the required auth/conflict boundary tests.\n- Ensure backend formatting verification passes.\n- Ensure frontend dependencies install and `build`, `typecheck`, `lint`, `format:check`, and `deadcode` scripts pass.\n- Ensure typed-client generation remains reproducible from source, either as part of frontend setup/build or via a documented script used by the build.\n- Follow the saved implementation plan closely; if changing direction, document why in the README or final notes.",
+  "status": "completed",
+  "currentStageIndex": 1,
+  "stages": [
+    {
+      "id": "plan",
+      "agent": "eval-planner",
+      "status": "completed",
+      "startedAt": "2026-04-27T14:10:28.370Z",
+      "telemetry": {
+        "tokensIn": 63641,
+        "tokensOut": 4556,
+        "tokensReasoning": 4453,
+        "tokensCacheRead": 439296,
+        "tokensCacheWrite": 0,
+        "costUSD": 0,
+        "messageCount": 13,
+        "model": "gpt-5.5",
+        "provider": "openai"
+      },
+      "completedAt": "2026-04-27T14:12:36.029Z",
+      "summary": "Created .lattice/plans/restaurant-booking.md with a concise vertical-slice implementation plan for authenticated booking accounts, CSRF, OpenAPI/client generation, UI updates, tests, and verification."
+    },
+    {
+      "id": "build",
+      "agent": "build",
+      "status": "completed",
+      "startedAt": "2026-04-27T14:12:36.046Z",
+      "telemetry": {
+        "tokensIn": 159740,
+        "tokensOut": 29102,
+        "tokensReasoning": 4905,
+        "tokensCacheRead": 7474176,
+        "tokensCacheWrite": 0,
+        "costUSD": 0,
+        "messageCount": 75,
+        "model": "gpt-5.5",
+        "provider": "openai"
+      },
+      "completedAt": "2026-04-27T14:24:30.559Z",
+      "summary": "Implemented authenticated booking accounts with cookie auth, CSRF protection, user-owned bookings/history, generated TanStack Query client workflow, polished auth/booking UI, backend HTTP tests, frontend integration tests, README updates, and all required backend/frontend quality gates passing."
+    }
+  ],
+  "createdAt": "2026-04-27T14:10:26.279Z",
+  "updatedAt": "2026-04-27T14:24:30.559Z"
+}

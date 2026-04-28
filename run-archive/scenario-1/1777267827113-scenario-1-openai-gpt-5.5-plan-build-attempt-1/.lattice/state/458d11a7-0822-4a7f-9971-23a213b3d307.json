@@ -1,0 +1,49 @@
+{
+  "id": "458d11a7-0822-4a7f-9971-23a213b3d307",
+  "pipelineName": "restaurant-booking-eval",
+  "goal": "# Restaurant Booking System Eval: Scenario 1\n\nBuild a restaurant booking system with a strong frontend/client implementation.\n\n## Backend\n\n- Use .NET 10 Web API.\n- Model restaurants, tables, and bookings.\n- Create a booking endpoint with conflict prevention.\n- List available time slots for a restaurant, date, and party size.\n- Validate invalid party size, invalid dates/times, unknown restaurants, and overlapping reservations.\n- Enable OpenAPI/Swagger with a usable OpenAPI document for frontend client generation.\n\n## Frontend\n\n- Use a React SPA.\n- Use Tailwind CSS and shadcn/ui for the interface.\n- Use TanStack libraries where they fit the SPA, especially TanStack Query for API state and mutations.\n- Generate and use a fully typed API client from the backend OpenAPI document with Orval or an equivalent OpenAPI client generator.\n- Show a restaurant list.\n- Provide a booking form.\n- Show booking confirmation.\n- Show existing bookings.\n- Avoid hand-written, stringly typed fetch wrappers when an OpenAPI-generated typed client is available.\n- Keep the UI polished, responsive, accessible, and meaningfully better than a plain form/list layout.\n\n## Engineering Preferences\n\n- Work in vertical TDD slices where practical.\n- Prefer pure domain functions and thin imperative shells.\n- Use explicit Result-style errors for expected business failures.\n- Keep Clean Architecture boundaries lightweight and appropriate for a 30-60 minute eval.\n- Include boundary tests for booking conflicts, invalid party size, invalid times, and overlapping reservations.\n- Configure deterministic frontend scripts: `build`, `typecheck`, `lint`, `format:check`, and `deadcode`.\n- Keep backend and frontend formatted, linted, warning-free, and free of dead code or unused exports.\n- Include README run instructions.\n- Follow the saved implementation plan closely; if changing direction, document why in the README or final notes.\n\n## Constraints\n\n- Keep scope realistic for a 30-60 minute implementation.\n- Prefer in-memory persistence unless durable persistence is quick and does not distract from core behavior.\n- Ensure backend build passes with warnings treated as errors.\n- Ensure backend tests pass without rebuilding after the build step and include boundary tests.\n- Ensure backend formatting verification passes.\n- Ensure frontend dependencies install and `build`, `typecheck`, `lint`, `format:check`, and `deadcode` scripts pass.\n- Ensure typed-client generation is reproducible from source, either as part of frontend setup/build or via a documented script used by the build.",
+  "status": "completed",
+  "currentStageIndex": 1,
+  "stages": [
+    {
+      "id": "plan",
+      "agent": "eval-planner",
+      "status": "completed",
+      "startedAt": "2026-04-27T05:31:10.701Z",
+      "telemetry": {
+        "tokensIn": 11921,
+        "tokensOut": 1858,
+        "tokensReasoning": 611,
+        "tokensCacheRead": 40960,
+        "tokensCacheWrite": 0,
+        "costUSD": 0,
+        "messageCount": 7,
+        "model": "gpt-5.5",
+        "provider": "openai"
+      },
+      "completedAt": "2026-04-27T05:31:52.617Z",
+      "summary": "Created .lattice/plans/restaurant-booking.md with a concise vertical-slice implementation plan for the restaurant booking eval."
+    },
+    {
+      "id": "build",
+      "agent": "build",
+      "status": "completed",
+      "startedAt": "2026-04-27T05:31:52.622Z",
+      "telemetry": {
+        "tokensIn": 93363,
+        "tokensOut": 21724,
+        "tokensReasoning": 3692,
+        "tokensCacheRead": 4163584,
+        "tokensCacheWrite": 0,
+        "costUSD": 0,
+        "messageCount": 59,
+        "model": "gpt-5.5",
+        "provider": "openai"
+      },
+      "completedAt": "2026-04-27T05:40:25.820Z",
+      "summary": "Implemented .NET 10 restaurant booking API with pure booking rules, in-memory shell, boundary tests, OpenAPI, React/Tailwind/shadcn-style SPA using TanStack Query and Orval-generated client. Backend and frontend verification suites pass."
+    }
+  ],
+  "createdAt": "2026-04-27T05:31:08.877Z",
+  "updatedAt": "2026-04-27T05:40:25.820Z"
+}

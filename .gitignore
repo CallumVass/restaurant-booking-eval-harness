@@ -5,16 +5,19 @@ results/
 .agents/
 .env
 
-# Generated run archive artifacts. Keep source, README files, and result.json files publishable.
+# Generated run archive artifacts. Keep source, README, result.json,
+# .lattice plans/state/summaries, and lightweight .opencode scripts publishable.
 run-archive/**/node_modules/
 run-archive/**/dist/
 run-archive/**/build/
 run-archive/**/coverage/
 run-archive/**/bin/
 run-archive/**/obj/
-run-archive/**/.lattice/
-run-archive/**/.opencode/
-run-archive/**/.agents/
+run-archive/**/.opencode/node_modules/
+run-archive/**/.opencode/package.json
+run-archive/**/.opencode/package-lock.json
+run-archive/**/.opencode/skills/
+run-archive/**/.agents/skills/
 run-archive/**/.env
 run-archive/**/.env.*
 run-archive/**/*.user

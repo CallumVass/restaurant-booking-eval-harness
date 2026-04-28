@@ -1,0 +1,363 @@
+{
+  "id": "1d13de0c-41d6-48e7-9480-c8ee21d1dc69",
+  "pipelineName": "restaurant-booking-eval",
+  "goal": "# Restaurant Booking System Eval: Scenario 1\n\nBuild a restaurant booking system with a strong frontend/client implementation.\n\n## Backend\n\n- Use .NET 10 Web API.\n- Model restaurants, tables, and bookings.\n- Create a booking endpoint with conflict prevention.\n- List available time slots for a restaurant, date, and party size.\n- Validate invalid party size, invalid dates/times, unknown restaurants, and overlapping reservations.\n- Enable OpenAPI/Swagger with a usable OpenAPI document for frontend client generation.\n\n## Frontend\n\n- Use a React SPA.\n- Use Tailwind CSS and shadcn/ui for the interface.\n- Use TanStack libraries where they fit the SPA, especially TanStack Query for API state and mutations.\n- Generate and use a fully typed API client from the backend OpenAPI document with Orval or an equivalent OpenAPI client generator.\n- Show a restaurant list.\n- Provide a booking form.\n- Show booking confirmation.\n- Show existing bookings.\n- Avoid hand-written, stringly typed fetch wrappers when an OpenAPI-generated typed client is available.\n- Keep the UI polished, responsive, accessible, and meaningfully better than a plain form/list layout.\n\n## Engineering Preferences\n\n- Work in vertical TDD slices where practical.\n- Prefer pure domain functions and thin imperative shells.\n- Use explicit Result-style errors for expected business failures.\n- Keep Clean Architecture boundaries lightweight and appropriate for a 30-60 minute eval.\n- Include boundary tests for booking conflicts, invalid party size, invalid times, and overlapping reservations.\n- Configure deterministic frontend scripts: `build`, `typecheck`, `lint`, `format:check`, and `deadcode`.\n- Keep backend and frontend formatted, linted, warning-free, and free of dead code or unused exports.\n- Include README run instructions.\n- Follow the saved implementation plan closely; if changing direction, document why in the README or final notes.\n\n## Constraints\n\n- Keep scope realistic for a 30-60 minute implementation.\n- Prefer in-memory persistence unless durable persistence is quick and does not distract from core behavior.\n- Ensure backend build passes with warnings treated as errors.\n- Ensure backend tests pass without rebuilding after the build step and include boundary tests.\n- Ensure backend formatting verification passes.\n- Ensure frontend dependencies install and `build`, `typecheck`, `lint`, `format:check`, and `deadcode` scripts pass.\n- Ensure typed-client generation is reproducible from source, either as part of frontend setup/build or via a documented script used by the build.",
+  "status": "completed",
+  "currentStageIndex": 7,
+  "stages": [
+    {
+      "id": "plan",
+      "agent": "eval-planner",
+      "status": "completed",
+      "startedAt": "2026-04-27T12:27:49.707Z",
+      "telemetry": {
+        "tokensIn": 8911,
+        "tokensOut": 5236,
+        "tokensReasoning": 534,
+        "tokensCacheRead": 58496,
+        "tokensCacheWrite": 0,
+        "costUSD": 0.036432932,
+        "messageCount": 7,
+        "model": "deepseek-v4-pro",
+        "provider": "opencode-go"
+      },
+      "completedAt": "2026-04-27T12:30:42.222Z",
+      "summary": "Implementation plan written to .lattice/plans/restaurant-booking.md covering 4 vertical slices: Backend domain+API (18min), Frontend foundation (15min), Frontend features (18min), and Polish+verification (9min). Plan covers all required behaviors: restaurants/tables/bookings models, booking conflict prevention, available slots, boundary validation tests, OpenAPI/Swagger, Orval-generated typed client, TanStack Query, Tailwind+shadcn UI, and deterministic frontend scripts."
+    },
+    {
+      "id": "normalize-slices",
+      "agent": "eval-planner",
+      "status": "completed",
+      "startedAt": "2026-04-27T12:30:42.234Z",
+      "telemetry": {
+        "tokensIn": 10953,
+        "tokensOut": 5168,
+        "tokensReasoning": 689,
+        "tokensCacheRead": 91264,
+        "tokensCacheWrite": 0,
+        "costUSD": 0.04076390800000001,
+        "messageCount": 8,
+        "model": "deepseek-v4-pro",
+        "provider": "opencode-go"
+      },
+      "completedAt": "2026-04-27T12:33:45.288Z",
+      "summary": "Created manifest.json and 4 slice files under .lattice/plans/slices/. The 4 slices follow the plan's natural boundaries: (1) backend domain+API+tests, (2) frontend scaffold+typed client, (3) frontend feature pages, (4) polish+verification. Each slice file includes Goal, Acceptance Criteria, Required Tests, Verification Commands, Handoff Notes, and Non-Goals."
+    },
+    {
+      "id": "build-slice-1-backend-domain-api",
+      "agent": "build",
+      "status": "completed",
+      "startedAt": "2026-04-27T12:33:45.309Z",
+      "telemetry": {
+        "tokensIn": 104799,
+        "tokensOut": 15359,
+        "tokensReasoning": 19590,
+        "tokensCacheRead": 4382208,
+        "tokensCacheWrite": 0,
+        "costUSD": 0.03672776240000001,
+        "messageCount": 55,
+        "model": "deepseek-v4-flash",
+        "provider": "opencode-go"
+      },
+      "completedAt": "2026-04-27T12:45:24.465Z",
+      "summary": "Slice 1 complete: Backend domain models (Restaurant, Table, Booking, Result<T>), pure-function BookingService with conflict prevention and auto table assignment, 7 minimal API endpoints with OpenAPI/Swagger at /swagger/v1/swagger.json (consumable by Orval), in-memory ConcurrentDictionary persistence, and 10 xUnit boundary tests all passing. Build (0 warnings/0 errors), test (10/10), and format check all pass."
+    },
+    {
+      "id": "build-slice-2-frontend-foundation",
+      "agent": "build",
+      "status": "completed",
+      "startedAt": "2026-04-27T12:45:24.480Z",
+      "telemetry": {
+        "tokensIn": 85832,
+        "tokensOut": 20647,
+        "tokensReasoning": 10737,
+        "tokensCacheRead": 4744832,
+        "tokensCacheWrite": 0,
+        "costUSD": 0.0340895296,
+        "messageCount": 96,
+        "model": "deepseek-v4-flash",
+        "provider": "opencode-go"
+      },
+      "completedAt": "2026-04-27T12:58:10.102Z",
+      "summary": "Slice 2 complete: Vite+React-TS scaffolded, Tailwind v4+shadcn/ui configured with all required components (button, input, card, select, badge, table, skeleton, field, label, separator, sonner toast), TanStack Query Provider in main.tsx with shared query-client, Orval generates fully typed API client (6 hooks, 8 interfaces) from static OpenAPI spec, all frontend scripts (typecheck, build, lint, format:check, deadcode) pass, dev server starts on :5173, backend build/test/format all pass."
+    },
+    {
+      "id": "build-slice-3-frontend-features",
+      "agent": "build",
+      "status": "completed",
+      "startedAt": "2026-04-27T12:58:10.113Z",
+      "telemetry": {
+        "tokensIn": 71893,
+        "tokensOut": 18206,
+        "tokensReasoning": 14829,
+        "tokensCacheRead": 2439936,
+        "tokensCacheWrite": 0,
+        "costUSD": 0.0261466408,
+        "messageCount": 44,
+        "model": "deepseek-v4-flash",
+        "provider": "opencode-go"
+      },
+      "completedAt": "2026-04-27T13:06:53.469Z",
+      "summary": "Slice 3 implemented: 4 pages (RestaurantList, BookingForm, BookingConfirmation, BookingsList), Layout with navigation, App state-based router, fixed mutator response wrapping. All verification passes — build, typecheck, lint (0 warnings), format:check, deadcode. Backend 10/10 tests pass."
+    },
+    {
+      "id": "build-slice-4-polish-verification",
+      "agent": "build",
+      "status": "completed",
+      "startedAt": "2026-04-27T13:06:53.477Z",
+      "telemetry": {
+        "tokensIn": 69497,
+        "tokensOut": 8620,
+        "tokensReasoning": 4170,
+        "tokensCacheRead": 1151744,
+        "tokensCacheWrite": 0,
+        "costUSD": 0.016535663199999995,
+        "messageCount": 31,
+        "model": "deepseek-v4-flash",
+        "provider": "opencode-go"
+      },
+      "completedAt": "2026-04-27T13:11:01.919Z",
+      "summary": "Slice 4 complete: deterministic frontend scripts verified (build, typecheck, lint, format:check, deadcode all pass with zero warnings/errors). Backend build/test/format verified (0 warnings, 10/10 tests). gen:api made reproducible from local openapi.json source. README.md created with prerequisites, setup, run instructions, API reference. False positives in deadcode documented (Orval-generated exports, shadcn/ui components). Slice summary written."
+    },
+    {
+      "id": "final-integration",
+      "agent": "build",
+      "status": "completed",
+      "startedAt": "2026-04-27T13:11:01.924Z",
+      "telemetry": {
+        "tokensIn": 89414,
+        "tokensOut": 7560,
+        "tokensReasoning": 10770,
+        "tokensCacheRead": 2298752,
+        "tokensCacheWrite": 0,
+        "costUSD": 0.024086865599999997,
+        "messageCount": 39,
+        "model": "deepseek-v4-flash",
+        "provider": "opencode-go"
+      },
+      "completedAt": "2026-04-27T13:17:28.652Z",
+      "summary": "Final integration pass complete. Fixed OpenAPI spec type mismatch (Booking.duration was number, is now string to match .NET TimeSpan serialization) and repaired broken duration display in BookingConfirmation. All backend (build 0 warnings, 10/10 tests, format clean) and frontend (build, typecheck, lint 0 warnings, format:check, deadcode) checks pass. Cross-slice integration verified: OpenAPI spec → Orval client → hooks → pages → mutator → Vite proxy → backend routes all align."
+    },
+    {
+      "id": "plan-adherence-review",
+      "agent": "plan-reviewer",
+      "status": "completed",
+      "startedAt": "2026-04-27T13:17:28.658Z",
+      "telemetry": {
+        "tokensIn": 103832,
+        "tokensOut": 10195,
+        "tokensReasoning": 3632,
+        "tokensCacheRead": 984064,
+        "tokensCacheWrite": 0,
+        "costUSD": 0.3421258,
+        "messageCount": 18,
+        "model": "mimo-v2.5-pro",
+        "provider": "opencode-go"
+      },
+      "completedAt": "2026-04-27T13:23:45.578Z",
+      "summary": "All material plan commitments implemented and verified. Backend: 0 warnings, 10/10 tests, format clean. Frontend: all 5 deterministic scripts pass, Orval-generated typed client used throughout, 4 pages with polished UI. Documented deviations are justified and preserve plan intent.",
+      "verdict": "approve"
+    }
+  ],
+  "createdAt": "2026-04-27T12:27:47.115Z",
+  "updatedAt": "2026-04-27T13:23:45.578Z",
+  "runtimeStages": [
+    {
+      "id": "plan",
+      "agent": "eval-planner",
+      "type": "stage",
+      "completion": "tool_signal",
+      "signals": [
+        "complete"
+      ],
+      "fork": false,
+      "skills": {
+        "dynamic": false,
+        "pinned": [
+          "tdd",
+          "clean-ddd-hexagonal",
+          "dotnet-backend-patterns",
+          "dotnet-10-csharp-14",
+          "vercel-react-best-practices",
+          "shadcn",
+          "tanstack-query-best-practices",
+          "orval",
+          "functional-core-imperative-shell",
+          "vertical-slice-architecture"
+        ],
+        "max": 4
+      },
+      "prompt": "Create a concise implementation plan for the restaurant booking eval.\nTarget completion is 30-60 minutes, so keep scope deliberate.\nPlan vertical behavior slices rather than horizontal layers.\nPrefer pure domain functions and thin imperative shells.\nUse explicit Result-style errors for expected business failures.\nIf the goal asks for Tailwind/shadcn, TanStack, or OpenAPI-generated clients, include concrete plan steps for those choices.\nWrite the plan to .lattice/plans/restaurant-booking.md, then return the same plan in your response.\nDo not edit any other files during planning.\nOnly call lattice_signal(status: \"complete\") after the plan file exists and your response includes the same plan.",
+      "pauseAfter": false,
+      "isRewindTarget": false
+    },
+    {
+      "id": "normalize-slices",
+      "agent": "eval-planner",
+      "type": "stage",
+      "completion": "tool_signal",
+      "signals": [
+        "complete"
+      ],
+      "fork": false,
+      "skills": {
+        "dynamic": false,
+        "pinned": [
+          "tdd",
+          "clean-ddd-hexagonal",
+          "dotnet-backend-patterns",
+          "dotnet-10-csharp-14",
+          "vercel-react-best-practices",
+          "shadcn",
+          "tanstack-query-best-practices",
+          "orval",
+          "functional-core-imperative-shell",
+          "vertical-slice-architecture"
+        ],
+        "max": 4
+      },
+      "prompt": "Convert the existing big implementation plan into a task-specific slice manifest for fresh-context execution.\nRead .lattice/plans/restaurant-booking.md. Do not change its meaning or add new scope.\nCreate .lattice/plans/slices/manifest.json and one slice file per manifest entry under .lattice/plans/slices/.\nThe manifest must contain between 1 and 8 slices. Choose slice boundaries from the actual plan and task; do not force restaurant-specific, backend/frontend-specific, or layer-based slices when the scenario calls for something else.\nUse this manifest shape: { \"slices\": [{ \"index\": 1, \"id\": \"short-kebab-id\", \"title\": \"Human title\", \"file\": \".lattice/plans/slices/01-short-kebab-id.md\" }] }.\nSlice files must be numbered with their manifest index and include Goal, Acceptance Criteria, Required Tests, Verification Commands, Handoff Notes, and Non-Goals.\nKeep each slice bounded and executable from a fresh context against the current codebase. Avoid tiny mechanical slices and avoid generic predetermined layers unless the plan naturally calls for them.\nDo not edit implementation files. Only create the manifest and slice plan files.\nCall lattice_signal(status: \"complete\") only after the manifest and all referenced slice files exist.",
+      "pauseAfter": false,
+      "isRewindTarget": false
+    },
+    {
+      "id": "build-slice-1-backend-domain-api",
+      "agent": "build",
+      "type": "stage",
+      "completion": "tool_signal",
+      "signals": [
+        "complete"
+      ],
+      "fork": false,
+      "skills": {
+        "dynamic": true,
+        "pinned": [],
+        "max": 4
+      },
+      "prompt": "Implement slice 1: Backend Domain Models, Booking Logic, API Endpoints, and Boundary Tests.\nRead .lattice/plans/slices/01-backend-domain-api.md and treat it as the slice contract.\nAlso inspect the current codebase and any previous .lattice/summaries/slice-*.md files before editing.\nWork only on this slice's acceptance criteria and preserve earlier behavior. Do not implement later manifest slices early unless required to keep the current slice coherent.\nIf a slice contract conflicts with the current codebase or scenario goal, choose the safer implementation and document the deviation in the slice summary.\nUse TDD where practical for this slice. Add or update tests required by the slice contract.\nRun the slice's verification commands, plus any directly relevant build/test commands for touched areas.\nWrite .lattice/summaries/slice-1-backend-domain-api.md with changes made, checks run, known gaps, and handoff notes.\nDo not claim unrelated future slices are done.\nCall lattice_signal(status: \"complete\") only when this slice is implemented, verified, and summarized.",
+      "pauseAfter": false,
+      "isRewindTarget": false
+    },
+    {
+      "id": "build-slice-2-frontend-foundation",
+      "agent": "build",
+      "type": "stage",
+      "completion": "tool_signal",
+      "signals": [
+        "complete"
+      ],
+      "fork": false,
+      "skills": {
+        "dynamic": true,
+        "pinned": [],
+        "max": 4
+      },
+      "prompt": "Implement slice 2: Frontend Scaffold, Tailwind + shadcn/ui, Orval Typed Client, TanStack Query Setup.\nRead .lattice/plans/slices/02-frontend-foundation.md and treat it as the slice contract.\nAlso inspect the current codebase and any previous .lattice/summaries/slice-*.md files before editing.\nWork only on this slice's acceptance criteria and preserve earlier behavior. Do not implement later manifest slices early unless required to keep the current slice coherent.\nIf a slice contract conflicts with the current codebase or scenario goal, choose the safer implementation and document the deviation in the slice summary.\nUse TDD where practical for this slice. Add or update tests required by the slice contract.\nRun the slice's verification commands, plus any directly relevant build/test commands for touched areas.\nWrite .lattice/summaries/slice-2-frontend-foundation.md with changes made, checks run, known gaps, and handoff notes.\nDo not claim unrelated future slices are done.\nCall lattice_signal(status: \"complete\") only when this slice is implemented, verified, and summarized.",
+      "pauseAfter": false,
+      "isRewindTarget": false
+    },
+    {
+      "id": "build-slice-3-frontend-features",
+      "agent": "build",
+      "type": "stage",
+      "completion": "tool_signal",
+      "signals": [
+        "complete"
+      ],
+      "fork": false,
+      "skills": {
+        "dynamic": true,
+        "pinned": [],
+        "max": 4
+      },
+      "prompt": "Implement slice 3: Frontend Pages: Restaurant List, Booking Form, Confirmation, Bookings List, Navigation.\nRead .lattice/plans/slices/03-frontend-features.md and treat it as the slice contract.\nAlso inspect the current codebase and any previous .lattice/summaries/slice-*.md files before editing.\nWork only on this slice's acceptance criteria and preserve earlier behavior. Do not implement later manifest slices early unless required to keep the current slice coherent.\nIf a slice contract conflicts with the current codebase or scenario goal, choose the safer implementation and document the deviation in the slice summary.\nUse TDD where practical for this slice. Add or update tests required by the slice contract.\nRun the slice's verification commands, plus any directly relevant build/test commands for touched areas.\nWrite .lattice/summaries/slice-3-frontend-features.md with changes made, checks run, known gaps, and handoff notes.\nDo not claim unrelated future slices are done.\nCall lattice_signal(status: \"complete\") only when this slice is implemented, verified, and summarized.",
+      "pauseAfter": false,
+      "isRewindTarget": false
+    },
+    {
+      "id": "build-slice-4-polish-verification",
+      "agent": "build",
+      "type": "stage",
+      "completion": "tool_signal",
+      "signals": [
+        "complete"
+      ],
+      "fork": false,
+      "skills": {
+        "dynamic": true,
+        "pinned": [],
+        "max": 4
+      },
+      "prompt": "Implement slice 4: Deterministic Scripts, Dead Code Check, README, and Final Verification.\nRead .lattice/plans/slices/04-polish-verification.md and treat it as the slice contract.\nAlso inspect the current codebase and any previous .lattice/summaries/slice-*.md files before editing.\nWork only on this slice's acceptance criteria and preserve earlier behavior. Do not implement later manifest slices early unless required to keep the current slice coherent.\nIf a slice contract conflicts with the current codebase or scenario goal, choose the safer implementation and document the deviation in the slice summary.\nUse TDD where practical for this slice. Add or update tests required by the slice contract.\nRun the slice's verification commands, plus any directly relevant build/test commands for touched areas.\nWrite .lattice/summaries/slice-4-polish-verification.md with changes made, checks run, known gaps, and handoff notes.\nDo not claim unrelated future slices are done.\nCall lattice_signal(status: \"complete\") only when this slice is implemented, verified, and summarized.",
+      "pauseAfter": false,
+      "isRewindTarget": false
+    },
+    {
+      "id": "final-integration",
+      "agent": "build",
+      "type": "stage",
+      "completion": "tool_signal",
+      "signals": [
+        "complete"
+      ],
+      "fork": false,
+      "skills": {
+        "dynamic": false,
+        "pinned": [
+          "tdd",
+          "clean-ddd-hexagonal",
+          "dotnet-backend-patterns",
+          "dotnet-10-csharp-14",
+          "vercel-react-best-practices",
+          "shadcn",
+          "tanstack-query-best-practices",
+          "orval",
+          "functional-core-imperative-shell",
+          "vertical-slice-architecture"
+        ],
+        "max": 4
+      },
+      "prompt": "Perform the final integration pass for the requested task.\nRead .lattice/plans/restaurant-booking.md, .lattice/plans/slices/manifest.json, every referenced slice file, and every .lattice/summaries/slice-*.md file.\nInspect the whole codebase for cross-slice integration bugs, stale generated clients or contracts, route/API mismatches, missing validations, broken error handling, weak UX where UI is required, dead code, and missing README instructions.\nFor user flows that cross backend, generated client, and UI, verify the actual values line up end-to-end. For example, if the backend returns selectable slots or IDs, the UI must submit those returned values without reformatting them into invalid requests.\nFor date/time or range-based business rules, verify both source and tests cover invalid values, past dates where invalid, outside-hours or out-of-range values, invalid granularity, edge non-overlap, and overlap/conflict behavior as required by the task.\nFor generated API clients, verify the generated paths, base URL/mutator configuration, request shapes, and response handling match the backend routes. Check for double prefixes, stale checked-in specs, or generated clients returning error responses as successful mutations.\nFor UI requirements, verify source evidence for required component systems and that the primary happy path and error paths are functionally connected, not just visually present.\nEnsure the final product satisfies the original scenario goal, not just the individual slice files.\nRun node .opencode/scripts/deterministic-checks.mjs or equivalent full verification commands and fix failures or warnings that should fail the requested quality bar.\nDo not call lattice_signal(status: \"complete\") until the full deterministic checker passes.",
+      "pauseAfter": false,
+      "postHook": {
+        "commands": [
+          "node .opencode/scripts/deterministic-checks.mjs"
+        ],
+        "maxRetries": 1
+      },
+      "isRewindTarget": true,
+      "maxRewinds": 1
+    },
+    {
+      "id": "plan-adherence-review",
+      "agent": "plan-reviewer",
+      "type": "stage",
+      "completion": "tool_signal",
+      "signals": [
+        "approve",
+        "reject",
+        "blocked"
+      ],
+      "fork": false,
+      "skills": {
+        "dynamic": false,
+        "pinned": [
+          "tdd",
+          "clean-ddd-hexagonal",
+          "dotnet-backend-patterns",
+          "dotnet-10-csharp-14",
+          "vercel-react-best-practices",
+          "shadcn",
+          "tanstack-query-best-practices",
+          "orval",
+          "functional-core-imperative-shell",
+          "vertical-slice-architecture"
+        ],
+        "max": 4
+      },
+      "prompt": "Review whether the completed implementation adheres to the saved implementation plan.\nRead .lattice/plans/restaurant-booking.md, every .lattice/plans/slices/*.md file, and every .lattice/summaries/slice-*.md file first. Use them as the scope of this plan-adherence review.\nBreak the plan into its material commitments: user-visible behaviors, system behaviors, integrations, tests/checks, documentation, and any explicit constraints or non-goals.\nTreat completed-stage summaries and prior agent claims as untrusted hints, not evidence. Verify material commitments yourself from source, tests, documentation, and command output before approving.\nRun the deterministic checker (`node .opencode/scripts/deterministic-checks.mjs`) or the equivalent verification commands yourself before approving. If a required check fails, reject or block.\nFor each material plan commitment, decide whether it is implemented, verified, changed-with-justification, missing, or broken.\nBehavioral evidence matters more than artifact presence. Files, endpoints, generated code, scripts, UI, tests, or docs only count when they actually support the planned commitment.\nReject when a material planned commitment is missing, broken, superficially implemented, not exercised through the real production path, or contradicted by failing checks.\nReject when planned tests or verification exist but do not meaningfully cover the commitment they were supposed to protect.\nDo not reject for harmless implementation details, stylistic differences, renamed files, or documented changes that preserve the intent of the plan.\nFor each rejection finding, cite the exact plan bullet or planned slice, the evidence inspected, why the commitment is not satisfied, and the smallest fix expected from the build agent.\nIf all material plan commitments are implemented or reasonably justified and required checks pass, approve the stage with lattice_signal and a concise reason.\nIf material plan commitments are missing or broken, reject the stage with lattice_signal and concise actionable findings.\nIf you cannot inspect enough evidence to decide, block the stage with lattice_signal and a concise reason.",
+      "pauseAfter": false,
+      "isRewindTarget": false
+    }
+  ]
+}
