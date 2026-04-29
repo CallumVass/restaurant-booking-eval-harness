@@ -1,3 +1,5 @@
+// pattern: Imperative Shell
+
 import { createOpencode } from "@opencode-ai/sdk";
 import { cp, mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -5,6 +7,7 @@ import path from "node:path";
 import { collectOptionalEvidenceChecks } from "./checks.js";
 import { judgeSchema } from "./judge-schema.js";
 import { buildJudgePrompt, judgeInstructionsForScenario } from "./judge-prompt.js";
+import { telemetryFromAssistantInfo, type AssistantTelemetry } from "./telemetry.js";
 
 type PhaseModel = {
   model: string;
@@ -12,18 +15,6 @@ type PhaseModel = {
 
 type ModelsConfig = {
   judge: PhaseModel;
-};
-
-type TokenTelemetry = {
-  tokensIn: number;
-  tokensOut: number;
-  tokensReasoning: number;
-  tokensCacheRead: number;
-  tokensCacheWrite: number;
-  costUSD: number;
-  messageCount: number;
-  model?: string;
-  provider?: string;
 };
 
 type ScenarioConfig = {
@@ -40,7 +31,7 @@ type ArchivedResult = {
   workspace: string;
   plan: string | null;
   pipelineState: unknown;
-  telemetry?: Record<string, unknown> & { judge?: TokenTelemetry };
+  telemetry?: Record<string, unknown> & { judge?: AssistantTelemetry };
   checks: unknown[];
   fileTree?: string[];
   judge?: unknown;
@@ -153,7 +144,7 @@ async function judgeRun(
   client: any,
   judge: PhaseModel,
   details: unknown
-): Promise<{ output: unknown; telemetry: TokenTelemetry }> {
+): Promise<{ output: unknown; telemetry: AssistantTelemetry }> {
   const session = await client.session.create({ body: { title: "rejudge restaurant booking eval" } });
   const prompt = buildJudgePrompt(
     details,
@@ -211,20 +202,6 @@ async function listFiles(directory: string, limit: number): Promise<string[]> {
 
   await walk(directory);
   return files.sort();
-}
-
-function telemetryFromAssistantInfo(info: any): TokenTelemetry {
-  return {
-    model: typeof info?.modelID === "string" ? info.modelID : undefined,
-    provider: typeof info?.providerID === "string" ? info.providerID : undefined,
-    tokensIn: info?.tokens?.input ?? 0,
-    tokensOut: info?.tokens?.output ?? 0,
-    tokensReasoning: info?.tokens?.reasoning ?? 0,
-    tokensCacheRead: info?.tokens?.cache?.read ?? 0,
-    tokensCacheWrite: info?.tokens?.cache?.write ?? 0,
-    costUSD: info?.cost ?? 0,
-    messageCount: 1
-  };
 }
 
 function getPipelineStatus(pipelineState: unknown): string | undefined {

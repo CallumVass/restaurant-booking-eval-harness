@@ -15,5 +15,7 @@
     "tsx": "latest",
     "typescript": "latest"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@callumvass/lattice": "file:../lattice"
+  }
 }

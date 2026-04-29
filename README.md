@@ -14,7 +14,6 @@ This machine currently has Node `25.9.0`, npm/npx `11.12.1`, and .NET SDK `10.0.
 
 - `models.json`: phase-specific model variants and judge model.
 - `scenarios/`: required scenario prompts sent to the Lattice pipeline.
-- `templates/lattice-pipeline.ts`: project-local Lattice pipeline copied into each fresh run workspace.
 - `scripts/install-skills.sh`: installs the pinned skills into the run workspace.
 - `src/run.ts`: orchestrates workspace creation, OpenCode startup, Lattice execution, verification, and judging.
 - `baselines/`: optional sanitized source snapshots used to seed brownfield scenario workspaces.
@@ -55,7 +54,7 @@ The current default matrix is intentionally small. It reflects prior exploratory
 
 The `review` field in `models.json` is optional. When a variant omits `review`, the generated workspace pipeline excludes the `plan-adherence-review` stage. When present, the review stage is included and uses the configured review model/options.
 
-`plan.mode` and `build.mode` are optional. Defaults preserve the original behavior: `plan.mode: "big"` and `build.mode: "single"`. A sliced build keeps the big plan available, normalizes it into a task-specific `.lattice/plans/slices/manifest.json` plus referenced slice files, then relies on Lattice dynamic stage expansion to create exactly one fresh-context build stage per manifest slice before final integration and optional review. The slice names, count, order, and acceptance criteria come from the generated plan, not from restaurant-specific harness phases.
+`plan.mode` and `build.mode` are optional. Defaults preserve the original behavior: `plan.mode: "big"` and `build.mode: "single"`. A sliced build keeps the big plan available, normalizes it into a task-specific `.lattice/plans/slices/manifest.json` plus referenced slice files, then emits a Lattice v3 `expand` stage that creates exactly one fresh-context build stage per manifest slice before final integration and optional review. The slice names, count, order, and acceptance criteria come from the generated plan, not from restaurant-specific harness phases.
 
 ## Review Strategy
 
@@ -139,7 +138,7 @@ The `run-archive/` directory contains the generated solutions and `result.json` 
 
 ## Deterministic Checks
 
-The build stage post-hook and final runner both use `.opencode/scripts/deterministic-checks.mjs`. The checker discovers the generated solution/project and frontend package directory, then enforces:
+The build/final-integration prompts and final runner use `.opencode/scripts/deterministic-checks.mjs`. The checker discovers the generated solution/project and frontend package directory, then enforces:
 
 - `dotnet build <solution-or-project> -p:TreatWarningsAsErrors=true`
 - `dotnet test <solution-or-project> --no-build`
@@ -159,10 +158,10 @@ The LLM judge is instructed to treat these command results as mandatory evidence
 - `eval-planner` is a custom subagent with edit permission so the plan can be persisted before implementation.
 - Current default variants use phase-specific models: heavier/high-reasoning planning and medium/faster build settings.
 - `openai/*` exposes named reasoning variants in OpenCode metadata. Several `opencode-go/*` models expose reasoning capability but no named variants, so their `reasoningEffort` settings are passed as provider options and should be treated as best-effort.
-- Lattice is loaded through the `@callumvass/lattice` OpenCode plugin.
+- Lattice v3 is loaded through the sibling `../lattice/dist/plugin/index.js` OpenCode plugin by default. Set `LATTICE_PLUGIN` to override the plugin package or path.
 - The Skills CLI installs to `.agents/skills`; the runner syncs that directory to `.opencode/skills` because Lattice discovers OpenCode skills there.
 - Active run workspaces are created in `/tmp/restaurant-booking-eval-harness-active` by default so agents cannot see harness code or archived results.
 - Completed workspaces are moved to `run-archive/scenario-<n>/<run-id>/` with the run's `result.json` stored alongside the generated code.
 - OpenCode external-directory access is limited to `/tmp/*` to reduce accidental access to prior runs/results and the harness source.
 - The pipeline has no approval gate so it can run unattended.
-- The build stage has one post-hook retry for the deterministic checker.
+- Lattice v3 removed post-hooks; the final runner remains the authoritative deterministic verification step.
