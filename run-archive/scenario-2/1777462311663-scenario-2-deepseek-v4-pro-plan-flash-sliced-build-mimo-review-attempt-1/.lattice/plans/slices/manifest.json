@@ -1,0 +1,610 @@
+{
+  "requirements": [
+    {
+      "id": "R-001",
+      "source": "original-goal",
+      "category": "architecture",
+      "priority": "must",
+      "text": "Keep using .NET 10 Web API.",
+      "verification": "RestaurantBooking.Api.csproj targets net10.0; dotnet build succeeds."
+    },
+    {
+      "id": "R-002",
+      "source": "original-goal",
+      "category": "architecture",
+      "priority": "must",
+      "text": "Keep existing restaurants, tables, availability, and booking behavior working.",
+      "verification": "Slice-1 HTTP integration tests pass after all changes; domain tests pass."
+    },
+    {
+      "id": "R-003",
+      "source": "original-goal",
+      "category": "architecture",
+      "priority": "must",
+      "text": "Keep existing React SPA, Tailwind CSS, shadcn/ui approach, TanStack Query, and generated OpenAPI client workflow.",
+      "verification": "package.json dependencies unchanged for these; components.json present; App.tsx uses shadcn/Tailwind; vite.config.ts unchanged."
+    },
+    {
+      "id": "R-004",
+      "source": "original-goal",
+      "category": "security",
+      "priority": "must",
+      "text": "Use local email/password authentication using ASP.NET Core Identity or equivalent first-party .NET auth approach.",
+      "verification": "Program.cs registers ASP.NET Core Identity services with cookie auth; no third-party auth package references."
+    },
+    {
+      "id": "R-005",
+      "source": "original-goal",
+      "category": "security",
+      "priority": "must",
+      "text": "Do not use external hosted auth providers, OAuth apps, or services requiring secrets.",
+      "verification": "No OAuth/OIDC package references; no external service configuration; no secrets in code or config files."
+    },
+    {
+      "id": "R-006",
+      "source": "original-goal",
+      "category": "security",
+      "priority": "must",
+      "text": "A user must be authenticated to create a booking.",
+      "verification": "POST /api/bookings without auth cookie returns 401; POST /api/bookings with valid auth cookie returns 201 (backend test)."
+    },
+    {
+      "id": "R-007",
+      "source": "original-goal",
+      "category": "security",
+      "priority": "must",
+      "text": "A user can view their own booking history at restaurants.",
+      "verification": "GET /api/bookings/mine returns only bookings where UserId matches authenticated user (backend test)."
+    },
+    {
+      "id": "R-008",
+      "source": "original-goal",
+      "category": "security",
+      "priority": "must",
+      "text": "Users must not be able to view another user's booking history.",
+      "verification": "User A's GET /api/bookings/mine does not include User B's bookings (backend adversarial test)."
+    },
+    {
+      "id": "R-009",
+      "source": "original-goal",
+      "category": "security",
+      "priority": "must",
+      "text": "Use HTTP-only cookies for authentication.",
+      "verification": "Set-Cookie header on login response includes HttpOnly flag (backend test)."
+    },
+    {
+      "id": "R-010",
+      "source": "original-goal",
+      "category": "security",
+      "priority": "must",
+      "text": "Implement local-development appropriate CSRF/anti-forgery protection for state-changing requests.",
+      "verification": "POST /api/bookings without X-CSRF-TOKEN header returns 400 (backend test)."
+    },
+    {
+      "id": "R-011",
+      "source": "original-goal",
+      "category": "security",
+      "priority": "must",
+      "text": "The SPA must fetch and send the CSRF token for login, logout, booking creation, and other booking mutations.",
+      "verification": "Frontend code calls /api/antiforgery/token before mutations; X-CSRF-TOKEN header present in mutation requests."
+    },
+    {
+      "id": "R-012",
+      "source": "original-goal",
+      "category": "security",
+      "priority": "must",
+      "text": "Configure CORS and credentialed requests deliberately for the local frontend/backend origins.",
+      "verification": "Program.cs CORS: WithOrigins('http://localhost:5173'), AllowCredentials(); frontend fetch has credentials:'include'."
+    },
+    {
+      "id": "R-013",
+      "source": "original-goal",
+      "category": "security",
+      "priority": "must",
+      "text": "Do not store auth tokens in localStorage or sessionStorage.",
+      "verification": "No references to localStorage.setItem/sessionStorage.setItem for auth tokens in frontend code."
+    },
+    {
+      "id": "R-014",
+      "source": "original-goal",
+      "category": "data",
+      "priority": "must",
+      "text": "Associate each booking with the authenticated user that created it.",
+      "verification": "Booking record has UserId field; POST /api/bookings sets UserId from authenticated user identity."
+    },
+    {
+      "id": "R-015",
+      "source": "original-goal",
+      "category": "api",
+      "priority": "must",
+      "text": "Add authenticated booking-history endpoints scoped to the current user.",
+      "verification": "GET /api/bookings/mine exists, requires auth, and returns user-scoped results."
+    },
+    {
+      "id": "R-016",
+      "source": "original-goal",
+      "category": "api",
+      "priority": "must",
+      "text": "Preserve useful validation errors for invalid party size, invalid dates/times, unknown restaurants, and overlapping reservations.",
+      "verification": "Backend HTTP tests assert correct HTTP error codes and ErrorResponse shapes for each validation case."
+    },
+    {
+      "id": "R-017",
+      "source": "original-goal",
+      "category": "api",
+      "priority": "must",
+      "text": "Keep OpenAPI/Swagger usable for frontend client generation, including auth-related endpoints and protected booking behavior.",
+      "verification": "OpenAPI spec at /openapi/v1.json includes auth paths, security schemes, and protected booking endpoints; orval generation succeeds."
+    },
+    {
+      "id": "R-018",
+      "source": "original-goal",
+      "category": "ui",
+      "priority": "must",
+      "text": "Add login, registration, logout, and authenticated-user state to the existing UI.",
+      "verification": "App renders login/register forms when anonymous; shows user greeting + logout when authenticated."
+    },
+    {
+      "id": "R-019",
+      "source": "original-goal",
+      "category": "ui",
+      "priority": "must",
+      "text": "Require login before creating a booking and show a clear path to authenticate.",
+      "verification": "Anonymous user sees login prompt before booking form; 'Confirm booking' button leads to auth flow."
+    },
+    {
+      "id": "R-020",
+      "source": "original-goal",
+      "category": "ui",
+      "priority": "must",
+      "text": "Show the authenticated user's booking history at restaurants.",
+      "verification": "BookingHistory component displays user-scoped bookings via useListBookingsMine hook."
+    },
+    {
+      "id": "R-021",
+      "source": "original-goal",
+      "category": "architecture",
+      "priority": "must",
+      "text": "Use generated TanStack Query hooks where the OpenAPI generator supports them; otherwise use generated typed operations with thin, typed TanStack Query/mutation calls.",
+      "verification": "orval.config.ts uses client:'react-query'; generated file exports useXxx hooks; App.tsx imports generated hooks."
+    },
+    {
+      "id": "R-022",
+      "source": "original-goal",
+      "category": "architecture",
+      "priority": "must",
+      "text": "Avoid hand-written, stringly typed fetch wrappers when an OpenAPI-generated typed client is available.",
+      "verification": "No manual fetch() calls or hand-written API types in App.tsx/hooks; only generated types and hooks used."
+    },
+    {
+      "id": "R-023",
+      "source": "original-goal",
+      "category": "ui",
+      "priority": "must",
+      "text": "Keep the UI polished, responsive, accessible, and consistent with the existing visual language.",
+      "verification": "Existing Tailwind utility classes preserved; shadcn Card/Button/Badge/Field/Input components used; responsive grid layout; aria labels present."
+    },
+    {
+      "id": "R-024",
+      "source": "original-goal",
+      "category": "tests",
+      "priority": "must",
+      "text": "Add backend HTTP/OpenAPI-level tests for the existing restaurant, availability, booking, and error-mapping behavior rather than only testing domain rules.",
+      "verification": "HttpIntegrationTests.cs with 14+ tests using WebApplicationFactory covering all existing endpoints and error codes."
+    },
+    {
+      "id": "R-025",
+      "source": "original-goal",
+      "category": "tests",
+      "priority": "must",
+      "text": "Add focused frontend UI/integration tests for the core booking flows where practical, including form submission, API error handling, and booking confirmation/history display.",
+      "verification": "Frontend test file with tests for: restaurant list, login prompt, booking form, API errors, confirmation, booking history."
+    },
+    {
+      "id": "R-026",
+      "source": "original-goal",
+      "category": "architecture",
+      "priority": "must",
+      "text": "Strengthen the generated client workflow so frontend server-state code uses generated TanStack Query hooks where supported, rather than wrapping generated fetch functions by hand.",
+      "verification": "orval generates react-query hooks; App components import and use these hooks directly without manual queryFn wrappers."
+    },
+    {
+      "id": "R-027",
+      "source": "original-goal",
+      "category": "ui",
+      "priority": "must",
+      "text": "Improve the UI polish beyond the current compact single-page card/form/list experience while preserving the existing visual language.",
+      "verification": "Components extracted (RestaurantList, BookingForm, BookingHistory, ConfirmationCard); loading skeletons; empty states; transitions; improved error display."
+    },
+    {
+      "id": "R-028",
+      "source": "original-goal",
+      "category": "quality",
+      "priority": "must",
+      "text": "Keep fixes focused. Preserve the existing architecture, generated API client workflow, TanStack Query usage, Tailwind/shadcn setup, and deterministic scripts.",
+      "verification": "No structural overhauls; existing config files preserved with minimal changes; build scripts unchanged."
+    },
+    {
+      "id": "R-029",
+      "source": "original-goal",
+      "category": "data",
+      "priority": "must",
+      "text": "Keep auth suitable for local development and automated verification; seeded/demo users are acceptable if documented.",
+      "verification": "Seeded demo users (alice@example.com, bob@example.com) in Seeder.cs; documented in README; tests use them."
+    },
+    {
+      "id": "R-030",
+      "source": "original-goal",
+      "category": "quality",
+      "priority": "must",
+      "text": "Prefer minimal focused edits over replacing existing structure.",
+      "verification": "Diff review: existing files edited in place with targeted changes; no wholesale file replacements."
+    },
+    {
+      "id": "R-031",
+      "source": "original-goal",
+      "category": "architecture",
+      "priority": "must",
+      "text": "Prefer pure domain functions and thin imperative shells for booking/conflict logic.",
+      "verification": "BookingRules remains static class with pure functions; BookingStore.TryCreate remains thin imperative shell with lock + domain call."
+    },
+    {
+      "id": "R-032",
+      "source": "original-goal",
+      "category": "architecture",
+      "priority": "must",
+      "text": "Use explicit Result-style errors for expected business failures where the existing app does so.",
+      "verification": "BookingResult<T> type preserved; ToHttpResult pattern in Program.cs extended for new endpoints."
+    },
+    {
+      "id": "R-033",
+      "source": "original-goal",
+      "category": "architecture",
+      "priority": "must",
+      "text": "Keep Clean Architecture boundaries lightweight and consistent with the existing app.",
+      "verification": "Domain types in Domain.cs; store in BookingStore.cs; endpoint mappings in Program.cs; no new abstraction layers."
+    },
+    {
+      "id": "R-034",
+      "source": "original-goal",
+      "category": "tests",
+      "priority": "must",
+      "text": "Backend tests for auth boundaries, user-scoped booking history, invalid auth attempts, atomic conflict prevention, invalid party size, invalid times, overlapping reservations, HTTP endpoint behavior, OpenAPI availability, and error mapping.",
+      "verification": "AuthIntegrationTests.cs with 16+ tests covering all listed scenarios; HttpIntegrationTests.cs covers existing behavior."
+    },
+    {
+      "id": "R-035",
+      "source": "original-goal",
+      "category": "tests",
+      "priority": "must",
+      "text": "Frontend tests for the main auth, booking creation, booking-history, confirmation, and API error-display flows where practical.",
+      "verification": "App.test.tsx with rendering, auth flow, form submission, error display, confirmation, and booking history tests."
+    },
+    {
+      "id": "R-036",
+      "source": "original-goal",
+      "category": "quality",
+      "priority": "must",
+      "text": "Backend and frontend formatted, linted, warning-free, and free of dead code or unused exports.",
+      "verification": "dotnet format --verify-no-changes passes; npm run lint, npm run format:check, npm run deadcode pass."
+    },
+    {
+      "id": "R-037",
+      "source": "original-goal",
+      "category": "docs",
+      "priority": "must",
+      "text": "Update README run instructions for auth, seeded/demo users, CSRF behavior, and any new scripts.",
+      "verification": "README includes demo credentials, auth flow description, CSRF notes, new endpoint listings."
+    },
+    {
+      "id": "R-038",
+      "source": "original-goal",
+      "category": "security",
+      "priority": "must",
+      "text": "Do not introduce external services, hosted databases, OAuth providers, or secrets.",
+      "verification": "EF Core InMemory provider only; no connection strings to external DB; no OAuth packages; no secret files."
+    },
+    {
+      "id": "R-039",
+      "source": "original-goal",
+      "category": "data",
+      "priority": "must",
+      "text": "Prefer in-memory or lightweight local persistence unless the existing app already uses another approach.",
+      "verification": "BookingStore uses in-memory List; Identity uses EF Core InMemory; no SQL/Redis/Mongo references."
+    },
+    {
+      "id": "R-040",
+      "source": "original-goal",
+      "category": "quality",
+      "priority": "must",
+      "text": "Backend build passes with warnings treated as errors.",
+      "verification": "dotnet build RestaurantBooking.slnx returns exit code 0 with TreatWarningsAsErrors=true."
+    },
+    {
+      "id": "R-041",
+      "source": "original-goal",
+      "category": "quality",
+      "priority": "must",
+      "text": "Backend tests pass without rebuilding after the build step and include required auth/conflict boundary tests.",
+      "verification": "dotnet test RestaurantBooking.slnx --no-build returns exit code 0."
+    },
+    {
+      "id": "R-042",
+      "source": "original-goal",
+      "category": "quality",
+      "priority": "must",
+      "text": "Backend formatting verification passes.",
+      "verification": "dotnet format RestaurantBooking.slnx --verify-no-changes returns exit code 0."
+    },
+    {
+      "id": "R-043",
+      "source": "original-goal",
+      "category": "quality",
+      "priority": "must",
+      "text": "Frontend dependencies install and build, typecheck, lint, format:check, and deadcode scripts pass.",
+      "verification": "npm install && npm run generate:api && npm run build && npm run typecheck && npm run lint && npm run format:check && npm run deadcode all pass."
+    },
+    {
+      "id": "R-044",
+      "source": "original-goal",
+      "category": "quality",
+      "priority": "must",
+      "text": "Typed-client generation remains reproducible from source, either as part of frontend setup/build or via documented script used by the build.",
+      "verification": "npm run generate:api completes successfully; npm run build succeeds (which includes generate:api)."
+    },
+    {
+      "id": "R-045",
+      "source": "original-goal",
+      "category": "quality",
+      "priority": "must",
+      "text": "Follow the saved implementation plan closely; if changing direction, document why in the README or final notes.",
+      "verification": "Diff against plan; any deviations documented in slice Handoff Notes or README."
+    },
+    {
+      "id": "R-046",
+      "source": "saved-plan",
+      "category": "api",
+      "priority": "should",
+      "text": "Add UserInfo record with Email and Id for /api/auth/me.",
+      "verification": "Domain.cs exports UserInfo record; /api/auth/me returns it."
+    },
+    {
+      "id": "R-047",
+      "source": "saved-plan",
+      "category": "api",
+      "priority": "should",
+      "text": "Add LoginRequest and RegisterRequest records.",
+      "verification": "Domain.cs exports LoginRequest and RegisterRequest records."
+    },
+    {
+      "id": "R-048",
+      "source": "saved-plan",
+      "category": "data",
+      "priority": "should",
+      "text": "Seed demo users alice@example.com/Demo1234! and bob@example.com/Demo1234!.",
+      "verification": "Seeder.cs creates both users; tests can authenticate with them."
+    },
+    {
+      "id": "R-049",
+      "source": "saved-plan",
+      "category": "api",
+      "priority": "should",
+      "text": "Auth endpoints: /api/auth/register, /api/auth/login, /api/auth/logout, /api/auth/me, /api/antiforgery/token.",
+      "verification": "All five endpoints present in Program.cs endpoint mappings and OpenAPI spec."
+    },
+    {
+      "id": "R-050",
+      "source": "saved-plan",
+      "category": "security",
+      "priority": "should",
+      "text": "Hash passwords; validate email format; reject duplicate emails.",
+      "verification": "ASP.NET Core Identity handles hashing; duplicate email registration returns 400."
+    },
+    {
+      "id": "R-051",
+      "source": "saved-plan",
+      "category": "api",
+      "priority": "should",
+      "text": "Replace GET /api/bookings with GET /api/bookings/mine (breaking change).",
+      "verification": "GET /api/bookings route removed; GET /api/bookings/mine exists and requires auth."
+    },
+    {
+      "id": "R-052",
+      "source": "saved-plan",
+      "category": "api",
+      "priority": "should",
+      "text": "Keep GET /api/restaurants and GET /api/restaurants/{id}/availability public (no auth).",
+      "verification": "No [Authorize] or RequireAuthorization() on these endpoints; unauthenticated tests pass."
+    },
+    {
+      "id": "R-053",
+      "source": "saved-plan",
+      "category": "api",
+      "priority": "should",
+      "text": "Add security scheme cookieAuth (apiKey in cookie) to OpenAPI spec.",
+      "verification": "restaurant-booking.json has securityDefinitions/securitySchemes with cookieAuth."
+    },
+    {
+      "id": "R-054",
+      "source": "saved-plan",
+      "category": "api",
+      "priority": "should",
+      "text": "Add X-CSRF-TOKEN header parameter for mutating endpoints in OpenAPI spec.",
+      "verification": "POST /api/bookings and POST /api/auth/* in OpenAPI spec declare X-CSRF-TOKEN header parameter."
+    },
+    {
+      "id": "R-055",
+      "source": "saved-plan",
+      "category": "architecture",
+      "priority": "should",
+      "text": "Configure orval to generate react-query client with credentials: include.",
+      "verification": "orval.config.ts specifies client: 'react-query' and credentials: 'include'."
+    },
+    {
+      "id": "R-056",
+      "source": "saved-plan",
+      "category": "usability",
+      "priority": "should",
+      "text": "Create useAuth hook with isAuthenticated, user, login, register, logout.",
+      "verification": "src/hooks/useAuth.ts exports useAuth with these properties."
+    },
+    {
+      "id": "R-057",
+      "source": "saved-plan",
+      "category": "ui",
+      "priority": "should",
+      "text": "Create AuthDialog component with tabbed login/register form.",
+      "verification": "src/components/AuthDialog.tsx with login/register toggle."
+    },
+    {
+      "id": "R-058",
+      "source": "saved-plan",
+      "category": "ui",
+      "priority": "should",
+      "text": "Create NavHeader component with user greeting/logout or login button.",
+      "verification": "src/components/NavHeader.tsx displays user email + logout when authed, login button when anon."
+    },
+    {
+      "id": "R-059",
+      "source": "saved-plan",
+      "category": "ui",
+      "priority": "should",
+      "text": "Extract RestaurantList, BookingForm, BookingHistory, ConfirmationCard components from App.tsx.",
+      "verification": "Separate component files exist under src/components/ with extracted logic."
+    },
+    {
+      "id": "R-060",
+      "source": "saved-plan",
+      "category": "ui",
+      "priority": "should",
+      "text": "Add loading skeleton/spinner states and empty states for booking history.",
+      "verification": "BookingHistory shows Loader during loading, 'No bookings' empty state."
+    },
+    {
+      "id": "R-061",
+      "source": "saved-plan",
+      "category": "ui",
+      "priority": "should",
+      "text": "Add transitions, improved mobile responsiveness, focus-visible indicators, visual hierarchy for errors.",
+      "verification": "Tailwind transition classes on key elements; mobile-first grid; focus-visible:ring on interactive elements; error messages visually distinct."
+    },
+    {
+      "id": "R-062",
+      "source": "saved-plan",
+      "category": "ui",
+      "priority": "should",
+      "text": "Update index.html title to 'Restaurant Booking'.",
+      "verification": "index.html <title> tag reads 'Restaurant Booking'."
+    }
+  ],
+  "globalInvariants": [
+    {
+      "id": "GI-001",
+      "sourceRequirementIds": ["R-016", "R-032"],
+      "text": "All API responses use typed, result-style errors mapped to appropriate HTTP status codes (400 for validation, 404 for not-found, 409 for conflict).",
+      "verification": "Every error response in endpoint tests has correct HTTP status code and ErrorResponse body with Code and Message."
+    },
+    {
+      "id": "GI-002",
+      "sourceRequirementIds": ["R-002", "R-031", "R-033"],
+      "text": "Booking domain rules remain unchanged pure functions: party size 1-8, date range today to +30 days, seating times 17:00-21:00 at 1h intervals, table overlap detection per table per date with 2h duration.",
+      "verification": "BookingRules static methods unchanged; BookingRulesTests (existing domain tests) continue to pass without modification."
+    },
+    {
+      "id": "GI-003",
+      "sourceRequirementIds": ["R-009", "R-013"],
+      "text": "Auth cookies are HTTP-only with SameSite=Lax; no auth tokens stored in localStorage or sessionStorage at any point.",
+      "verification": "HttpIntegrationTests or AuthIntegrationTests assert Set-Cookie has HttpOnly; grep confirms no localStorage/sessionStorage auth token usage."
+    },
+    {
+      "id": "GI-004",
+      "sourceRequirementIds": ["R-010", "R-011"],
+      "text": "CSRF protection must validate tokens on all state-changing endpoints: POST /api/bookings, POST /api/auth/login, POST /api/auth/logout, POST /api/auth/register.",
+      "verification": "Each state-changing endpoint test includes a CSRF-missing subtest asserting 400; SPA code fetches antiforgery token before mutations."
+    },
+    {
+      "id": "GI-005",
+      "sourceRequirementIds": ["R-012"],
+      "text": "CORS allows localhost:5173 with credentials; all credentialed fetch requests include cookies (credentials: 'include').",
+      "verification": "Program.cs CORS configuration with WithOrigins; frontend fetch/orval config has credentials: 'include'."
+    },
+    {
+      "id": "GI-006",
+      "sourceRequirementIds": ["R-007", "R-008"],
+      "text": "User-scoped data isolation: User A's requests to /api/bookings/mine must never return User B's bookings under any circumstances.",
+      "verification": "AuthIntegrationTests has adversarial cross-user isolation test with two authenticated users."
+    },
+    {
+      "id": "GI-007",
+      "sourceRequirementIds": ["R-017", "R-021", "R-022", "R-026"],
+      "text": "The generated TypeScript client from Orval is the single typed surface for frontend API interaction. No hand-written fetch wrappers or raw API type declarations duplicate what Orval generates.",
+      "verification": "App.tsx and hooks import types and functions exclusively from ./generated/booking-client; no inline fetch() calls."
+    },
+    {
+      "id": "GI-008",
+      "sourceRequirementIds": ["R-036", "R-040", "R-041", "R-042", "R-043"],
+      "text": "All quality gates must pass: backend build (TreatWarningsAsErrors), backend tests (--no-build), backend format verification (--verify-no-changes), frontend build (includes generate:api), typecheck, lint, format:check, deadcode.",
+      "verification": "Sequential execution of all gate commands returns exit code 0."
+    },
+    {
+      "id": "GI-009",
+      "sourceRequirementIds": ["R-005", "R-038"],
+      "text": "No external services, hosted databases, OAuth providers, or hardcoded secrets at any point. Identity uses EF Core InMemory provider.",
+      "verification": "No PackageReference for external auth; no connection strings; AppDbContext configured with UseInMemoryDatabase."
+    },
+    {
+      "id": "GI-010",
+      "sourceRequirementIds": ["R-052"],
+      "text": "Existing public endpoints (GET /api/restaurants, GET /api/restaurants/{id}/availability) remain publicly accessible without authentication.",
+      "verification": "HttpIntegrationTests verify these endpoints return 200 without any auth cookies."
+    },
+    {
+      "id": "GI-011",
+      "sourceRequirementIds": ["R-014", "R-015"],
+      "text": "Domain types and pure functions preserve existing signatures and behavior; Booking.UserId is an additive field only.",
+      "verification": "Existing BookingRulesTests pass unchanged; BookingRules constructor calls and domain logic unchanged."
+    }
+  ],
+  "slices": [
+    {
+      "index": 1,
+      "id": "backend-http-tests",
+      "title": "Backend HTTP Integration Tests for Existing Behavior",
+      "file": ".lattice/plans/slices/01-backend-http-tests.md",
+      "covers": ["R-024", "R-002"],
+      "preserves": ["GI-001", "GI-002", "GI-008", "GI-010"]
+    },
+    {
+      "index": 2,
+      "id": "backend-auth-booking",
+      "title": "Backend Authentication, Booking Association, and Boundary Tests",
+      "file": ".lattice/plans/slices/02-backend-auth-booking.md",
+      "covers": ["R-004", "R-005", "R-006", "R-007", "R-008", "R-009", "R-010", "R-011", "R-012", "R-013", "R-014", "R-015", "R-016", "R-029", "R-034", "R-038", "R-039", "R-046", "R-047", "R-048", "R-049", "R-050", "R-051", "R-052"],
+      "preserves": ["GI-001", "GI-002", "GI-003", "GI-004", "GI-005", "GI-006", "GI-008", "GI-009", "GI-010", "GI-011"]
+    },
+    {
+      "index": 3,
+      "id": "openapi-client-regeneration",
+      "title": "OpenAPI Spec Update and Frontend Client Regeneration",
+      "file": ".lattice/plans/slices/03-openapi-client-regeneration.md",
+      "covers": ["R-017", "R-021", "R-022", "R-026", "R-044", "R-053", "R-054", "R-055"],
+      "preserves": ["GI-007", "GI-008"]
+    },
+    {
+      "index": 4,
+      "id": "frontend-auth-ui-polish",
+      "title": "Frontend Auth UI, Booking History, Polish, and Tests",
+      "file": ".lattice/plans/slices/04-frontend-auth-ui-polish.md",
+      "covers": ["R-003", "R-018", "R-019", "R-020", "R-023", "R-025", "R-027", "R-035", "R-056", "R-057", "R-058", "R-059", "R-060", "R-061", "R-062"],
+      "preserves": ["GI-005", "GI-007", "GI-008"]
+    },
+    {
+      "index": 5,
+      "id": "documentation-cleanup",
+      "title": "Documentation, Cleanup, and Final Verification",
+      "file": ".lattice/plans/slices/05-documentation-cleanup.md",
+      "covers": ["R-001", "R-028", "R-030", "R-031", "R-032", "R-033", "R-036", "R-037", "R-040", "R-041", "R-042", "R-043", "R-045"],
+      "preserves": ["GI-001", "GI-002", "GI-003", "GI-004", "GI-005", "GI-006", "GI-007", "GI-008", "GI-009", "GI-010", "GI-011"]
+    }
+  ]
+}

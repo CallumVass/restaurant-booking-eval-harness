@@ -43,16 +43,16 @@ Brownfield auth/security extension: local cookie auth, CSRF protection, user-own
 | Rank | Variant | Score | Time | Tokens | Cost | Checks | Solution |
 |---:|---|---:|---:|---:|---:|---|---|
 | 1 | [`openai-gpt-5.5-plan-build`](./details#scenario-2-openai-gpt-55-plan-build) | 88 | 16.6m | 269,990 | ~$6.45 | Pass | [source]({{ repo }}/tree/{{ branch }}/run-archive/scenario-2/1777298973976-scenario-2-openai-gpt-5.5-plan-build-attempt-1) |
-| 2 | [`deepseek-v4-pro-plan-flash-build-mimo-review`](./details#scenario-2-deepseek-v4-pro-plan-flash-build-mimo-review) | 82 | 36.8m | 417,005 | $0.63 | Pass | [source]({{ repo }}/tree/{{ branch }}/run-archive/scenario-2/1777364720430-scenario-2-deepseek-v4-pro-plan-flash-build-mimo-review-attempt-1) |
-| 3 | [`mimo-v2.5-pro-plan-mimo-v2.5-build-deepseek-review`](./details#scenario-2-mimo-v25-pro-plan-mimo-v25-build-deepseek-review) | 82 | 39.9m | 401,441 | $1.59 | Pass | [source]({{ repo }}/tree/{{ branch }}/run-archive/scenario-2/1777367017204-scenario-2-mimo-v2.5-pro-plan-mimo-v2.5-build-deepseek-review-attempt-1) |
-| 4 | [`deepseek-v4-pro-plan-flash-sliced-build-mimo-review`](./details#scenario-2-deepseek-v4-pro-plan-flash-sliced-build-mimo-review) | 82 | 69.4m | 892,583 | $0.70 | Pass | [source]({{ repo }}/tree/{{ branch }}/run-archive/scenario-2/1777393256500-scenario-2-deepseek-v4-pro-plan-flash-sliced-build-mimo-review-attempt-1) |
+| 2 | [`deepseek-v4-pro-plan-flash-sliced-build-mimo-review`](./details#scenario-2-deepseek-v4-pro-plan-flash-sliced-build-mimo-review) | 87 | 83.3m | 1,220,714 | $0.96 | Pass | [source]({{ repo }}/tree/{{ branch }}/run-archive/scenario-2/1777462311663-scenario-2-deepseek-v4-pro-plan-flash-sliced-build-mimo-review-attempt-1) |
+| 3 | [`deepseek-v4-pro-plan-flash-build-mimo-review`](./details#scenario-2-deepseek-v4-pro-plan-flash-build-mimo-review) | 82 | 36.8m | 417,005 | $0.63 | Pass | [source]({{ repo }}/tree/{{ branch }}/run-archive/scenario-2/1777364720430-scenario-2-deepseek-v4-pro-plan-flash-build-mimo-review-attempt-1) |
+| 4 | [`mimo-v2.5-pro-plan-mimo-v2.5-build-deepseek-review`](./details#scenario-2-mimo-v25-pro-plan-mimo-v25-build-deepseek-review) | 82 | 39.9m | 401,441 | $1.59 | Pass | [source]({{ repo }}/tree/{{ branch }}/run-archive/scenario-2/1777367017204-scenario-2-mimo-v2.5-pro-plan-mimo-v2.5-build-deepseek-review-attempt-1) |
 | 5 | [`deepseek-v4-pro-plan-pro-build`](./details#scenario-2-deepseek-v4-pro-plan-pro-build) | 57 | 46.3m | 220,110 | $0.65 | Pass | [source]({{ repo }}/tree/{{ branch }}/run-archive/scenario-2/1777304791852-scenario-2-deepseek-v4-pro-plan-pro-build-attempt-1) |
 
 ## Scenario 2 Takeaways
 
-- OpenAI produced the strongest brownfield auth result, especially on cookie auth, ownership, generated client integration, and balanced backend/frontend changes.
+- OpenAI produced the strongest brownfield auth result by one point, especially on cookie auth, ownership, generated client integration, and balanced backend/frontend changes.
+- Dynamic sliced execution is now the strongest open-model Scenario 2 result. The latest run fixed the previous CSRF and public all-bookings ownership failures by letting new task requirements override incompatible legacy behavior, though it remained the slowest run and had thinner real frontend auth/client integration tests.
 - DeepSeek Flash plus Mimo review and Mimo plus DeepSeek review tied on overall score, but failed in different ways: DeepSeek leaked the legacy all-bookings endpoint and used hand-written auth fetches, while Mimo lacked generated TanStack Query hooks and a strong cross-user isolation test.
-- Dynamic sliced execution improved after generic global-invariant and slice-shaping changes, tying the other `82`-score open-model runs with stronger generated React Query usage and better ownership coverage than the original sliced run. It remained slower and still missed CSRF enforcement for auth mutations plus the legacy public all-bookings leak.
 - DeepSeek Pro without review passed deterministic checks but was judged not reliably runnable because CSRF enforcement and frontend generated-client integration were materially broken.
 
 ## Repository Links
