@@ -4,8 +4,8 @@ import { createOpencode } from "@opencode-ai/sdk";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { collectOptionalEvidenceChecks, runCommand, type CommandResult } from "./checks.js";
-import { judgeSchema } from "./judge-schema.js";
 import { buildJudgePrompt, judgeInstructionsForScenario } from "./judge-prompt.js";
+import { judgeSchema } from "./judge-schema.js";
 import {
   completedPipelineAnomaly,
   getPipelineStatus,
@@ -17,7 +17,7 @@ import {
 import { makeOpenCodeConfig } from "./opencode-config.js";
 import { renderPipelineTemplate, type ModelVariant, type PhaseModel } from "./pipeline.js";
 import { summarizeTelemetry, telemetryFromAssistantInfo, type AssistantTelemetry, type TelemetrySummary } from "./telemetry.js";
-import { archiveRun, ensureLatticePluginAvailable, exists, listFiles, prepareWorkspace, waitForStableWorkspace } from "./workspace.js";
+import { archiveRun, exists, listFiles, prepareWorkspace, waitForStableWorkspace } from "./workspace.js";
 
 type ModelsConfig = {
   variants: ModelVariant[];
@@ -54,8 +54,6 @@ const root = process.cwd();
 const activeRunsDir = path.resolve(process.env.EVAL_RUNS_DIR ?? "/tmp/restaurant-booking-eval-harness-active");
 const archiveDir = path.resolve(process.env.EVAL_ARCHIVE_DIR ?? path.join(root, "run-archive"));
 const defaultTimeoutMs = 120 * 60 * 1000;
-const defaultLocalLatticePlugin = path.resolve(root, "..", "lattice", "dist", "plugin", "index.js");
-const latticePluginSpecifier = process.env.LATTICE_PLUGIN ?? defaultLocalLatticePlugin;
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
@@ -81,7 +79,6 @@ async function main() {
     log(`Variant ${requestedVariant} is disabled (${variants[0].reason ?? "no reason"}) but was explicitly requested; running it anyway.`);
   }
 
-  await ensureLatticePluginAvailable({ root, defaultLocalLatticePlugin, latticePluginSpecifier, log });
   await mkdir(activeRunsDir, { recursive: true });
   await mkdir(archiveDir, { recursive: true });
 
@@ -142,7 +139,7 @@ async function runVariant(input: {
     skipSkills: input.skipSkills,
     baselinePath: input.scenarioConfig.baselinePath,
     root,
-    opencodeConfig: makeOpenCodeConfig(input.variant, latticePluginSpecifier),
+    opencodeConfig: makeOpenCodeConfig(input.variant),
     pipelineTemplate: renderPipelineTemplate(input.variant),
     log
   });
@@ -156,7 +153,7 @@ async function runVariant(input: {
     opencode = await createOpencode({
       port: await choosePort(),
       timeout: 30_000,
-      config: makeOpenCodeConfig(input.variant, latticePluginSpecifier) as any
+      config: makeOpenCodeConfig(input.variant) as any
     });
     log(`${input.variant.id}: OpenCode server started at ${opencode.server.url}`);
 
@@ -170,8 +167,8 @@ async function runVariant(input: {
     await assertCommandRegistered(client, "restaurant-booking-eval");
     await assertCommandRegistered(client, "lattice");
 
-    log(`${input.variant.id}: starting Lattice pipeline via prompt`);
-    await client.session.prompt({
+    log(`${input.variant.id}: starting Lattice pipeline via async prompt`);
+    await client.session.promptAsync({
       path: { id: sessionId },
       body: {
         agent: "build",
@@ -180,16 +177,20 @@ async function runVariant(input: {
           {
             type: "text",
             text: [
-              "Use the lattice_control tool with action \"run\" and pipeline \"restaurant-booking-eval\".",
+              "Call the lattice_control tool exactly once with action \"run\" and pipeline \"restaurant-booking-eval\".",
               "Pass the following goal exactly as the tool goal:",
               "",
-              input.task
+              input.task,
+              "",
+              "After the run tool returns, do not call status, continue, retry, abort, reset, or any other tool.",
+              "Do not wait for or inspect pipeline progress in this prompt; the harness will do that.",
+              "End your response with exactly: Lattice pipeline start requested."
             ].join("\n")
           }
         ]
       }
     });
-    log(`${input.variant.id}: Lattice start prompt returned; waiting for pipeline state`);
+    log(`${input.variant.id}: Lattice start prompt dispatched; waiting for pipeline state`);
 
     let pipelineState = await waitForPipeline(workspace, input.timeoutMs, log);
     const retryFinding = reviewRejectionSummary(pipelineState);

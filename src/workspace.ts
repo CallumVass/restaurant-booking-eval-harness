@@ -75,31 +75,6 @@ export async function prepareWorkspace(input: {
   }
 }
 
-export async function ensureLatticePluginAvailable(input: {
-  root: string;
-  defaultLocalLatticePlugin: string;
-  latticePluginSpecifier: string;
-  log: Logger;
-}): Promise<void> {
-  if (input.latticePluginSpecifier !== input.defaultLocalLatticePlugin) return;
-  if (await exists(input.latticePluginSpecifier)) return;
-
-  const latticePackage = path.resolve(input.root, "..", "lattice", "package.json");
-  if (!(await exists(latticePackage))) {
-    throw new Error(`Lattice plugin not found at ${input.latticePluginSpecifier}. Set LATTICE_PLUGIN to a v3 plugin package or built plugin path.`);
-  }
-
-  input.log(`Lattice plugin build not found; building ${path.dirname(latticePackage)}`);
-  const build = await runCommand("npm", ["run", "build"], path.dirname(latticePackage), 5 * 60 * 1000);
-  if (build.exitCode !== 0) {
-    throw new Error(`Lattice plugin build failed:\n${build.stderr || build.stdout}`);
-  }
-
-  if (!(await exists(input.latticePluginSpecifier))) {
-    throw new Error(`Lattice plugin build finished but ${input.latticePluginSpecifier} does not exist.`);
-  }
-}
-
 export async function archiveRun(workspace: string, scenario: string, archiveDir: string): Promise<string> {
   const destination = path.join(archiveDir, `scenario-${scenario}`, path.basename(workspace));
   await rm(destination, { recursive: true, force: true });

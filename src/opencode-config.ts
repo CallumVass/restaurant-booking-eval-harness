@@ -2,11 +2,10 @@
 
 import { reviewModelForVariant, type ModelVariant } from "./pipeline.js";
 
-export function makeOpenCodeConfig(variant: ModelVariant, latticePluginSpecifier: string) {
+export function makeOpenCodeConfig(variant: ModelVariant) {
   const review = reviewModelForVariant(variant);
   return {
     $schema: "https://opencode.ai/config.json",
-    plugin: [latticePluginSpecifier],
     model: variant.build.model,
     agent: {
       plan: {

@@ -5,8 +5,8 @@ import { cp, mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/pro
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { collectOptionalEvidenceChecks } from "./checks.js";
-import { judgeSchema } from "./judge-schema.js";
 import { buildJudgePrompt, judgeInstructionsForScenario } from "./judge-prompt.js";
+import { judgeSchema } from "./judge-schema.js";
 import { telemetryFromAssistantInfo, type AssistantTelemetry } from "./telemetry.js";
 
 type PhaseModel = {

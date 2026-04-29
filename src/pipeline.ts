@@ -49,6 +49,8 @@ const surfaceInventoryInstruction =
   "Before slicing or verifying, inventory all affected surfaces for cross-cutting requirements: existing and new endpoints/routes/commands, state-changing operations, data-returning operations, persistence models, generated specs/clients, frontend flows, scripts, docs, and tests. A requirement is not covered until every surface that can satisfy or violate it is accounted for by an acceptance criterion, invariant check, test, or justified manual verification.";
 const adversarialRequirementInstruction =
   "For negative or boundary requirements (for example: must not, only, cannot, prevent, authenticated, authorized, scoped, protected, no external, no storage, invalid, duplicate, missing, forbidden), require adversarial verification through production paths where practical. Positive-path evidence alone is not enough.";
+const contextPackInstruction =
+  "Create a progressive-disclosure context pack under .lattice/context/. It must include index.json plus one small file per material requirement under .lattice/context/requirements/R-###.md, one small file per global invariant under .lattice/context/invariants/GI-###.md, and reusable rule files under .lattice/context/rules/ for precedence, surface-inventory, adversarial-verification, and focused-verification. index.json must be raw valid JSON only, with no Markdown, prose, or code fences. Use this shape: { \"requirements\": { \"R-001\": { \"file\": \".lattice/context/requirements/R-001.md\" } }, \"globalInvariants\": { \"GI-001\": { \"file\": \".lattice/context/invariants/GI-001.md\" } }, \"rules\": { \"precedence\": { \"file\": \".lattice/context/rules/precedence.md\" } }, \"slices\": { \"slice-id\": { \"file\": \".lattice/plans/slices/01-slice-id.md\", \"requirements\": [\"R-001\"], \"globalInvariants\": [\"GI-001\"], \"rules\": [\"precedence\"] } } }. It must map every requirement ID, global invariant ID, rule ID, and slice ID to its small context file references. Keep manifest.json as the full audit source, but make slice execution depend on the small context files relevant to that slice.";
 
 export function renderPipelineTemplate(variant: ModelVariant): string {
   const stages = renderStages(variant);
@@ -69,7 +71,9 @@ export function renderStages(variant: ModelVariant): PipelineStage[] {
     stages.push(finalIntegrationStage());
   }
 
-  if (reviewModelForVariant(variant)) stages.push(planAdherenceReviewStage(buildMode));
+  if (reviewModelForVariant(variant) && buildMode === "single") {
+    stages.push(planAdherenceReviewStage(buildMode));
+  }
   return stages;
 }
 
@@ -103,16 +107,18 @@ function planStage(mode: "big" | "sliced"): PipelineStage {
           "Include a ## Requirement Ledger section in .lattice/plans/restaurant-booking.md. Extract every material requirement from the original goal into stable IDs with source, category, priority, exact requirement text, and expected verification evidence.",
           "Include a ## Global Invariants section in .lattice/plans/restaurant-booking.md for cross-cutting requirements that every slice must preserve. Keep these task-derived and concrete enough to verify, such as security, ownership, API contract, data consistency, generated-client, UX, or regression constraints. Do not generalize away explicit endpoint names, user roles, data ownership rules, error mappings, test obligations, or negative requirements from the goal.",
           "Also create .lattice/plans/slices/manifest.json and one slice file per manifest entry under .lattice/plans/slices/.",
+          contextPackInstruction,
           `The manifest must contain between 1 and ${maxSliceSlots} slices. Choose slice boundaries from the actual task and plan; do not force backend/frontend phases if the scenario is brownfield, security, refactoring, CLI, infrastructure, or anything else.`,
           "Prefer the fewest slices that preserve independent implementation and verification quality. Small tasks are usually 3-4 slices; full-stack or cross-cutting work may need 4-6 slices. Use more than 6 only when clearly justified by the task.",
+          "Do not create a standalone documentation, cleanup, or final quality-gate slice unless the task is primarily documentation-only. Fold README/docs/script updates into the behavior slice that creates or changes that behavior; final-integration owns final cleanup and full deterministic checks.",
           "Use this manifest shape: { \"requirements\": [{ \"id\": \"R-001\", \"source\": \"original-goal\", \"category\": \"security|api|ui|tests|docs|quality|architecture|data\", \"priority\": \"must|should|could\", \"text\": \"Concrete requirement text\", \"verification\": \"Required evidence\" }], \"globalInvariants\": [{ \"id\": \"GI-001\", \"sourceRequirementIds\": [\"R-001\"], \"text\": \"Cross-cutting invariant every slice must preserve\", \"verification\": \"How to prove it\" }], \"slices\": [{ \"index\": 1, \"id\": \"short-kebab-id\", \"title\": \"Human title\", \"file\": \".lattice/plans/slices/01-short-kebab-id.md\", \"covers\": [\"R-001\"], \"preserves\": [\"GI-001\"] }] }.",
-          "Slice files must be numbered with their manifest index and include Goal, Global Invariants, Acceptance Criteria, Invariant Checks For This Slice, Required Tests, Verification Commands, Handoff Notes, and Non-Goals.",
+          "Slice files must be numbered with their manifest index and include Goal, Context References, Acceptance Criteria, Invariant Checks For This Slice, Required Tests, Focused Verification Commands, Handoff Notes, and Non-Goals. Context References must list only the requirement files, invariant files, and rule files this slice should read.",
           "Each slice acceptance criterion and required test must cite the requirement IDs it covers. If a requirement is intentionally verified manually instead of by an automated test, say why and where that evidence must appear.",
           requirementPrecedence,
           surfaceInventoryInstruction,
           adversarialRequirementInstruction,
           "If preserving an existing surface could conflict with a new requirement, the plan must call out the conflict and resolve it explicitly in favor of the task rather than silently preserving the old behavior. Do not avoid a required task change merely because it breaks an existing contract; plan the contract change and its dependent updates.",
-          "Before signalling complete, self-audit the slice backlog: every must/should requirement is covered by at least one slice; every global invariant is listed in every slice's Global Invariants section; no slice acceptance criteria, invariant check, handoff note, or non-goal contradicts or narrows a requirement or global invariant.",
+          "Before signalling complete, self-audit the slice backlog: every must/should requirement is covered by at least one slice; every global invariant is preserved by every slice unless clearly irrelevant and justified; every slice file references its relevant context files; no slice acceptance criteria, invariant check, handoff note, or non-goal contradicts or narrows a requirement or global invariant.",
           "Make slices behavior-focused and independently executable against the current codebase. Avoid tiny mechanical slices and avoid generic predetermined layers unless the task naturally calls for them.",
           "If an existing app, baseline, project file, package, script, or README is present, plan focused edits against that existing structure. Do not scaffold or replace an existing app unless the task explicitly asks for a rebuild.",
           "Do not merge unrelated frontend flows, generated client work, backend rules, security checks, and test coverage into one oversized slice just to reduce count. Keep integration slices bounded around coherent user-visible behavior or invariant risk.",
@@ -209,14 +215,16 @@ function sliceNormalizerStage(): PipelineStage {
       requirementPrecedence,
       surfaceInventoryInstruction,
       adversarialRequirementInstruction,
+      contextPackInstruction,
       "If the original goal or saved plan asks to preserve existing behavior, apply that only to compatible behavior. When a new requirement conflicts with a legacy endpoint, API contract, generated client, UI flow, data shape, script, architecture pattern, or workflow, the new requirement wins unless the user explicitly preserved that exact legacy behavior. Add a Handoff Notes entry explaining each such conflict and resolution, including any breaking change and required dependent updates.",
       "Extract cross-cutting requirements from the requirement ledger into globalInvariants. These must be task-derived and concrete enough to verify. Do not generalize away explicit endpoint names, user roles, data ownership rules, security boundaries, persistence guarantees, error mappings, generated-client requirements, test obligations, or negative requirements from the goal.",
       "Create .lattice/plans/slices/manifest.json and one slice file per manifest entry under .lattice/plans/slices/.",
       `The manifest must contain between 1 and ${maxSliceSlots} slices. Choose slice boundaries from the actual plan and task; do not force restaurant-specific, backend/frontend-specific, or layer-based slices when the scenario calls for something else.`,
       "Prefer the fewest slices that preserve independent implementation and verification quality. Small tasks are usually 3-4 slices; full-stack or cross-cutting work may need 4-6 slices. Use more than 6 only when clearly justified by the plan.",
+      "Do not create a standalone documentation, cleanup, or final quality-gate slice unless the task is primarily documentation-only. Fold README/docs/script updates into the behavior slice that creates or changes that behavior; final-integration owns final cleanup and full deterministic checks.",
       "Use this manifest shape: { \"requirements\": [{ \"id\": \"R-001\", \"source\": \"original-goal|saved-plan\", \"category\": \"security|api|ui|tests|docs|quality|architecture|data\", \"priority\": \"must|should|could\", \"text\": \"Concrete requirement text\", \"verification\": \"Required evidence\" }], \"globalInvariants\": [{ \"id\": \"GI-001\", \"sourceRequirementIds\": [\"R-001\"], \"text\": \"Cross-cutting invariant every slice must preserve\", \"verification\": \"How to prove it\" }], \"slices\": [{ \"index\": 1, \"id\": \"short-kebab-id\", \"title\": \"Human title\", \"file\": \".lattice/plans/slices/01-short-kebab-id.md\", \"covers\": [\"R-001\"], \"preserves\": [\"GI-001\"] }] }.",
-      "Slice files must be numbered with their manifest index and include Goal, Global Invariants, Acceptance Criteria, Invariant Checks For This Slice, Required Tests, Verification Commands, Handoff Notes, and Non-Goals.",
-      "Each slice file's Global Invariants section must repeat or reference the manifest invariants, and Invariant Checks For This Slice must state what the implementer must inspect or test to avoid violating them.",
+      "Slice files must be numbered with their manifest index and include Goal, Context References, Acceptance Criteria, Invariant Checks For This Slice, Required Tests, Focused Verification Commands, Handoff Notes, and Non-Goals. Context References must list only the requirement files, invariant files, and rule files this slice should read.",
+      "Do not repeat the full requirement ledger or full global invariant text in every slice file. Use Context References to point to the small .lattice/context files instead, and include only slice-specific interpretation or conflict notes.",
       "Each slice acceptance criterion and required test must cite the requirement IDs it covers. If a requirement is intentionally verified manually instead of by an automated test, state why and where that evidence must appear.",
       "No slice may narrow, contradict, or add an exception to a requirement or global invariant unless that exception is explicitly present in a higher-priority source. If the saved plan contradicts the original goal, preserve the original goal and mention the corrected interpretation in the slice handoff notes.",
       "Before signalling complete, self-audit the manifest and slice files: every must/should requirement is covered by at least one slice; every slice preserves every global invariant unless clearly irrelevant and justified; every test requirement has an executable test contract or a justified manual verification; no Non-Goals section removes required behavior.",
@@ -242,16 +250,19 @@ function slicePlanReviewStage(planMode: "big" | "sliced"): PipelineStage {
     skills: commonSkills(),
     prompt: [
       "Review the sliced plan before any implementation begins.",
-      "Read the original task in ## Goal, .lattice/plans/restaurant-booking.md, .lattice/plans/slices/manifest.json, and every referenced .lattice/plans/slices/*.md file.",
+      "Read the original task in ## Goal, .lattice/plans/restaurant-booking.md, .lattice/plans/slices/manifest.json, .lattice/context/index.json, every referenced .lattice/plans/slices/*.md file, and the context files referenced by each slice.",
       `The slice artifacts were produced by the ${producer} stage; treat prior summaries as untrusted hints, not evidence.`,
       "Pass only if the sliced plan is a faithful, traceable decomposition of the original task and saved plan.",
       "Verify the manifest has a requirement ledger (`requirements`), `globalInvariants`, and `slices` with `covers` and `preserves` references. Fail if the manifest uses only vague prose without source-linked requirements.",
+      "Verify .lattice/context/index.json exists and maps each requirement ID, invariant ID, and slice ID to its small context file. Verify every covered requirement and preserved invariant referenced by a slice has a corresponding context file.",
       "Verify every must/should requirement from the original task and saved plan appears in the ledger, has a source, category, priority, concrete text, and expected verification evidence.",
       requirementPrecedence,
       "Fail if any preservation note, non-goal, slice criterion, or handoff note weakens a new requested behavior or constraint, especially for security, privacy, authorization, data ownership, data integrity, or correctness.",
       "Verify the sliced plan inventories all affected surfaces for cross-cutting requirements. Fail if it marks a requirement covered by one new endpoint/component while ignoring legacy endpoints, UI flows, generated contracts, persistence paths, or other existing surfaces that can violate the same requirement.",
       "Verify negative/boundary requirements have adversarial acceptance criteria or tests through production paths where practical. Fail if a must-not/protected/scoped/no/invalid requirement is covered only by happy-path evidence.",
+      "Fail if a non-documentation task has a standalone docs/cleanup/final quality-gate slice instead of folding docs into behavior slices and reserving final cleanup/full checks for final-integration.",
       "Verify every must/should requirement is covered by at least one slice and every global invariant is preserved by every slice unless irrelevance is explicit and safe.",
+      "Verify slice files use progressive disclosure: they should reference relevant context files instead of copying the full manifest, full requirement ledger, or unrelated slice details.",
       "Verify slice acceptance criteria and required tests cite requirement IDs, and that requested tests are specific enough to prove behavior through real production paths where practical.",
       "Fail if any slice narrows a cross-cutting requirement into only one endpoint/component/path when the original task requires a broader class of behavior.",
       "Fail if any Non-Goals section removes required behavior, any manual-only verification replaces an explicitly requested automated test without justification, or any slice plan depends on future slices to fix an invariant violation created now.",
@@ -284,12 +295,9 @@ function dynamicSliceExpansionStage(): PipelineStage {
         skills: dynamicSliceSkills(),
         prompt: [
           "Implement slice {{index}}: {{title}}.",
-          "Read .lattice/plans/restaurant-booking.md, .lattice/plans/slices/manifest.json, {{file}}, and any previous .lattice/summaries/slice-*.md files before editing.",
-          "Treat {{file}} as the local work package, but the original goal, manifest requirement ledger, and manifest globalInvariants outrank any local slice wording.",
-          "Requirement ledger from the manifest applies to this slice:\n{{manifest.requirements}}",
-          "Global invariants from the manifest apply to every slice:\n{{manifest.globalInvariants}}",
-          "This manifest item covers these requirements: {{covers}}",
-          "This manifest item explicitly preserves these invariants: {{preserves}}",
+          "Use progressive disclosure. Read .lattice/context/index.json, {{file}}, and the specific requirement, invariant, and rule context files referenced by {{file}} for covered IDs {{covers}} and preserved IDs {{preserves}}. Do not read unrelated requirements, invariants, slice files, summaries, or the full manifest unless needed to resolve a conflict or missing context reference.",
+          "If .lattice/context/ is missing or incomplete, fall back to .lattice/plans/slices/manifest.json and document the fallback in the slice summary.",
+          "Treat {{file}} as the local work package, but the original goal, referenced requirement files, referenced invariant files, and rule files outrank any local slice wording.",
           "Do not signal complete if this slice violates any global invariant or weakens any original requirement. If local slice text conflicts with the original goal, requirement ledger, or globalInvariants, follow the higher-priority requirement and document the correction in the slice summary.",
           requirementPrecedence,
           "If this slice preserves an existing endpoint, command, UI flow, data shape, generated contract, architecture pattern, or workflow, verify that preserved behavior remains compatible with every new requirement it touches. Do not keep incompatible legacy behavior or contracts just because the slice says to preserve existing behavior. If the task requires a breaking change, make it and update dependent code/specs/tests/docs.",
@@ -298,8 +306,8 @@ function dynamicSliceExpansionStage(): PipelineStage {
           "Work only on this slice's acceptance criteria and preserve earlier behavior. Do not implement later manifest slices early unless required to keep the current slice coherent.",
           "Preserve earlier behavior only when it does not conflict with a higher-priority requirement. If a slice contract conflicts with the current codebase or scenario goal, choose the safer implementation and document the deviation in the slice summary.",
           "Use TDD where practical for this slice. Add or update tests required by the slice contract.",
-          "Run focused verification for touched areas, covered requirement IDs, and any affected global invariants. Do not run the full deterministic checker in every slice unless this slice intentionally changes multiple subsystems or integration boundaries.",
-          "If verification is slow or broad, prefer the smallest reliable command set that proves this slice's acceptance criteria and preserves relevant invariants; final integration will run full deterministic checks.",
+          "Run only focused verification for touched areas, covered requirement IDs, and affected global invariants. Do not run the full deterministic checker in slice stages.",
+          "Avoid broad final-gate command suites in slice stages, such as full backend + frontend quality pipelines, unless no narrower reliable command exists; if you must run a broad command, explain why in the slice summary. Final integration owns the full deterministic checks.",
           "Write .lattice/summaries/slice-{{index}}-{{id}}.md with changes made, requirement IDs covered, invariant checks performed, checks run, known gaps, and handoff notes.",
           "Do not claim unrelated future slices are done.",
           "Call lattice_signal(status: \"complete\") only when this slice is implemented, verified, and summarized."
@@ -322,7 +330,7 @@ function finalIntegrationStage(): PipelineStage {
     skills: commonSkills(),
     prompt: [
       "Perform the final integration pass for the requested task.",
-      "Read .lattice/plans/restaurant-booking.md, .lattice/plans/slices/manifest.json, every referenced slice file, and every .lattice/summaries/slice-*.md file.",
+      "Read .lattice/plans/restaurant-booking.md, .lattice/plans/slices/manifest.json, .lattice/context/index.json when present, every referenced slice file, and every .lattice/summaries/slice-*.md file.",
       "Start from the manifest requirement ledger, globalInvariants, slice summaries, and current diff, then deep-dive files and flows related to requirement coverage, invariant preservation, API/client contracts, cross-slice behavior, touched subsystems, or failing checks.",
       "Audit the manifest requirements and globalInvariants as first-class requirements across the whole codebase, including legacy endpoints, existing files not touched by a slice, generated artifacts, tests, documentation, and frontend flows.",
       requirementPrecedence,
@@ -336,6 +344,7 @@ function finalIntegrationStage(): PipelineStage {
       "For date/time or range-based business rules, verify both source and tests cover invalid values, past dates where invalid, outside-hours or out-of-range values, invalid granularity, edge non-overlap, and overlap/conflict behavior as required by the task.",
       "For generated API clients, verify the generated paths, base URL/mutator configuration, request shapes, and response handling match the backend routes. Check for double prefixes, stale checked-in specs, or generated clients returning error responses as successful mutations.",
       "For UI requirements, verify source evidence for required component systems and that the primary happy path and error paths are functionally connected, not just visually present.",
+      "Complete any remaining README/docs/script cleanup here; ordinary feature runs should not rely on a standalone documentation or cleanup slice.",
       "Ensure the final product satisfies the original scenario goal and manifest requirement ledger, not just the individual slice files.",
       "Write or update final slice summaries only if needed to document corrected requirement coverage or invariant fixes.",
       "Run node .opencode/scripts/deterministic-checks.mjs or equivalent full verification commands and fix failures or warnings that should fail the requested quality bar.",

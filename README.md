@@ -158,7 +158,7 @@ The LLM judge is instructed to treat these command results as mandatory evidence
 - `eval-planner` is a custom subagent with edit permission so the plan can be persisted before implementation.
 - Current default variants use phase-specific models: heavier/high-reasoning planning and medium/faster build settings.
 - `openai/*` exposes named reasoning variants in OpenCode metadata. Several `opencode-go/*` models expose reasoning capability but no named variants, so their `reasoningEffort` settings are passed as provider options and should be treated as best-effort.
-- Lattice v3 is loaded through the sibling `../lattice/dist/plugin/index.js` OpenCode plugin by default. Set `LATTICE_PLUGIN` to override the plugin package or path.
+- Lattice v3 is expected to be loaded by OpenCode config, for example from `~/.config/opencode/opencode.jsonc`. The harness does not inject the plugin into generated workspaces.
 - The Skills CLI installs to `.agents/skills`; the runner syncs that directory to `.opencode/skills` because Lattice discovers OpenCode skills there.
 - Active run workspaces are created in `/tmp/restaurant-booking-eval-harness-active` by default so agents cannot see harness code or archived results.
 - Completed workspaces are moved to `run-archive/scenario-<n>/<run-id>/` with the run's `result.json` stored alongside the generated code.
