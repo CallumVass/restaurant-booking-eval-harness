@@ -45,7 +45,8 @@
       "enabled": false,
       "plan": {
         "model": "opencode-go/deepseek-v4-pro",
-        "mode": "big",
+        "mode": "sliced",
+        "maxSlices": 4,
         "agentOptions": {
           "reasoningEffort": "high"
         }
@@ -53,6 +54,7 @@
       "build": {
         "model": "opencode-go/deepseek-v4-flash",
         "mode": "sliced",
+        "slicePlanReview": true,
         "agentOptions": {
           "reasoningEffort": "medium"
         }

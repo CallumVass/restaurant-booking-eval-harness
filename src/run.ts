@@ -1,7 +1,7 @@
 // pattern: Imperative Shell
 
 import { createOpencode } from "@opencode-ai/sdk";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { collectOptionalEvidenceChecks, runCommand, type CommandResult } from "./checks.js";
 import { buildJudgePrompt, judgeInstructionsForScenario } from "./judge-prompt.js";
@@ -167,30 +167,8 @@ async function runVariant(input: {
     await assertCommandRegistered(client, "restaurant-booking-eval");
     await assertCommandRegistered(client, "lattice");
 
-    log(`${input.variant.id}: starting Lattice pipeline via async prompt`);
-    await client.session.promptAsync({
-      path: { id: sessionId },
-      body: {
-        agent: "build",
-        model: toSdkModel(input.variant.build.model),
-        parts: [
-          {
-            type: "text",
-            text: [
-              "Call the lattice_control tool exactly once with action \"run\" and pipeline \"restaurant-booking-eval\".",
-              "Pass the following goal exactly as the tool goal:",
-              "",
-              input.task,
-              "",
-              "After the run tool returns, do not call status, continue, retry, abort, reset, or any other tool.",
-              "Do not wait for or inspect pipeline progress in this prompt; the harness will do that.",
-              "End your response with exactly: Lattice pipeline start requested."
-            ].join("\n")
-          }
-        ]
-      }
-    });
-    log(`${input.variant.id}: Lattice start prompt dispatched; waiting for pipeline state`);
+    await startLatticePipeline(client, sessionId, input.variant, input.task, workspace);
+    log(`${input.variant.id}: Lattice pipeline state detected; waiting for pipeline completion`);
 
     let pipelineState = await waitForPipeline(workspace, input.timeoutMs, log);
     const retryFinding = reviewRejectionSummary(pipelineState);
@@ -347,6 +325,100 @@ function isRetryableSummary(summary: RunSummary): boolean {
   if (status !== "failed" && status !== "timeout") return false;
   if (summary.checks.length > 0 && summary.checks.every((check) => check.exitCode === 0)) return false;
   return true;
+}
+
+async function startLatticePipeline(
+  client: any,
+  sessionId: string,
+  variant: ModelVariant,
+  task: string,
+  workspace: string
+): Promise<void> {
+  const pipelineName = "restaurant-booking-eval";
+  const attempts = [
+    {
+      label: "restricted lattice_control prompt",
+      text: [
+        "You are a pipeline launcher. Your only job is to start Lattice.",
+        "Call the `lattice_control` tool exactly once with:",
+        `action: "run"`,
+        `pipeline: "${pipelineName}"`,
+        "goal: the exact text between <goal> and </goal> below",
+        "Do not inspect files. Do not call any other tool. Do not implement the task. Do not answer in text before calling the tool.",
+        "<goal>",
+        task,
+        "</goal>"
+      ].join("\n")
+    },
+    {
+      label: "minimal lattice_control prompt",
+      text: `Call lattice_control with action "run", pipeline "${pipelineName}", and this goal:\n\n${task}`
+    }
+  ];
+
+  for (const attempt of attempts) {
+    log(`Pipeline: starting via ${attempt.label}`);
+    await withTransientSdkRetry(attempt.label, async () => {
+      await client.session.promptAsync({
+        path: { id: sessionId },
+        body: {
+          agent: "build",
+          model: toSdkModel(variant.plan.model),
+          tools: latticeLauncherTools(),
+          parts: [{ type: "text", text: attempt.text }]
+        }
+      });
+    });
+
+    if (await waitForPipelineStateFile(workspace, 30_000)) return;
+    log(`Pipeline: ${attempt.label} did not create .lattice/state within 30s; aborting launcher turn and trying fallback`);
+    await abortSession(client, sessionId);
+  }
+
+  throw new Error("Lattice pipeline did not start: no .lattice/state/*.json file was created after start attempts.");
+}
+
+function latticeLauncherTools(): Record<string, boolean> {
+  return {
+    lattice_control: true,
+    lattice_signal: false,
+    task: false,
+    todowrite: false,
+    bash: false,
+    read: false,
+    glob: false,
+    grep: false,
+    edit: false,
+    write: false,
+    patch: false,
+    apply_patch: false,
+    question: false,
+    webfetch: false,
+    skill: false
+  };
+}
+
+async function abortSession(client: any, sessionId: string): Promise<void> {
+  try {
+    await client.session.abort({ path: { id: sessionId } });
+  } catch (error) {
+    log(`Pipeline: failed to abort launcher session cleanly (${errorSummary(error)})`);
+  }
+}
+
+async function waitForPipelineStateFile(workspace: string, timeoutMs: number): Promise<boolean> {
+  const stateDir = path.join(workspace, ".lattice", "state");
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    try {
+      const entries = await readdir(stateDir);
+      if (entries.some((entry) => entry.endsWith(".json"))) return true;
+    } catch {
+      // State directory is created only after lattice_control starts the pipeline.
+    }
+    await sleep(1_000);
+  }
+  return false;
 }
 
 async function retryPausedPipeline(client: any, sessionId: string, findings: string): Promise<void> {

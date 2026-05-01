@@ -48,7 +48,7 @@ The current default matrix is intentionally small. It reflects prior exploratory
 |---|---|---|---|---|
 | `openai-gpt-5.5-plan-build` | OpenAI GPT-5.5 | OpenAI GPT-5.5 | none | Proprietary quality reference. Review was not materially useful in prior OpenAI runs. |
 | `deepseek-v4-pro-plan-flash-build-mimo-review` | DeepSeek V4 Pro | DeepSeek V4 Flash | Mimo v2.5 Pro | Tests whether cheap DeepSeek implementation plus independent open-model review beats paying for Pro implementation. |
-| `deepseek-v4-pro-plan-flash-sliced-build-mimo-review` | DeepSeek V4 Pro big plan | DeepSeek V4 Flash sliced execution | Mimo v2.5 Pro | A/B test for whether fresh-context sliced execution improves the current DeepSeek Flash implementation gap while keeping the same planner/reviewer. |
+| `deepseek-v4-pro-plan-flash-sliced-build-mimo-review` | DeepSeek V4 Pro direct sliced plan, max 4 slices | DeepSeek V4 Flash sliced execution | Mimo v2.5 Pro | Faster sliced execution test: keeps manifest review, final integration, and cross-model review while skipping the extra big-plan normalization pass. |
 | `deepseek-v4-pro-plan-pro-build` | DeepSeek V4 Pro | DeepSeek V4 Pro | none | Open-model quality ceiling/control without review overhead. |
 | `mimo-v2.5-pro-plan-mimo-v2.5-build-deepseek-review` | Mimo v2.5 Pro | Mimo v2.5 | DeepSeek V4 Pro | Tests Mimo planning/building with independent DeepSeek review. |
 
