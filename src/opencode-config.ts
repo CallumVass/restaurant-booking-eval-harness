@@ -1,9 +1,10 @@
 // pattern: Functional Core
 
-import { reviewModelForVariant, type ModelVariant } from "./pipeline.js";
+import { reviewModelForVariant, sliceModelForVariant, type ModelVariant } from "./pipeline.js";
 
 export function makeOpenCodeConfig(variant: ModelVariant) {
   const review = reviewModelForVariant(variant);
+  const slice = sliceModelForVariant(variant);
   return {
     $schema: "https://opencode.ai/config.json",
     model: variant.build.model,
@@ -31,6 +32,26 @@ export function makeOpenCodeConfig(variant: ModelVariant) {
           skill: "allow"
         },
         ...variant.plan.agentOptions
+      },
+      "eval-slicer": {
+        model: slice.model,
+        mode: "subagent",
+        description: "Converts an implementation plan into a bounded slice manifest and slice work packages.",
+        permission: {
+          read: "allow",
+          edit: "allow",
+          glob: "allow",
+          grep: "allow",
+          list: "allow",
+          bash: "deny",
+          external_directory: {
+            "/tmp/*": "allow",
+            "*": "deny"
+          },
+          webfetch: "allow",
+          skill: "allow"
+        },
+        ...slice.agentOptions
       },
       "plan-reviewer": {
         model: review?.model ?? variant.plan.model,
