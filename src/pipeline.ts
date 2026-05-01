@@ -81,8 +81,8 @@ export function renderStages(variant: ModelVariant): PipelineStage[] {
     stages.push(finalIntegrationStage());
   }
 
-  if (reviewModelForVariant(variant) && buildMode === "single") {
-    stages.push(planAdherenceReviewStage(buildMode));
+  if (reviewModelForVariant(variant)) {
+    stages.push(planAdherenceReviewStage(planMode, buildMode));
   }
   return stages;
 }
@@ -122,11 +122,12 @@ function planStage(mode: "big" | "sliced", maxSlices: number): PipelineStage {
       ? [
           "Create a direct sliced implementation plan for the restaurant booking eval as a small behavior-focused slice backlog.",
           "Target completion is 30-60 minutes, so keep scope deliberate and avoid line-by-line implementation scripts.",
+          "Keep planning artifacts compact: prefer 2-3 slices, cap the requirement ledger at 40 material requirements, cap global invariants at 8, and use concise one-sentence requirement/verification text. Merge closely related requirements instead of splitting every sentence into its own ledger row.",
           "Write a short overview to .lattice/plans/restaurant-booking.md.",
           "Include a ## Requirement Ledger section in .lattice/plans/restaurant-booking.md. Extract every material requirement from the original goal into stable IDs with source, category, priority, exact requirement text, and expected verification evidence.",
           "Include a ## Global Invariants section in .lattice/plans/restaurant-booking.md for cross-cutting requirements that every slice must preserve. Keep these task-derived and concrete enough to verify, such as security, ownership, API contract, data consistency, generated-client, UX, or regression constraints. Do not generalize away explicit endpoint names, user roles, data ownership rules, error mappings, test obligations, or negative requirements from the goal.",
           "Include a ## Verification Contract section in .lattice/plans/restaurant-booking.md. This must be derived only from the original goal and current codebase: for each must/should requirement, name the expected evidence type (automated test, deterministic command, generated artifact, source inspection, or justified manual check) and the observable behavior it proves. Do not add benchmark-specific hidden probes, scenario-answer-key checks, or endpoint requirements not present in the task/codebase.",
-          "Also create .lattice/plans/slices/manifest.json and one slice file per manifest entry under .lattice/plans/slices/.",
+          "Also create .lattice/plans/slices/manifest.json and one slice file per manifest entry under .lattice/plans/slices/. Keep each slice file under 120 lines unless a longer file is required to avoid ambiguity.",
           `The manifest must contain between 1 and ${maxSlices} slices. Choose slice boundaries from the actual task and plan; do not force backend/frontend phases if the scenario is brownfield, security, refactoring, CLI, infrastructure, or anything else.`,
           "Prefer the fewest slices that preserve independent implementation and verification quality. Fit the backlog within the slice cap by using broader vertical behavior slices, not by dropping requirements or creating follow-up-only slices.",
           noStandaloneVerificationSliceInstruction,
@@ -395,9 +396,10 @@ function finalIntegrationStage(): PipelineStage {
   });
 }
 
-function planAdherenceReviewStage(buildMode: "single" | "sliced"): PipelineStage {
+function planAdherenceReviewStage(planMode: "big" | "sliced", buildMode: "single" | "sliced"): PipelineStage {
+  const hasSlicedPlan = planMode === "sliced";
   const planScope =
-    buildMode === "sliced"
+    hasSlicedPlan
       ? "Read .lattice/plans/restaurant-booking.md, .lattice/plans/slices/manifest.json, every .lattice/plans/slices/*.md file, and every .lattice/summaries/slice-*.md file first. Use the original goal plus the requirement ledger, globalInvariants, verificationContract, crossSurfaceChecks, and slices as the scope of this plan-adherence review."
       : "Read .lattice/plans/restaurant-booking.md first. Use that plan as the scope of this review.";
 
@@ -414,7 +416,9 @@ function planAdherenceReviewStage(buildMode: "single" | "sliced"): PipelineStage
       "Review whether the completed implementation adheres to the saved implementation plan.",
       planScope,
       "Break the original goal, saved plan, and manifest requirement ledger into material commitments: user-visible behaviors, system behaviors, integrations, tests/checks, documentation, and any explicit constraints or non-goals.",
-      "For sliced builds, treat manifest requirements, globalInvariants, verificationContract entries, and crossSurfaceChecks entries as material commitments. Audit them separately from local slice acceptance criteria and fail if any requirement or invariant is violated anywhere in the final codebase.",
+      hasSlicedPlan
+        ? "For sliced plans, treat manifest requirements, globalInvariants, verificationContract entries, and crossSurfaceChecks entries as material commitments. Audit them separately from local slice acceptance criteria and fail if any requirement or invariant is violated anywhere in the final codebase."
+        : "Treat the saved plan and original goal as material commitments. Audit them against the final codebase and fail if any requirement is weakened, skipped, or contradicted.",
       requirementPrecedence,
       surfaceInventoryInstruction,
       broadRequirementMatrixInstruction,
