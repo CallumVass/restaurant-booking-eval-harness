@@ -150,7 +150,6 @@ async function runVariant(input: {
     log
   });
   await writeLatticeConfig(workspace, input.variant);
-  await writeLatticeAutostart(workspace, "restaurant-booking-eval", input.task);
 
   const previousCwd = process.cwd();
   process.chdir(workspace);
@@ -175,9 +174,12 @@ async function runVariant(input: {
     });
     const sessionId = session.data.id;
 
-    log(`${input.variant.id}: waiting for Lattice autostart state`);
+    log(`${input.variant.id}: starting Lattice pipeline`);
+    await startLatticePipeline(client, sessionId, input.task);
+
+    log(`${input.variant.id}: waiting for Lattice pipeline state`);
     if (!(await waitForPipelineStateFile(workspace, 60_000))) {
-      throw new Error("Lattice pipeline did not autostart: no .lattice/state/*.json file was created after session creation.");
+      throw new Error("Lattice pipeline did not start: no .lattice/state/*.json file was created after queueing /restaurant-booking-eval.");
     }
     log(`${input.variant.id}: Lattice pipeline state detected; waiting for pipeline completion`);
 
@@ -353,10 +355,6 @@ async function writeLatticeConfig(workspace: string, variant: ModelVariant): Pro
   await writeFile(path.join(workspace, ".lattice", "config.jsonc"), `${JSON.stringify(latticeConfig, null, 2)}\n`);
 }
 
-async function writeLatticeAutostart(workspace: string, pipeline: string, goal: string): Promise<void> {
-  await writeFile(path.join(workspace, ".lattice", "autostart.json"), `${JSON.stringify({ pipeline, goal }, null, 2)}\n`);
-}
-
 async function waitForPipelineStateFile(workspace: string, timeoutMs: number): Promise<boolean> {
   const stateDir = path.join(workspace, ".lattice", "state");
   const startedAt = Date.now();
@@ -370,6 +368,30 @@ async function waitForPipelineStateFile(workspace: string, timeoutMs: number): P
     await sleep(1_000);
   }
   return false;
+}
+
+async function startLatticePipeline(client: any, sessionId: string, goal: string): Promise<void> {
+  log("Pipeline: queueing /restaurant-booking-eval prompt");
+  await withTransientSdkRetry("/restaurant-booking-eval", async () => {
+    const result = await client.session.promptAsync({
+      path: { id: sessionId },
+      body: {
+        agent: "build",
+        parts: [
+          {
+            type: "text",
+            text:
+              `Use the lattice_control tool exactly once with action "run", pipeline "restaurant-booking-eval", and goal: ${goal}\n\n` +
+              "After the tool call returns, stop. Do not inspect status, continue, retry, abort, read files, or begin implementation."
+          }
+        ]
+      }
+    });
+    if (result?.error) {
+      throw new Error(`Failed to queue /restaurant-booking-eval: ${errorSummary(result.error)}`);
+    }
+  });
+  log("Pipeline: /restaurant-booking-eval prompt queued");
 }
 
 async function retryPausedPipeline(client: any, sessionId: string, findings: string): Promise<void> {
