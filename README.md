@@ -82,6 +82,7 @@ npm start -- --scenario 2 --base ./baselines/scenario-2
 npm start -- --1 --task ./scenarios/1.md
 EVAL_RUNS_DIR=/tmp/my-eval-runs npm start -- --1
 EVAL_ARCHIVE_DIR=/tmp/my-eval-archive npm start -- --1
+EVAL_CODEMAP=1 EVAL_CODEMAP_FORCE=1 EVAL_CODEMAP_BIN=/path/to/codemap npm start -- --2 --base ./baselines/scenario-2 --variant openai-gpt-5.5-plan-build
 ```
 
 The scenario argument is required. Use `--1`, `--2`, `--scenario 1`, or `--scenario 2`.
@@ -91,6 +92,8 @@ The scenario argument is required. Use `--1`, `--2`, `--scenario 1`, or `--scena
 `--runRetries` controls whole-run retries for transient pipeline failures. It defaults to `1`, so each variant gets up to two attempts. Retries only happen when the pipeline fails or times out and deterministic checks do not already pass.
 
 `--timeoutMs` controls the per-attempt pipeline wait timeout. It defaults to `7200000` (120 minutes), which gives sliced/reviewed runs enough headroom.
+
+Set `EVAL_CODEMAP=1` to install and log codemap usage inside workspaces. Set `EVAL_CODEMAP_FORCE=1` with it to deny first-class repository discovery tools (`grep`, `glob`, and `list`) plus shell `grep`/`rg`/`find`/`fd`, so agents must use codemap for discovery before direct source reads.
 
 ## Brownfield Scenarios
 

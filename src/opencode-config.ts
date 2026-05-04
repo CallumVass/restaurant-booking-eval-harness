@@ -7,6 +7,17 @@ export function makeOpenCodeConfig(variant: ModelVariant) {
   const critic = criticModelForVariant(variant);
   const slice = sliceModelForVariant(variant);
   const codemapEnabled = process.env.EVAL_CODEMAP === "1";
+  const forceCodemapDiscovery = codemapEnabled && process.env.EVAL_CODEMAP_FORCE === "1";
+  const discoveryPermission = forceCodemapDiscovery ? "deny" : "allow";
+  const codemapBashPermission = forceCodemapDiscovery
+    ? {
+        "*": "allow",
+        "grep *": "deny",
+        "rg *": "deny",
+        "find *": "deny",
+        "fd *": "deny"
+      }
+    : "allow";
   return {
     $schema: "https://opencode.ai/config.json",
     model: variant.build.model,
@@ -22,10 +33,10 @@ export function makeOpenCodeConfig(variant: ModelVariant) {
         permission: {
           read: "allow",
           edit: "allow",
-          glob: "allow",
-          grep: "allow",
-          list: "allow",
-          bash: codemapEnabled ? "allow" : "deny",
+          glob: discoveryPermission,
+          grep: discoveryPermission,
+          list: discoveryPermission,
+          bash: codemapEnabled ? codemapBashPermission : "deny",
           external_directory: {
             "/tmp/*": "allow",
             "*": "deny"
@@ -42,10 +53,10 @@ export function makeOpenCodeConfig(variant: ModelVariant) {
         permission: {
           read: "allow",
           edit: "allow",
-          glob: "allow",
-          grep: "allow",
-          list: "allow",
-          bash: "deny",
+          glob: discoveryPermission,
+          grep: discoveryPermission,
+          list: discoveryPermission,
+          bash: codemapEnabled ? codemapBashPermission : "deny",
           external_directory: {
             "/tmp/*": "allow",
             "*": "deny"
@@ -62,10 +73,10 @@ export function makeOpenCodeConfig(variant: ModelVariant) {
         permission: {
           read: "allow",
           edit: "deny",
-          glob: "allow",
-          grep: "allow",
-          list: "allow",
-          bash: "allow",
+          glob: discoveryPermission,
+          grep: discoveryPermission,
+          list: discoveryPermission,
+          bash: codemapBashPermission,
           external_directory: {
             "/tmp/*": "allow",
             "*": "deny"
@@ -91,11 +102,11 @@ export function makeOpenCodeConfig(variant: ModelVariant) {
         description: "Implements the restaurant booking eval plan and verifies the completed product.",
         permission: {
           edit: "allow",
-          bash: "allow",
+          bash: codemapBashPermission,
           read: "allow",
-          glob: "allow",
-          grep: "allow",
-          list: "allow",
+          glob: discoveryPermission,
+          grep: discoveryPermission,
+          list: discoveryPermission,
           external_directory: {
             "/tmp/*": "allow",
             "*": "deny"

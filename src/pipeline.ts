@@ -69,11 +69,14 @@ const explicitOverFallbackInstruction =
   "Prefer explicit task instructions over fallback alternatives. If the task or saved plan asks for a specific implementation path, generated artifact, framework feature, API contract, storage model, security mechanism, or testing style, slice acceptance criteria must preserve that path as the default requirement. Do not offer fallback alternatives in acceptance criteria or handoff notes unless the slice also requires concrete evidence that the requested path is impossible or unsafe and requires documenting the deviation.";
 const codemapInstruction =
   "Codemap is available as a local CLI and an OpenCode skill named `codemap`. Before broad source inspection, load the `codemap` skill, run `codemap sync` and `codemap overview`, then use focused queries such as `codemap file <path>`, `codemap uses <path>`, `codemap used-by <path>`, `codemap neighborhood <path> --depth 2`, `codemap related <path>`, `codemap impact <path>`, `codemap route <METHOD> <PATH>`, `codemap symbol <name>`, `codemap tests-for <path-or-symbol>`, and `codemap scripts-for <path>` to locate relevant files before reading them directly. Updating `.codemap/` and `.opencode/skills/codemap/` is allowed and is not an implementation edit. Do not treat codemap output as authoritative for behavior; use it to choose small source reads and verify claims from source/tests.";
+const forcedCodemapInstruction =
+  "For this run, repository discovery tools such as grep, glob, list, rg, find, and shell grep are disabled. Use codemap for discovery and direct file reads only after codemap identifies candidate paths.";
 const implementationStageInstruction =
   "This is an implementation stage, not a planning stage. The planning stage is already complete. Do not call lattice_signal(status: \"complete\") after only reading or creating a plan; complete only after product source/tests/docs have been edited as needed and verification has run.";
 
 function codemapInstructions(): string[] {
-  return process.env.EVAL_CODEMAP === "1" ? [codemapInstruction] : [];
+  if (process.env.EVAL_CODEMAP !== "1") return [];
+  return process.env.EVAL_CODEMAP_FORCE === "1" ? [codemapInstruction, forcedCodemapInstruction] : [codemapInstruction];
 }
 
 export function renderPipelineTemplate(variant: ModelVariant): string {
