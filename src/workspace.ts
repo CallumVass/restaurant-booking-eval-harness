@@ -1,6 +1,6 @@
 // pattern: Imperative Shell
 
-import { chmod, cp, mkdir, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
+import { cp, mkdir, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { runCommand } from "./checks.js";
 
@@ -8,7 +8,6 @@ type Logger = (message: string) => void;
 
 const baselineExcludeNames = new Set([
   ".agents",
-  ".codemap",
   ".git",
   ".lattice",
   ".opencode",
@@ -20,7 +19,7 @@ const baselineExcludeNames = new Set([
   "result.json"
 ]);
 
-const settleIgnoredDirs = new Set([".codemap", ".git", ".lattice", ".opencode", "bin", "coverage", "dist", "node_modules", "obj"]);
+const settleIgnoredDirs = new Set([".git", ".lattice", ".opencode", "bin", "coverage", "dist", "node_modules", "obj"]);
 
 export async function prepareWorkspace(input: {
   workspace: string;
@@ -40,14 +39,7 @@ export async function prepareWorkspace(input: {
     await copyBaseline(input.baselinePath, input.workspace);
   }
 
-  let codemapBinary: string | null = null;
-  if (process.env.EVAL_CODEMAP === "1") {
-    codemapBinary = await resolveCodemapBinary();
-    await initializeCodemapWorkspace(input.workspace, input.variantId, input.log, codemapBinary);
-  }
-
   await mkdir(path.join(input.workspace, ".opencode", "lattice-pipelines"), { recursive: true });
-  await mkdir(path.join(input.workspace, ".opencode", "bin"), { recursive: true });
   await mkdir(path.join(input.workspace, ".opencode", "scripts"), { recursive: true });
   await mkdir(path.join(input.workspace, ".lattice", "plans"), { recursive: true });
   await mkdir(path.join(input.workspace, ".lattice", "plans", "slices"), { recursive: true });
@@ -64,9 +56,6 @@ export async function prepareWorkspace(input: {
 
   await writeFile(path.join(input.workspace, "opencode.json"), `${JSON.stringify(input.opencodeConfig, null, 2)}\n`);
   await writeFile(path.join(input.workspace, ".opencode", "lattice-pipelines", "restaurant-booking-eval.ts"), input.pipelineTemplate);
-  if (codemapBinary) {
-    await writeCodemapWrapper(input.workspace, codemapBinary);
-  }
   await cp(
     path.join(input.root, "templates", "scripts", "deterministic-checks.mjs"),
     path.join(input.workspace, ".opencode", "scripts", "deterministic-checks.mjs")
@@ -84,14 +73,9 @@ export async function prepareWorkspace(input: {
   } else {
     input.log(`${input.variantId}: skipping skill install`);
   }
-  if (codemapBinary) {
-    await writeCodemapSkill(input.workspace, input.variantId, input.log, codemapBinary);
-  }
 }
 
 export async function archiveRun(workspace: string, scenario: string, archiveDir: string): Promise<string> {
-  await preserveCodemapUsageLog(workspace);
-  await rm(path.join(workspace, ".codemap"), { recursive: true, force: true });
   await rm(path.join(workspace, ".git"), { recursive: true, force: true });
 
   const destination = path.join(archiveDir, `scenario-${scenario}`, path.basename(workspace));
@@ -118,7 +102,7 @@ export async function listFiles(directory: string, limit: number): Promise<strin
     const entries = await readdir(current, { withFileTypes: true });
     for (const entry of entries) {
       if (files.length >= limit) return;
-      if ([".codemap", ".git", "node_modules", "bin", "obj", ".lattice", ".opencode", "result.json"].includes(entry.name)) continue;
+      if ([".git", "node_modules", "bin", "obj", ".lattice", ".opencode", "result.json"].includes(entry.name)) continue;
       const absolute = path.join(current, entry.name);
       const relative = path.relative(directory, absolute);
       if (entry.isDirectory()) {
@@ -163,75 +147,6 @@ async function copyBaseline(baselinePath: string, workspace: string) {
       filter: (candidate) => !isExcludedBaselinePath(baselinePath, candidate)
     });
   }
-}
-
-async function initializeCodemapWorkspace(workspace: string, variantId: string, log: Logger, codemapBinary: string): Promise<void> {
-  log(`${variantId}: initializing temporary git repo for codemap`);
-  const gitInit = await runCommand("git", ["init", "-b", "main"], workspace, 60_000);
-  if (gitInit.exitCode !== 0) {
-    throw new Error(`git init for codemap failed:\n${gitInit.stderr || gitInit.stdout}`);
-  }
-
-  log(`${variantId}: pre-indexing workspace with codemap`);
-  const codemapSync = await runCommand(codemapBinary, ["sync"], workspace, 2 * 60 * 1000);
-  log(`${variantId}: codemap sync exited ${codemapSync.exitCode}`);
-  if (codemapSync.exitCode !== 0) {
-    throw new Error(`codemap sync failed:\n${codemapSync.stderr || codemapSync.stdout}`);
-  }
-}
-
-async function writeCodemapSkill(workspace: string, variantId: string, log: Logger, codemapBinary: string): Promise<void> {
-  log(`${variantId}: writing OpenCode codemap skill`);
-  const result = await runCommand(codemapBinary, ["init-agent", "--force"], workspace, 60_000);
-  if (result.exitCode !== 0) {
-    throw new Error(`codemap init-agent failed:\n${result.stderr || result.stdout}`);
-  }
-}
-
-async function writeCodemapWrapper(workspace: string, codemapBinary: string): Promise<void> {
-  const wrapperPath = path.join(workspace, ".opencode", "bin", "codemap");
-  const script = [
-    "#!/usr/bin/env sh",
-    "set +e",
-    "log_dir=\"$(pwd)/.codemap\"",
-    "mkdir -p \"$log_dir\"",
-    "start=$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-    `${shellQuote(codemapBinary)} "$@"`,
-    "status=$?",
-    "end=$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-    "printf '%s\\t%s\\t%s\\t%s\\n' \"$start\" \"$end\" \"$status\" \"$*\" >> \"$log_dir/usage.log\"",
-    "exit $status",
-    ""
-  ].join("\n");
-  await writeFile(wrapperPath, script);
-  await chmod(wrapperPath, 0o755);
-}
-
-async function preserveCodemapUsageLog(workspace: string): Promise<void> {
-  const source = path.join(workspace, ".codemap", "usage.log");
-  if (!(await exists(source))) return;
-  const target = path.join(workspace, ".lattice", "codemap-usage.log");
-  await mkdir(path.dirname(target), { recursive: true });
-  await cp(source, target, { force: true });
-}
-
-async function resolveCodemapBinary(): Promise<string> {
-  const configured = process.env.EVAL_CODEMAP_BIN;
-  if (configured) {
-    return path.resolve(configured);
-  }
-
-  for (const entry of (process.env.PATH ?? "").split(path.delimiter)) {
-    if (!entry) continue;
-    const candidate = path.join(entry, "codemap");
-    if (await exists(candidate)) return candidate;
-  }
-
-  throw new Error("EVAL_CODEMAP=1 requires codemap on PATH or EVAL_CODEMAP_BIN to point to the codemap binary.");
-}
-
-function shellQuote(value: string): string {
-  return `'${value.replaceAll("'", "'\\''")}'`;
 }
 
 function isExcludedBaselinePath(baselinePath: string, candidate: string): boolean {
@@ -283,7 +198,6 @@ async function latestWorkspaceMtimeMs(dir: string): Promise<number> {
 function workspaceGitignore(): string {
   return [
     "node_modules/",
-    ".codemap/",
     "bin/",
     "obj/",
     "frontend/node_modules/",

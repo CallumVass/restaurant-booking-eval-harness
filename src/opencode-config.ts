@@ -6,18 +6,10 @@ export function makeOpenCodeConfig(variant: ModelVariant) {
   const review = reviewModelForVariant(variant);
   const critic = criticModelForVariant(variant);
   const slice = sliceModelForVariant(variant);
-  const codemapEnabled = process.env.EVAL_CODEMAP === "1";
-  const forceCodemapDiscovery = codemapEnabled && process.env.EVAL_CODEMAP_FORCE === "1";
-  const discoveryPermission = forceCodemapDiscovery ? "deny" : "allow";
-  const codemapBashPermission = forceCodemapDiscovery
-    ? {
-        "*": "allow",
-        "grep *": "deny",
-        "rg *": "deny",
-        "find *": "deny",
-        "fd *": "deny"
-      }
-    : "allow";
+  const externalDirectoryPermission = {
+    "*": "deny",
+    "/tmp/*": "allow"
+  };
   return {
     $schema: "https://opencode.ai/config.json",
     model: variant.build.model,
@@ -33,14 +25,11 @@ export function makeOpenCodeConfig(variant: ModelVariant) {
         permission: {
           read: "allow",
           edit: "allow",
-          glob: discoveryPermission,
-          grep: discoveryPermission,
-          list: discoveryPermission,
-          bash: codemapEnabled ? codemapBashPermission : "deny",
-          external_directory: {
-            "/tmp/*": "allow",
-            "*": "deny"
-          },
+          glob: "allow",
+          grep: "allow",
+          list: "allow",
+          bash: "deny",
+          external_directory: externalDirectoryPermission,
           webfetch: "allow",
           skill: "allow"
         },
@@ -53,14 +42,11 @@ export function makeOpenCodeConfig(variant: ModelVariant) {
         permission: {
           read: "allow",
           edit: "allow",
-          glob: discoveryPermission,
-          grep: discoveryPermission,
-          list: discoveryPermission,
-          bash: codemapEnabled ? codemapBashPermission : "deny",
-          external_directory: {
-            "/tmp/*": "allow",
-            "*": "deny"
-          },
+          glob: "allow",
+          grep: "allow",
+          list: "allow",
+          bash: "deny",
+          external_directory: externalDirectoryPermission,
           webfetch: "allow",
           skill: "allow"
         },
@@ -73,14 +59,11 @@ export function makeOpenCodeConfig(variant: ModelVariant) {
         permission: {
           read: "allow",
           edit: "deny",
-          glob: discoveryPermission,
-          grep: discoveryPermission,
-          list: discoveryPermission,
-          bash: codemapBashPermission,
-          external_directory: {
-            "/tmp/*": "allow",
-            "*": "deny"
-          },
+          glob: "allow",
+          grep: "allow",
+          list: "allow",
+          bash: "allow",
+          external_directory: externalDirectoryPermission,
           webfetch: "allow",
           skill: "allow"
         },
@@ -89,10 +72,7 @@ export function makeOpenCodeConfig(variant: ModelVariant) {
       build: {
         model: variant.build.model,
         permission: {
-          external_directory: {
-            "/tmp/*": "allow",
-            "*": "deny"
-          }
+          external_directory: externalDirectoryPermission
         },
         ...variant.build.agentOptions
       },
@@ -102,15 +82,12 @@ export function makeOpenCodeConfig(variant: ModelVariant) {
         description: "Implements the restaurant booking eval plan and verifies the completed product.",
         permission: {
           edit: "allow",
-          bash: codemapBashPermission,
+          bash: "allow",
           read: "allow",
-          glob: discoveryPermission,
-          grep: discoveryPermission,
-          list: discoveryPermission,
-          external_directory: {
-            "/tmp/*": "allow",
-            "*": "deny"
-          },
+          glob: "allow",
+          grep: "allow",
+          list: "allow",
+          external_directory: externalDirectoryPermission,
           webfetch: "allow",
           skill: "allow"
         },
@@ -120,10 +97,7 @@ export function makeOpenCodeConfig(variant: ModelVariant) {
     permission: {
       edit: "allow",
       bash: "allow",
-      external_directory: {
-        "/tmp/*": "allow",
-        "*": "deny"
-      },
+      external_directory: externalDirectoryPermission,
       webfetch: "allow"
     },
     snapshot: false

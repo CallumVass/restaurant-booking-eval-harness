@@ -166,10 +166,6 @@ async function runVariant(input: {
   });
   await writeLatticeConfig(workspace, input.variant);
 
-  const previousPath = process.env.PATH;
-  if (process.env.EVAL_CODEMAP === "1") {
-    process.env.PATH = [path.join(workspace, ".opencode", "bin"), previousPath].filter(Boolean).join(path.delimiter);
-  }
   const previousCwd = process.cwd();
   process.chdir(workspace);
 
@@ -356,11 +352,6 @@ async function runVariant(input: {
     };
   } finally {
     opencode?.server.close();
-    if (previousPath === undefined) {
-      delete process.env.PATH;
-    } else {
-      process.env.PATH = previousPath;
-    }
     process.chdir(previousCwd);
   }
 }
