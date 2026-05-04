@@ -84,6 +84,9 @@ export async function prepareWorkspace(input: {
   } else {
     input.log(`${input.variantId}: skipping skill install`);
   }
+  if (codemapBinary) {
+    await writeCodemapSkill(input.workspace, input.variantId, input.log, codemapBinary);
+  }
 }
 
 export async function archiveRun(workspace: string, scenario: string, archiveDir: string): Promise<string> {
@@ -174,6 +177,14 @@ async function initializeCodemapWorkspace(workspace: string, variantId: string, 
   log(`${variantId}: codemap sync exited ${codemapSync.exitCode}`);
   if (codemapSync.exitCode !== 0) {
     throw new Error(`codemap sync failed:\n${codemapSync.stderr || codemapSync.stdout}`);
+  }
+}
+
+async function writeCodemapSkill(workspace: string, variantId: string, log: Logger, codemapBinary: string): Promise<void> {
+  log(`${variantId}: writing OpenCode codemap skill`);
+  const result = await runCommand(codemapBinary, ["init-agent", "--force"], workspace, 60_000);
+  if (result.exitCode !== 0) {
+    throw new Error(`codemap init-agent failed:\n${result.stderr || result.stdout}`);
   }
 }
 
