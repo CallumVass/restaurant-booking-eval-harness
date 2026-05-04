@@ -8,6 +8,7 @@ results/
 # Generated run archive artifacts. Keep source, README, result.json,
 # .lattice plans/state/summaries, and lightweight .opencode scripts publishable.
 run-archive/**/node_modules/
+run-archive/**/.codemap/
 run-archive/**/dist/
 run-archive/**/build/
 run-archive/**/coverage/

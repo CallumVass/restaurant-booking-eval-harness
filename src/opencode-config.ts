@@ -1,10 +1,12 @@
 // pattern: Functional Core
 
-import { reviewModelForVariant, sliceModelForVariant, type ModelVariant } from "./pipeline.js";
+import { criticModelForVariant, reviewModelForVariant, sliceModelForVariant, type ModelVariant } from "./pipeline.js";
 
 export function makeOpenCodeConfig(variant: ModelVariant) {
   const review = reviewModelForVariant(variant);
+  const critic = criticModelForVariant(variant);
   const slice = sliceModelForVariant(variant);
+  const codemapEnabled = process.env.EVAL_CODEMAP === "1";
   return {
     $schema: "https://opencode.ai/config.json",
     model: variant.build.model,
@@ -23,7 +25,7 @@ export function makeOpenCodeConfig(variant: ModelVariant) {
           glob: "allow",
           grep: "allow",
           list: "allow",
-          bash: "deny",
+          bash: codemapEnabled ? "allow" : "deny",
           external_directory: {
             "/tmp/*": "allow",
             "*": "deny"
@@ -54,7 +56,7 @@ export function makeOpenCodeConfig(variant: ModelVariant) {
         ...slice.agentOptions
       },
       "plan-reviewer": {
-        model: review?.model ?? variant.plan.model,
+        model: review?.model ?? critic?.model ?? variant.plan.model,
         mode: "subagent",
         description: "Reviews whether the implementation followed the saved plan and scenario requirements.",
         permission: {
@@ -80,6 +82,26 @@ export function makeOpenCodeConfig(variant: ModelVariant) {
             "/tmp/*": "allow",
             "*": "deny"
           }
+        },
+        ...variant.build.agentOptions
+      },
+      "eval-builder": {
+        model: variant.build.model,
+        mode: "subagent",
+        description: "Implements the restaurant booking eval plan and verifies the completed product.",
+        permission: {
+          edit: "allow",
+          bash: "allow",
+          read: "allow",
+          glob: "allow",
+          grep: "allow",
+          list: "allow",
+          external_directory: {
+            "/tmp/*": "allow",
+            "*": "deny"
+          },
+          webfetch: "allow",
+          skill: "allow"
         },
         ...variant.build.agentOptions
       }

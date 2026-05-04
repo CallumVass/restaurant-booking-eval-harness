@@ -19,6 +19,12 @@ type BuildModel = PhaseModel & {
 
 type ReviewModel = PhaseModel & {
   enabled?: boolean;
+  maxRetries?: number;
+};
+
+type CriticModel = PhaseModel & {
+  enabled?: boolean;
+  maxRepairAttempts?: number;
 };
 
 export type ModelVariant = {
@@ -29,6 +35,7 @@ export type ModelVariant = {
   slice?: PhaseModel;
   build: BuildModel;
   review?: ReviewModel;
+  critic?: CriticModel;
 };
 
 type PipelineStage = StageDefinition;
@@ -60,6 +67,14 @@ const behavioralEvidenceInstruction =
   "Verification evidence must prove behavior through real production paths where practical. Tests may mock external boundaries, but the slice contract must not accept placeholder components, static markup, stub-only handlers, or tests that bypass the production code path being claimed as verified.";
 const explicitOverFallbackInstruction =
   "Prefer explicit task instructions over fallback alternatives. If the task or saved plan asks for a specific implementation path, generated artifact, framework feature, API contract, storage model, security mechanism, or testing style, slice acceptance criteria must preserve that path as the default requirement. Do not offer fallback alternatives in acceptance criteria or handoff notes unless the slice also requires concrete evidence that the requested path is impossible or unsafe and requires documenting the deviation.";
+const codemapInstruction =
+  "Codemap is available as a local CLI. For existing source, run `codemap sync` before broad source inspection, then prefer focused queries such as `codemap overview`, `codemap related <path>`, `codemap impact <path>`, `codemap file <path>`, `codemap route <METHOD> <PATH>`, `codemap symbol <name>`, `codemap tests-for <path-or-symbol>`, and `codemap scripts-for <path>` to locate relevant files before reading them directly. Updating `.codemap/` is allowed and is not an implementation edit. Do not treat codemap output as authoritative for behavior; use it to choose small source reads and verify claims from source/tests.";
+const implementationStageInstruction =
+  "This is an implementation stage, not a planning stage. The planning stage is already complete. Do not call lattice_signal(status: \"complete\") after only reading or creating a plan; complete only after product source/tests/docs have been edited as needed and verification has run.";
+
+function codemapInstructions(): string[] {
+  return process.env.EVAL_CODEMAP === "1" ? [codemapInstruction] : [];
+}
 
 export function renderPipelineTemplate(variant: ModelVariant): string {
   const stages = renderStages(variant);
@@ -95,6 +110,11 @@ function sliceLimit(variant: ModelVariant): number {
 export function reviewModelForVariant(variant: ModelVariant): ReviewModel | undefined {
   if (!variant.review || variant.review.enabled === false) return undefined;
   return variant.review;
+}
+
+export function criticModelForVariant(variant: ModelVariant): CriticModel | undefined {
+  if (!variant.critic || variant.critic.enabled === false) return undefined;
+  return variant.critic;
 }
 
 export function sliceModelForVariant(variant: ModelVariant): PhaseModel {
@@ -146,6 +166,7 @@ function planStage(mode: "big" | "sliced", maxSlices: number): PipelineStage {
           "Before signalling complete, self-audit the slice backlog: every must/should requirement is covered by at least one slice; every global invariant is preserved by every slice unless clearly irrelevant and justified; every verification contract and crossSurfaceChecks entry is task-derived and covered by a slice or final integration; no slice acceptance criterion, invariant check, handoff note, or non-goal contradicts or narrows a requirement or global invariant.",
           "Make slices behavior-focused and independently executable against the current codebase. Avoid tiny mechanical slices and avoid generic predetermined layers unless the task naturally calls for them.",
           "If an existing app, baseline, project file, package, script, or README is present, plan focused edits against that existing structure. Do not scaffold or replace an existing app unless the task explicitly asks for a rebuild.",
+          ...codemapInstructions(),
           "Do not merge unrelated frontend flows, generated client work, backend rules, security checks, and test coverage into one oversized slice just to reduce count. Keep integration slices bounded around coherent user-visible behavior or invariant risk.",
           "Prefer pure domain functions and thin imperative shells. Use explicit Result-style errors for expected business failures.",
           "If the goal asks for Tailwind/shadcn, TanStack, or OpenAPI-generated clients, dedicate concrete slice acceptance criteria to those choices.",
@@ -162,6 +183,7 @@ function planStage(mode: "big" | "sliced", maxSlices: number): PipelineStage {
           "Prefer pure domain functions and thin imperative shells.",
           "Use explicit Result-style errors for expected business failures.",
           "If the goal asks for Tailwind/shadcn, TanStack, or OpenAPI-generated clients, include concrete plan steps for those choices.",
+          ...codemapInstructions(),
           "Write the plan to .lattice/plans/restaurant-booking.md, then return the same plan in your response.",
           "Do not edit any other files during planning.",
           "Only call lattice_signal(status: \"complete\") after the plan file exists and your response includes the same plan."
@@ -190,7 +212,7 @@ function singleBuildStage(planMode: "big" | "sliced"): PipelineStage {
   return withStageDefaults({
     id: "build",
     type: "stage",
-    agent: "build",
+    agent: "eval-builder",
     completion: "signal",
     signals: ["complete", "blocked"],
     context: "isolated",
@@ -199,7 +221,9 @@ function singleBuildStage(planMode: "big" | "sliced"): PipelineStage {
     skills: commonSkills(),
     prompt: [
       "Implement the saved plan for the requested task.",
+      implementationStageInstruction,
       planReadInstruction,
+      ...codemapInstructions(),
       "When sliced plan files exist, use the requirement ledger and globalInvariants as the authoritative cross-cutting contract; original goal requirements outrank local slice wording or preserve-existing notes.",
       requirementPrecedence,
       surfaceInventoryInstruction,
@@ -281,6 +305,7 @@ function slicePlanReviewStage(planMode: "big" | "sliced"): PipelineStage {
     prompt: [
       "Review the sliced plan before any implementation begins.",
       "Read the original task in ## Goal, .lattice/plans/restaurant-booking.md, .lattice/plans/slices/manifest.json, and every referenced .lattice/plans/slices/*.md file.",
+      ...codemapInstructions(),
       `The slice artifacts were produced by the ${producer} stage; treat prior summaries as untrusted hints, not evidence.`,
       "Pass only if the sliced plan is a faithful, traceable decomposition of the original task and saved plan.",
       "Verify the manifest has a requirement ledger (`requirements`), `globalInvariants`, `verificationContract`, `crossSurfaceChecks`, and `slices` with `covers` and `preserves` references. Fail if the manifest uses only vague prose without source-linked requirements.",
@@ -323,7 +348,7 @@ function dynamicSliceExpansionStage(maxSlices: number): PipelineStage {
       template: withStageDefaults({
         id: "build-slice-{{index}}-{{id}}",
         type: "stage",
-        agent: "build",
+        agent: "eval-builder",
         completion: "signal",
         signals: ["complete", "blocked"],
         context: "isolated",
@@ -331,7 +356,9 @@ function dynamicSliceExpansionStage(maxSlices: number): PipelineStage {
         skills: dynamicSliceSkills(),
         prompt: [
           "Implement slice {{index}}: {{title}}.",
+          implementationStageInstruction,
           "Read {{file}} first and treat it as the local work package. It should include the relevant requirement IDs, invariant IDs, acceptance criteria, tests, and verification evidence for covered IDs {{covers}} and preserved IDs {{preserves}}.",
+          ...codemapInstructions(),
           "Read .lattice/plans/slices/manifest.json only if {{file}} is missing required requirement/invariant/verification details or you need to resolve a conflict. Do not read unrelated slice files or summaries unless needed for a concrete dependency.",
           "Treat {{file}} as the local work package, but the original goal and manifest requirement ledger/globalInvariants/verificationContract/crossSurfaceChecks outrank any local slice wording.",
           "Do not signal complete if this slice violates any global invariant or weakens any original requirement. If local slice text conflicts with the original goal, requirement ledger, or globalInvariants, follow the higher-priority requirement and document the correction in the slice summary.",
@@ -360,7 +387,7 @@ function finalIntegrationStage(): PipelineStage {
   return withStageDefaults({
     id: "final-integration",
     type: "stage",
-    agent: "build",
+    agent: "eval-builder",
     completion: "signal",
     signals: ["complete", "blocked"],
     context: "isolated",
@@ -370,7 +397,9 @@ function finalIntegrationStage(): PipelineStage {
     skills: commonSkills(),
     prompt: [
       "Perform the final integration pass for the requested task.",
+      implementationStageInstruction,
       "Read .lattice/plans/restaurant-booking.md, .lattice/plans/slices/manifest.json, every referenced slice file, and every .lattice/summaries/slice-*.md file.",
+      ...codemapInstructions(),
       "Start from the manifest requirement ledger, globalInvariants, verificationContract, crossSurfaceChecks, slice summaries, and current diff, then deep-dive files and flows related to requirement coverage, invariant preservation, API/client contracts, cross-slice behavior, touched subsystems, or failing checks.",
       "Audit the manifest requirements and globalInvariants as first-class requirements across the whole codebase, including legacy endpoints, existing files not touched by a slice, generated artifacts, tests, documentation, and frontend flows.",
       requirementPrecedence,
@@ -415,6 +444,7 @@ function planAdherenceReviewStage(planMode: "big" | "sliced", buildMode: "single
     prompt: [
       "Review whether the completed implementation adheres to the saved implementation plan.",
       planScope,
+      ...codemapInstructions(),
       "Break the original goal, saved plan, and manifest requirement ledger into material commitments: user-visible behaviors, system behaviors, integrations, tests/checks, documentation, and any explicit constraints or non-goals.",
       hasSlicedPlan
         ? "For sliced plans, treat manifest requirements, globalInvariants, verificationContract entries, and crossSurfaceChecks entries as material commitments. Audit them separately from local slice acceptance criteria and fail if any requirement or invariant is violated anywhere in the final codebase."

@@ -3,7 +3,7 @@
 import { createOpencode } from "@opencode-ai/sdk";
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { collectOptionalEvidenceChecks, runCommand, type CommandResult } from "./checks.js";
+import { collectOptionalEvidenceChecks, collectSemanticEvidenceChecks, runCommand, type CommandResult } from "./checks.js";
 import { buildJudgePrompt, judgeInstructionsForScenario } from "./judge-prompt.js";
 import { judgeSchema } from "./judge-schema.js";
 import {
@@ -16,6 +16,7 @@ import {
 } from "./lattice-state.js";
 import { makeOpenCodeConfig } from "./opencode-config.js";
 import {
+  criticModelForVariant,
   renderPipelineTemplate,
   reviewModelForVariant,
   sliceModelForVariant,
@@ -53,7 +54,21 @@ type RunSummary = {
   telemetry: TelemetrySummary;
   checks: CommandResult[];
   fileTree: string[];
+  critic?: CriticAttemptSummary[];
   judge: unknown;
+};
+
+type CriticAttemptSummary = {
+  attempt: number;
+  output: unknown;
+  telemetry: AssistantTelemetry;
+  repaired: boolean;
+  repairTelemetry?: AssistantTelemetry;
+};
+
+type CriticOutput = {
+  verdict?: unknown;
+  findings?: unknown;
 };
 
 const root = process.cwd();
@@ -151,6 +166,10 @@ async function runVariant(input: {
   });
   await writeLatticeConfig(workspace, input.variant);
 
+  const previousPath = process.env.PATH;
+  if (process.env.EVAL_CODEMAP === "1") {
+    process.env.PATH = [path.join(workspace, ".opencode", "bin"), previousPath].filter(Boolean).join(path.delimiter);
+  }
   const previousCwd = process.cwd();
   process.chdir(workspace);
 
@@ -184,9 +203,11 @@ async function runVariant(input: {
     log(`${input.variant.id}: Lattice pipeline state detected; waiting for pipeline completion`);
 
     let pipelineState = await waitForPipeline(workspace, input.timeoutMs, log);
-    const retryFinding = reviewRejectionSummary(pipelineState);
-    if (retryFinding) {
-      log(`${input.variant.id}: review stage rejected; retrying upstream stage with review findings`);
+    const maxReviewRetries = reviewRetryLimit(input.variant);
+    for (let retryIndex = 0; retryIndex < maxReviewRetries; retryIndex += 1) {
+      const retryFinding = reviewRejectionSummary(pipelineState);
+      if (!retryFinding) break;
+      log(`${input.variant.id}: review stage rejected; retrying upstream stage (${retryIndex + 1}/${maxReviewRetries})`);
       await retryPausedPipeline(client, sessionId, retryFinding);
       pipelineState = await waitForPipeline(workspace, input.timeoutMs, log);
     }
@@ -194,7 +215,7 @@ async function runVariant(input: {
       const completedAt = new Date();
       log(`${input.variant.id}: pipeline did not complete; running deterministic checks for salvage evidence`);
       const plan = await readPlan(workspace);
-      const checks = await runChecks(workspace);
+      const checks = await runChecks(workspace, input.scenario);
       const fileTree = await listFiles(workspace, 500);
       const pipelineTelemetry = summarizeTelemetry(pipelineState);
       if (checks.every((check) => check.exitCode === 0)) {
@@ -257,9 +278,9 @@ async function runVariant(input: {
     await waitForStableWorkspace(workspace, 10_000, 120_000, log);
     log(`${input.variant.id}: pipeline completed; running deterministic checks`);
     const plan = await readPlan(workspace);
-    const checks = await runChecks(workspace);
+    let checks = await runChecks(workspace, input.scenario);
     log(`${input.variant.id}: deterministic checks finished; collecting files`);
-    const fileTree = await listFiles(workspace, 500);
+    let fileTree = await listFiles(workspace, 500);
     const pipelineTelemetry = summarizeTelemetry(pipelineState);
     const pipelineAnomaly = completedPipelineAnomaly(pipelineState);
     if (pipelineAnomaly) {
@@ -288,6 +309,18 @@ async function runVariant(input: {
         }
       };
     }
+    const critic = await runCriticRepairLoop({
+      client,
+      variant: input.variant,
+      task: input.task,
+      scenario: input.scenarioConfig,
+      workspace,
+      checks,
+      fileTree
+    });
+    checks = critic.checks;
+    fileTree = critic.fileTree;
+
     log(`${input.variant.id}: running LLM judge`);
     const judgeResult = await judgeRun(client, input.judge, {
       task: input.task,
@@ -318,10 +351,16 @@ async function runVariant(input: {
       telemetry,
       checks,
       fileTree,
+      ...(critic.attempts.length > 0 ? { critic: critic.attempts } : {}),
       judge: judgeResult.output
     };
   } finally {
     opencode?.server.close();
+    if (previousPath === undefined) {
+      delete process.env.PATH;
+    } else {
+      process.env.PATH = previousPath;
+    }
     process.chdir(previousCwd);
   }
 }
@@ -340,6 +379,12 @@ function isRetryableSummary(summary: RunSummary): boolean {
   return true;
 }
 
+function reviewRetryLimit(variant: ModelVariant): number {
+  const configured = reviewModelForVariant(variant)?.maxRetries ?? 1;
+  if (typeof configured !== "number" || !Number.isFinite(configured)) return 1;
+  return Math.max(0, Math.min(5, Math.trunc(configured)));
+}
+
 async function writeLatticeConfig(workspace: string, variant: ModelVariant): Promise<void> {
   const review = reviewModelForVariant(variant);
   const slice = sliceModelForVariant(variant);
@@ -348,6 +393,7 @@ async function writeLatticeConfig(workspace: string, variant: ModelVariant): Pro
       "eval-planner": { model: variant.plan.model },
       "eval-slicer": { model: slice.model },
       "plan-reviewer": { model: review?.model ?? variant.plan.model },
+      "eval-builder": { model: variant.build.model },
       build: { model: variant.build.model }
     }
   };
@@ -460,15 +506,15 @@ async function readPlan(workspace: string): Promise<string | null> {
   }
 }
 
-async function runChecks(workspace: string): Promise<CommandResult[]> {
+async function runChecks(workspace: string, scenario: string): Promise<CommandResult[]> {
   log("Check: node .opencode/scripts/deterministic-checks.mjs --json");
   const result = await runCommand("node", [".opencode/scripts/deterministic-checks.mjs", "--json"], workspace, 60 * 60 * 1000);
   log(`Check: deterministic checker exited ${result.exitCode} in ${Math.round(result.durationMs / 1000)}s`);
   try {
     const checks = JSON.parse(result.stdout) as CommandResult[];
-    return [...checks, ...(await collectOptionalEvidenceChecks(workspace, log))];
+    return [...checks, ...(await collectSemanticEvidenceChecks(workspace, scenario, log)), ...(await collectOptionalEvidenceChecks(workspace, log))];
   } catch {
-    return [result, ...(await collectOptionalEvidenceChecks(workspace, log))];
+    return [result, ...(await collectSemanticEvidenceChecks(workspace, scenario, log)), ...(await collectOptionalEvidenceChecks(workspace, log))];
   }
 }
 
@@ -485,6 +531,180 @@ async function assertCommandRegistered(client: any, commandName: string): Promis
   }
   log(`Preflight: /${commandName} command is registered`);
 }
+
+async function runCriticRepairLoop(input: {
+  client: any;
+  variant: ModelVariant;
+  task: string;
+  scenario: ScenarioConfig;
+  workspace: string;
+  checks: CommandResult[];
+  fileTree: string[];
+}): Promise<{ attempts: CriticAttemptSummary[]; checks: CommandResult[]; fileTree: string[] }> {
+  const criticModel = criticModelForVariant(input.variant);
+  if (!criticModel) return { attempts: [], checks: input.checks, fileTree: input.fileTree };
+
+  const maxRepairAttempts = repairAttemptLimit(criticModel.maxRepairAttempts);
+  const attempts: CriticAttemptSummary[] = [];
+  let checks = input.checks;
+  let fileTree = input.fileTree;
+
+  for (let attempt = 1; attempt <= maxRepairAttempts + 1; attempt += 1) {
+    log(`${input.variant.id}: running critic pass ${attempt}/${maxRepairAttempts + 1}`);
+    const critic = await criticRun(input.client, criticModel, {
+      task: input.task,
+      scenario: input.scenario,
+      checks,
+      fileTree
+    });
+    const shouldRepair = criticNeedsRepair(critic.output) && attempt <= maxRepairAttempts;
+    const summary: CriticAttemptSummary = {
+      attempt,
+      output: critic.output,
+      telemetry: critic.telemetry,
+      repaired: shouldRepair
+    };
+
+    if (!shouldRepair) {
+      attempts.push(summary);
+      break;
+    }
+
+    log(`${input.variant.id}: critic requested repair; running build repair pass ${attempt}/${maxRepairAttempts}`);
+    const repair = await repairFromCritic(input.client, input.variant.build, critic.output);
+    summary.repairTelemetry = repair.telemetry;
+    attempts.push(summary);
+
+    await waitForStableWorkspace(input.workspace, 10_000, 120_000, log);
+    log(`${input.variant.id}: rerunning checks after critic repair`);
+    checks = await runChecks(input.workspace, input.scenario.id);
+    fileTree = await listFiles(input.workspace, 500);
+  }
+
+  return { attempts, checks, fileTree };
+}
+
+function repairAttemptLimit(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) return 1;
+  return Math.max(0, Math.min(3, Math.trunc(value)));
+}
+
+function criticNeedsRepair(output: unknown): boolean {
+  if (!output || typeof output !== "object") return false;
+  const verdict = (output as CriticOutput).verdict;
+  if (typeof verdict === "string" && verdict.toLowerCase() === "repair") return true;
+  const findings = (output as CriticOutput).findings;
+  if (!Array.isArray(findings)) return false;
+  return findings.some((finding) => {
+    if (!finding || typeof finding !== "object") return false;
+    const severity = (finding as { severity?: unknown }).severity;
+    return typeof severity === "string" && ["blocker", "major"].includes(severity.toLowerCase());
+  });
+}
+
+async function criticRun(
+  client: any,
+  critic: PhaseModel,
+  details: { task: string; scenario: ScenarioConfig; checks: CommandResult[]; fileTree: string[] }
+): Promise<{ output: unknown; telemetry: AssistantTelemetry }> {
+  const session = await client.session.create({ body: { title: "critic restaurant booking eval" } });
+  const result = await client.session.prompt({
+    path: { id: session.data.id },
+    body: {
+      model: toSdkModel(critic.model),
+      agent: "plan-reviewer",
+      parts: [{ type: "text", text: buildCriticPrompt(details) }],
+      format: { type: "json_schema", schema: criticSchema, retryCount: 2 }
+    }
+  });
+
+  return {
+    output: result.data.info.structured_output ?? result.data.info,
+    telemetry: telemetryFromAssistantInfo(result.data.info)
+  };
+}
+
+async function repairFromCritic(
+  client: any,
+  build: PhaseModel,
+  criticOutput: unknown
+): Promise<{ telemetry: AssistantTelemetry }> {
+  const session = await client.session.create({ body: { title: "critic repair restaurant booking eval" } });
+  const result = await client.session.prompt({
+    path: { id: session.data.id },
+    body: {
+      model: toSdkModel(build.model),
+      agent: "build",
+      parts: [
+        {
+          type: "text",
+          text: [
+            "Repair the completed restaurant booking implementation using only the critic findings below.",
+            "Fix blocker and major findings with the smallest correct edits. Do not rewrite unrelated architecture or chase minor/nice-to-have findings.",
+            "Preserve all original scenario requirements, existing deterministic checks, generated-client workflow, and README accuracy.",
+            "After editing, run the deterministic checker (`node .opencode/scripts/deterministic-checks.mjs --json`) or equivalent commands and fix any failures.",
+            "Return a concise summary of fixes and checks run.",
+            "",
+            JSON.stringify(criticOutput, null, 2)
+          ].join("\n")
+        }
+      ]
+    }
+  });
+
+  return { telemetry: telemetryFromAssistantInfo(result.data.info) };
+}
+
+function buildCriticPrompt(details: { task: string; scenario: ScenarioConfig; checks: CommandResult[]; fileTree: string[] }): string {
+  return [
+    "You are an expensive final escalation critic for a coding-agent eval.",
+    "Your job is to find only material blocker or major issues that are worth sending back to a cheaper builder for repair before final judging.",
+    "Do not nitpick style, harmless naming, minor coverage preferences, or subjective polish. If the implementation is good enough, return verdict pass.",
+    "Do not inspect or rely on eval provenance files such as .lattice/, .opencode/lattice state, result.json, or model configuration. Inspect product source, tests, generated artifacts, README, and command evidence.",
+    "Treat evidenceOnly semantic probes as leads, not proof. Verify any material issue from source/tests before reporting it.",
+    "Focus especially on recurring hidden failure classes: auth/CSRF gaps, public data leaks, stale OpenAPI/generated clients, generated-client bypasses, frontend/backend route mismatches, double API prefixes, mutation error handling, masked dead-code scripts, and tests that bypass the real production path.",
+    "Return verdict repair only when at least one blocker or major finding is concrete, source-backed, and has a smallest safe fix.",
+    "Return JSON matching the schema.",
+    "",
+    "## Scenario Task",
+    details.task,
+    "",
+    "## Scenario Metadata",
+    JSON.stringify({ id: details.scenario.id, hasBaseline: Boolean(details.scenario.baselinePath), judgeInstructions: details.scenario.judgeInstructions }, null, 2),
+    "",
+    "## Command Evidence",
+    JSON.stringify(details.checks, null, 2),
+    "",
+    "## File Tree Sample",
+    JSON.stringify(details.fileTree, null, 2)
+  ].join("\n");
+}
+
+const criticSchema = {
+  type: "object",
+  properties: {
+    verdict: { type: "string", enum: ["pass", "repair"] },
+    confidence: { type: "number", minimum: 0, maximum: 1 },
+    findings: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          severity: { type: "string", enum: ["blocker", "major", "minor"] },
+          title: { type: "string" },
+          evidence: { type: "string" },
+          impact: { type: "string" },
+          smallestFix: { type: "string" }
+        },
+        required: ["severity", "title", "evidence", "impact", "smallestFix"],
+        additionalProperties: false
+      }
+    },
+    summary: { type: "string" }
+  },
+  required: ["verdict", "confidence", "findings", "summary"],
+  additionalProperties: false
+} as const;
 
 async function judgeRun(
   client: any,

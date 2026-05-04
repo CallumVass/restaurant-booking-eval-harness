@@ -67,6 +67,41 @@
       }
     },
     {
+      "id": "deepseek-v4-pro-plan-flash-sliced-build-mimo-review-openai-critic",
+      "enabled": false,
+      "plan": {
+        "model": "opencode-go/deepseek-v4-pro",
+        "mode": "sliced",
+        "maxSlices": 4,
+        "agentOptions": {
+          "reasoningEffort": "high"
+        }
+      },
+      "build": {
+        "model": "opencode-go/deepseek-v4-flash",
+        "mode": "sliced",
+        "slicePlanReview": true,
+        "agentOptions": {
+          "reasoningEffort": "medium"
+        }
+      },
+      "review": {
+        "model": "opencode-go/mimo-v2.5-pro",
+        "maxRetries": 2,
+        "agentOptions": {
+          "reasoningEffort": "high"
+        }
+      },
+      "critic": {
+        "model": "openai/gpt-5.5",
+        "maxRepairAttempts": 1,
+        "agentOptions": {
+          "reasoningEffort": "high",
+          "textVerbosity": "low"
+        }
+      }
+    },
+    {
       "id": "deepseek-v4-pro-plan-pro-build",
       "enabled": false,
       "plan": {

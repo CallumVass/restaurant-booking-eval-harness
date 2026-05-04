@@ -81,10 +81,15 @@ export function completedPipelineAnomaly(state: unknown): string | null {
 
   if (completedStages.length === 0) return "completed pipeline has no completed stages";
 
-  const buildStage = completedStages.find((stage) => stage.id === "build" || stage.agent === "build" || stage.agent === "implementor");
+  const buildStage = completedStages.find(
+    (stage) => stage.id === "build" || stage.agent === "build" || stage.agent === "eval-builder" || stage.agent === "implementor"
+  );
   const stagesToCheck = buildStage ? [buildStage] : completedStages;
 
   for (const stage of stagesToCheck) {
+    if (stage.agent === "eval-builder") {
+      continue;
+    }
     if (!stage.telemetry || typeof stage.telemetry !== "object") {
       return buildStage ? `completed build stage has no assistant telemetry (${stage.id})` : "completed pipeline has no assistant telemetry";
     }
