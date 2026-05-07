@@ -41,6 +41,36 @@
       }
     },
     {
+      "id": "deepseek-v4-pro-plan-flash-build-weave-review",
+      "enabled": false,
+      "agentProfile": "weave",
+      "plan": {
+        "model": "opencode-go/deepseek-v4-pro",
+        "agentOptions": {
+          "reasoningEffort": "high"
+        }
+      },
+      "build": {
+        "model": "opencode-go/deepseek-v4-flash",
+        "agentOptions": {
+          "reasoningEffort": "medium"
+        }
+      },
+      "review": {
+        "model": "opencode-go/mimo-v2.5-pro",
+        "maxRetries": 1,
+        "agentOptions": {
+          "reasoningEffort": "high"
+        }
+      },
+      "securityReview": {
+        "model": "opencode-go/deepseek-v4-pro",
+        "agentOptions": {
+          "reasoningEffort": "high"
+        }
+      }
+    },
+    {
       "id": "deepseek-v4-pro-plan-flash-sliced-build-mimo-review",
       "enabled": false,
       "plan": {

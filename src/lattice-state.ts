@@ -2,6 +2,7 @@
 
 import type { PipelineInstance, PipelineStatus } from "@callumvass/lattice";
 import { readFile, readdir, stat } from "node:fs/promises";
+import type { PiPipelineState } from "./pi-runner.js";
 import path from "node:path";
 
 export type TimeoutPipelineState = {
@@ -10,7 +11,7 @@ export type TimeoutPipelineState = {
   lastState: PipelineState;
 };
 
-export type PipelineState = PipelineInstance | TimeoutPipelineState | null;
+export type PipelineState = PipelineInstance | PiPipelineState | TimeoutPipelineState | null;
 
 type PipelineStageStatus = PipelineInstance["stages"][number]["status"];
 
@@ -50,6 +51,39 @@ export async function waitForPipeline(
   return { status: "timeout", timeoutMs, lastState };
 }
 
+export async function waitForPipelineRetryResume(
+  workspace: string,
+  previousState: PipelineState,
+  timeoutMs: number,
+  log: (message: string) => void
+): Promise<PipelineState> {
+  const start = Date.now();
+  const previousUpdatedAt = pipelineUpdatedAt(previousState);
+  let lastState: PipelineState = previousState;
+  log(`Pipeline: waiting for retry to resume (timeout ${Math.round(timeoutMs / 1000)}s)`);
+
+  while (Date.now() - start < timeoutMs) {
+    lastState = await latestPipelineState(workspace);
+    const status = getPipelineStatus(lastState);
+
+    if (status && status !== "paused") {
+      log(`Pipeline: retry resumed with status ${status}`);
+      return lastState;
+    }
+
+    const updatedAt = pipelineUpdatedAt(lastState);
+    if (updatedAt && previousUpdatedAt && updatedAt !== previousUpdatedAt && status === "paused") {
+      log("Pipeline: retry processed but pipeline remains paused");
+      return lastState;
+    }
+
+    await sleep(1_000);
+  }
+
+  log("Pipeline: retry did not resume before timeout");
+  return lastState;
+}
+
 export function isPipelineCompleted(state: unknown): boolean {
   return getPipelineStatus(state) === "completed";
 }
@@ -58,11 +92,15 @@ export function getPipelineStatus(state: unknown): PipelineStatus | "timeout" | 
   return typeof state === "object" && state !== null ? ((state as { status?: PipelineStatus | "timeout" }).status) : undefined;
 }
 
+function pipelineUpdatedAt(state: unknown): string | undefined {
+  return typeof state === "object" && state !== null ? (state as { updatedAt?: string }).updatedAt : undefined;
+}
+
 export function reviewRejectionSummary(state: unknown): string | null {
   if (getPipelineStatus(state) !== "paused" || !state || typeof state !== "object") return null;
   const stages = (state as PipelineInstance).stages;
   if (!Array.isArray(stages)) return null;
-  const retryableReviewStageIds = new Set(["slice-plan-review", "plan-adherence-review"]);
+  const retryableReviewStageIds = new Set(["slice-plan-review", "plan-adherence-review", "security-review"]);
   const rejected = stages.find((stage) => retryableReviewStageIds.has(stage.id) && stage.status === "rejected");
   if (!rejected) return null;
   return typeof rejected.summary === "string" && rejected.summary.trim().length > 0

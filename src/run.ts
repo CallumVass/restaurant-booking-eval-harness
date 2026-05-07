@@ -12,30 +12,29 @@ import {
   isPipelineCompleted,
   reviewRejectionSummary,
   waitForPipeline,
+  waitForPipelineRetryResume,
   type PipelineState
 } from "./lattice-state.js";
-import { makeOpenCodeConfig } from "./opencode-config.js";
+import { makeOpenCodeConfig, makeWeaveConfig } from "./opencode-config.js";
 import {
   criticModelForVariant,
   renderPipelineTemplate,
   reviewModelForVariant,
+  securityReviewModelForVariant,
   sliceModelForVariant,
+  stageAgentsForVariant,
+  type EvalBackend,
   type ModelVariant,
   type PhaseModel
 } from "./pipeline.js";
+import { runPiPipeline } from "./pi-runner.js";
+import type { ScenarioConfig } from "./run-types.js";
 import { summarizeTelemetry, telemetryFromAssistantInfo, type AssistantTelemetry, type TelemetrySummary } from "./telemetry.js";
 import { archiveRun, exists, listFiles, prepareWorkspace, waitForStableWorkspace } from "./workspace.js";
 
 type ModelsConfig = {
   variants: ModelVariant[];
   judge: PhaseModel;
-};
-
-type ScenarioConfig = {
-  id: string;
-  taskPath: string;
-  baselinePath: string | null;
-  judgeInstructions: string[];
 };
 
 type RunSummary = {
@@ -88,9 +87,11 @@ async function main() {
   const models = JSON.parse(await readFile(modelsPath, "utf8")) as ModelsConfig;
   const task = await readFile(scenarioConfig.taskPath, "utf8");
   const requestedVariant = args.variant;
-  const variants = requestedVariant
+  const backendOverride = parseBackend(args.backend);
+  const variants = (requestedVariant
     ? models.variants.filter((variant) => variant.id === requestedVariant)
-    : models.variants.filter((variant) => variant.enabled !== false);
+    : models.variants.filter((variant) => variant.enabled !== false)
+  ).map((variant) => (backendOverride ? { ...variant, backend: backendOverride } : variant));
 
   if (variants.length === 0) {
     throw new Error(`No variants matched ${requestedVariant}`);
@@ -161,6 +162,7 @@ async function runVariant(input: {
     baselinePath: input.scenarioConfig.baselinePath,
     root,
     opencodeConfig: makeOpenCodeConfig(input.variant),
+    weaveConfig: makeWeaveConfig(input.variant) ?? undefined,
     pipelineTemplate: renderPipelineTemplate(input.variant),
     log
   });
@@ -180,6 +182,80 @@ async function runVariant(input: {
     log(`${input.variant.id}: OpenCode server started at ${opencode.server.url}`);
 
     const client = opencode.client as any;
+
+    if ((input.variant.backend ?? "lattice") === "pi") {
+      const piResult = await runPiPipeline({
+        workspace,
+        variant: input.variant,
+        scenario: input.scenarioConfig,
+        task: input.task,
+        timeoutMs: input.timeoutMs,
+        skillsEnabled: input.skipSkills !== true,
+        runChecks,
+        log
+      });
+      const pipelineTelemetry = summarizeTelemetry(piResult.pipelineState);
+      const completedAt = new Date();
+
+      if (!isPipelineCompleted(piResult.pipelineState) && !piResult.checks.every((check) => check.exitCode === 0)) {
+        log(`${input.variant.id}: Pi pipeline did not complete and deterministic checks failed; skipping judge`);
+        return {
+          variant: input.variant.id,
+          scenario: input.scenario,
+          attempt: input.attempt,
+          maxAttempts: input.maxAttempts,
+          retryable: false,
+          baseline: input.scenarioConfig.baselinePath,
+          workspace,
+          startedAt: startedAt.toISOString(),
+          completedAt: completedAt.toISOString(),
+          durationMs: completedAt.getTime() - startedAt.getTime(),
+          pipelineState: piResult.pipelineState,
+          plan: piResult.plan,
+          telemetry: pipelineTelemetry,
+          checks: piResult.checks,
+          fileTree: piResult.fileTree,
+          ...(piResult.critic.length > 0 ? { critic: piResult.critic } : {}),
+          judge: {
+            skipped: true,
+            reason: "Pi pipeline did not complete and deterministic checks did not pass",
+            status: getPipelineStatus(piResult.pipelineState)
+          }
+        };
+      }
+
+      log(`${input.variant.id}: running LLM judge`);
+      const judgeResult = await judgeRun(client, input.judge, {
+        task: input.task,
+        scenario: input.scenarioConfig,
+        variant: input.variant,
+        plan: piResult.plan,
+        pipelineTelemetry,
+        checks: piResult.checks,
+        fileTree: piResult.fileTree
+      });
+      const finishedAt = new Date();
+      return {
+        variant: input.variant.id,
+        scenario: input.scenario,
+        attempt: input.attempt,
+        maxAttempts: input.maxAttempts,
+        retryable: false,
+        baseline: input.scenarioConfig.baselinePath,
+        workspace,
+        startedAt: startedAt.toISOString(),
+        completedAt: finishedAt.toISOString(),
+        durationMs: finishedAt.getTime() - startedAt.getTime(),
+        pipelineState: piResult.pipelineState,
+        plan: piResult.plan,
+        telemetry: summarizeTelemetry(piResult.pipelineState, judgeResult.telemetry),
+        checks: piResult.checks,
+        fileTree: piResult.fileTree,
+        ...(piResult.critic.length > 0 ? { critic: piResult.critic } : {}),
+        judge: judgeResult.output
+      };
+    }
+
     await assertCommandRegistered(client, "restaurant-booking-eval");
     await assertCommandRegistered(client, "lattice");
 
@@ -204,7 +280,9 @@ async function runVariant(input: {
       const retryFinding = reviewRejectionSummary(pipelineState);
       if (!retryFinding) break;
       log(`${input.variant.id}: review stage rejected; retrying upstream stage (${retryIndex + 1}/${maxReviewRetries})`);
+      const pausedState = pipelineState;
       await retryPausedPipeline(client, sessionId, retryFinding);
+      pipelineState = await waitForPipelineRetryResume(workspace, pausedState, 5 * 60 * 1000, log);
       pipelineState = await waitForPipeline(workspace, input.timeoutMs, log);
     }
     if (!isPipelineCompleted(pipelineState)) {
@@ -378,14 +456,20 @@ function reviewRetryLimit(variant: ModelVariant): number {
 
 async function writeLatticeConfig(workspace: string, variant: ModelVariant): Promise<void> {
   const review = reviewModelForVariant(variant);
+  const securityReview = securityReviewModelForVariant(variant);
   const slice = sliceModelForVariant(variant);
+  const stageAgents = stageAgentsForVariant(variant);
   const latticeConfig = {
     agents: {
       "eval-planner": { model: variant.plan.model },
       "eval-slicer": { model: slice.model },
       "plan-reviewer": { model: review?.model ?? variant.plan.model },
       "eval-builder": { model: variant.build.model },
-      build: { model: variant.build.model }
+      build: { model: variant.build.model },
+      ...(stageAgents.discovery ? { [stageAgents.discovery]: { model: variant.plan.model } } : {}),
+      [stageAgents.build]: { model: variant.build.model },
+      [stageAgents.review]: { model: review?.model ?? variant.plan.model },
+      [stageAgents.security]: { model: securityReview?.model ?? review?.model ?? variant.plan.model }
     }
   };
 
@@ -432,22 +516,32 @@ async function startLatticePipeline(client: any, sessionId: string, goal: string
 }
 
 async function retryPausedPipeline(client: any, sessionId: string, findings: string): Promise<void> {
-  log("Pipeline: invoking /lattice retry with review findings");
-  await withTransientSdkRetry("/lattice retry", async () => {
-    await client.session.command({
+  log("Pipeline: queueing Lattice retry with review findings");
+  await withTransientSdkRetry("lattice retry", async () => {
+    const result = await client.session.promptAsync({
       path: { id: sessionId },
       body: {
-        command: "lattice",
-        arguments: [
-          "retry",
-          "Retry the appropriate upstream stage and address these review findings before signaling again:",
-          "",
-          findings
-        ].join("\n")
+        agent: "build",
+        parts: [
+          {
+            type: "text",
+            text: [
+              "Use the lattice_control tool exactly once with action \"retry\", pipeline \"restaurant-booking-eval\", and response:",
+              "Retry the appropriate upstream stage and address these review findings before signaling again:",
+              "",
+              findings,
+              "",
+              "After the tool call returns, stop. Do not inspect status, continue, retry again, abort, read files, or begin implementation."
+            ].join("\n")
+          }
+        ]
       }
     });
+    if (result?.error) {
+      throw new Error(`Failed to queue lattice retry: ${errorSummary(result.error)}`);
+    }
   });
-  log("Pipeline: /lattice retry command completed");
+  log("Pipeline: Lattice retry prompt queued");
 }
 
 async function withTransientSdkRetry<T>(label: string, action: () => Promise<T>, maxAttempts = 4): Promise<T> {
@@ -765,6 +859,12 @@ async function makeScenarioConfig(scenario: string, args: Record<string, string>
     baselinePath,
     judgeInstructions: judgeInstructionsForScenario(scenario, Boolean(baselinePath))
   };
+}
+
+function parseBackend(value: string | undefined): EvalBackend | undefined {
+  if (!value) return undefined;
+  if (value === "lattice" || value === "pi") return value;
+  throw new Error(`Invalid backend ${value}. Expected lattice or pi.`);
 }
 
 function parseScenario(args: Record<string, string>): string {

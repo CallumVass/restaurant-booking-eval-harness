@@ -1,6 +1,14 @@
 // pattern: Functional Core
 
-import { criticModelForVariant, reviewModelForVariant, sliceModelForVariant, type ModelVariant } from "./pipeline.js";
+import {
+  criticModelForVariant,
+  reviewModelForVariant,
+  securityReviewModelForVariant,
+  sliceModelForVariant,
+  usesWeaveAgents,
+  type ModelVariant,
+  type PhaseModel
+} from "./pipeline.js";
 
 export function makeOpenCodeConfig(variant: ModelVariant) {
   const review = reviewModelForVariant(variant);
@@ -101,5 +109,54 @@ export function makeOpenCodeConfig(variant: ModelVariant) {
       webfetch: "allow"
     },
     snapshot: false
+  };
+}
+
+export function makeWeaveConfig(variant: ModelVariant) {
+  if (!usesWeaveAgents(variant)) return null;
+
+  const review = reviewModelForVariant(variant) ?? variant.plan;
+  const securityReview = securityReviewModelForVariant(variant) ?? review;
+  const latticeWorkerHint =
+    "When invoked by a Lattice pipeline, the Lattice stage prompt is the task contract. Follow it directly and use lattice_signal exactly as requested by that stage.";
+
+  return {
+    agents: {
+      thread: weaveAgentOverride(variant.plan, {
+        prompt_append: latticeWorkerHint
+      }),
+      spindle: weaveAgentOverride(variant.plan, {
+        prompt_append: latticeWorkerHint
+      }),
+      pattern: weaveAgentOverride(variant.plan, {
+        prompt_append: latticeWorkerHint
+      }),
+      shuttle: weaveAgentOverride(variant.build, {
+        prompt_append: [
+          latticeWorkerHint,
+          "You may be invoked directly by Lattice rather than Tapestry. Execute the stage prompt completely; do not wait for a Tapestry-style delegation wrapper."
+        ].join("\n")
+      }),
+      weft: weaveAgentOverride(review, {
+        prompt_append: [
+          latticeWorkerHint,
+          "For Lattice review stages, translate APPROVE to lattice_signal(status: \"pass\"), REJECT to lattice_signal(status: \"fail\"), and unavailable evidence to lattice_signal(status: \"blocked\")."
+        ].join("\n")
+      }),
+      warp: weaveAgentOverride(securityReview, {
+        prompt_append: [
+          latticeWorkerHint,
+          "For Lattice security review stages, translate APPROVE to lattice_signal(status: \"pass\"), REJECT to lattice_signal(status: \"fail\"), and unavailable evidence to lattice_signal(status: \"blocked\")."
+        ].join("\n")
+      })
+    }
+  };
+}
+
+function weaveAgentOverride(phase: PhaseModel, extra: Record<string, unknown> = {}) {
+  return {
+    model: phase.model,
+    ...(phase.agentOptions ? { modelOptions: phase.agentOptions } : {}),
+    ...extra
   };
 }

@@ -28,6 +28,7 @@ export async function prepareWorkspace(input: {
   baselinePath: string | null;
   root: string;
   opencodeConfig: unknown;
+  weaveConfig?: unknown;
   pipelineTemplate: string;
   log: Logger;
 }): Promise<void> {
@@ -55,6 +56,9 @@ export async function prepareWorkspace(input: {
   }
 
   await writeFile(path.join(input.workspace, "opencode.json"), `${JSON.stringify(input.opencodeConfig, null, 2)}\n`);
+  if (input.weaveConfig) {
+    await writeFile(path.join(input.workspace, ".opencode", "weave-opencode.jsonc"), `${JSON.stringify(input.weaveConfig, null, 2)}\n`);
+  }
   await writeFile(path.join(input.workspace, ".opencode", "lattice-pipelines", "restaurant-booking-eval.ts"), input.pipelineTemplate);
   await cp(
     path.join(input.root, "templates", "scripts", "deterministic-checks.mjs"),

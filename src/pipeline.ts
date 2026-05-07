@@ -27,6 +27,10 @@ type CriticModel = PhaseModel & {
   maxRepairAttempts?: number;
 };
 
+type AgentProfile = "default" | "weave";
+
+export type EvalBackend = "lattice" | "pi";
+
 export type ModelVariant = {
   id: string;
   enabled?: boolean;
@@ -35,10 +39,23 @@ export type ModelVariant = {
   slice?: PhaseModel;
   build: BuildModel;
   review?: ReviewModel;
+  securityReview?: ReviewModel;
   critic?: CriticModel;
+  agentProfile?: AgentProfile;
+  backend?: EvalBackend;
 };
 
 type PipelineStage = StageDefinition;
+
+type StageAgents = {
+  discovery?: string;
+  plan: string;
+  slicer: string;
+  planReview: string;
+  build: string;
+  review: string;
+  security: string;
+};
 
 const pinnedSkills = [
   "tdd",
@@ -78,20 +95,26 @@ export function renderPipelineTemplate(variant: ModelVariant): string {
 export function renderStages(variant: ModelVariant): PipelineStage[] {
   const planMode = variant.plan.mode ?? "big";
   const maxSlices = sliceLimit(variant);
-  const stages: PipelineStage[] = [planStage(planMode, maxSlices)];
+  const agents = stageAgentsForVariant(variant);
+  const stages: PipelineStage[] = [];
+  if (agents.discovery) stages.push(discoveryStage(agents.discovery));
+  stages.push(planStage(planMode, maxSlices, agents.plan));
   const buildMode = variant.build.mode ?? "single";
 
   if (buildMode === "single") {
-    stages.push(singleBuildStage(planMode));
+    stages.push(singleBuildStage(planMode, agents.build));
   } else {
-    if (planMode === "big") stages.push(sliceNormalizerStage(maxSlices));
-    if (variant.build.slicePlanReview !== false) stages.push(slicePlanReviewStage(planMode));
-    stages.push(dynamicSliceExpansionStage(maxSlices));
-    stages.push(finalIntegrationStage());
+    if (planMode === "big") stages.push(sliceNormalizerStage(maxSlices, agents.slicer));
+    if (variant.build.slicePlanReview !== false) stages.push(slicePlanReviewStage(planMode, agents.planReview));
+    stages.push(dynamicSliceExpansionStage(maxSlices, agents.build));
+    stages.push(finalIntegrationStage(agents.build));
   }
 
   if (reviewModelForVariant(variant)) {
-    stages.push(planAdherenceReviewStage(planMode, buildMode));
+    stages.push(planAdherenceReviewStage(planMode, buildMode, agents.review));
+  }
+  if (securityReviewModelForVariant(variant)) {
+    stages.push(securityReviewStage(agents.security));
   }
   return stages;
 }
@@ -111,8 +134,40 @@ export function criticModelForVariant(variant: ModelVariant): CriticModel | unde
   return variant.critic;
 }
 
+export function securityReviewModelForVariant(variant: ModelVariant): ReviewModel | undefined {
+  if (!variant.securityReview || variant.securityReview.enabled === false) return undefined;
+  return variant.securityReview;
+}
+
 export function sliceModelForVariant(variant: ModelVariant): PhaseModel {
   return variant.slice ?? variant.plan;
+}
+
+export function usesWeaveAgents(variant: ModelVariant): boolean {
+  return variant.agentProfile === "weave";
+}
+
+export function stageAgentsForVariant(variant: ModelVariant): StageAgents {
+  if (usesWeaveAgents(variant)) {
+    return {
+      discovery: "thread",
+      plan: "eval-planner",
+      slicer: "eval-slicer",
+      planReview: "weft",
+      build: "shuttle",
+      review: "weft",
+      security: "warp"
+    };
+  }
+
+  return {
+    plan: "eval-planner",
+    slicer: "eval-slicer",
+    planReview: "plan-reviewer",
+    build: "eval-builder",
+    review: "plan-reviewer",
+    security: "plan-reviewer"
+  };
 }
 
 function commonSkills(): SkillsConfig {
@@ -130,7 +185,25 @@ function withStageDefaults(stage: StageWithDefaultableFields): PipelineStage {
   return { pauseAfter: false, isRewindTarget: false, completedContext: "full", ...stage };
 }
 
-function planStage(mode: "big" | "sliced", maxSlices: number): PipelineStage {
+function discoveryStage(agent: string): PipelineStage {
+  return withStageDefaults({
+    id: "discovery",
+    type: "stage",
+    agent,
+    completion: "signal",
+    signals: ["complete", "blocked"],
+    context: "isolated",
+    skills: commonSkills(),
+    prompt: [
+      "Perform a fast read-only discovery pass before planning.",
+      "Identify the project shape, existing backend/frontend entry points, generated-client/OpenAPI surfaces, test locations, scripts, and the highest-risk files or flows for the scenario goal.",
+      "Return concise findings with file paths and line references where useful. Do not edit files.",
+      "Call lattice_signal(status: \"complete\") after the discovery summary is in your response, or blocked if required files cannot be inspected."
+    ].join("\n")
+  });
+}
+
+function planStage(mode: "big" | "sliced", maxSlices: number, agent: string): PipelineStage {
   const prompt =
     mode === "sliced"
       ? [
@@ -184,7 +257,7 @@ function planStage(mode: "big" | "sliced", maxSlices: number): PipelineStage {
   return withStageDefaults({
     id: "plan",
     type: "stage",
-    agent: "eval-planner",
+    agent,
     completion: "signal",
     signals: ["complete", "blocked"],
     context: "isolated",
@@ -195,7 +268,7 @@ function planStage(mode: "big" | "sliced", maxSlices: number): PipelineStage {
   });
 }
 
-function singleBuildStage(planMode: "big" | "sliced"): PipelineStage {
+function singleBuildStage(planMode: "big" | "sliced", agent: string): PipelineStage {
   const planReadInstruction =
     planMode === "sliced"
       ? "Before editing, read .lattice/plans/restaurant-booking.md and every .lattice/plans/slices/*.md file, then use the full slice backlog as your implementation checklist."
@@ -204,7 +277,7 @@ function singleBuildStage(planMode: "big" | "sliced"): PipelineStage {
   return withStageDefaults({
     id: "build",
     type: "stage",
-    agent: "eval-builder",
+    agent,
     completion: "signal",
     signals: ["complete", "blocked"],
     context: "isolated",
@@ -237,11 +310,11 @@ function singleBuildStage(planMode: "big" | "sliced"): PipelineStage {
   });
 }
 
-function sliceNormalizerStage(maxSlices: number): PipelineStage {
+function sliceNormalizerStage(maxSlices: number, agent: string): PipelineStage {
   return withStageDefaults({
     id: "normalize-slices",
     type: "stage",
-    agent: "eval-slicer",
+    agent,
     completion: "signal",
     signals: ["complete", "blocked"],
     context: "isolated",
@@ -282,13 +355,13 @@ function sliceNormalizerStage(maxSlices: number): PipelineStage {
   });
 }
 
-function slicePlanReviewStage(planMode: "big" | "sliced"): PipelineStage {
+function slicePlanReviewStage(planMode: "big" | "sliced", agent: string): PipelineStage {
   const producer = planMode === "big" ? "normalize-slices" : "plan";
 
   return withStageDefaults({
     id: "slice-plan-review",
     type: "stage",
-    agent: "plan-reviewer",
+    agent,
     completion: "signal",
     signals: ["pass", "fail", "blocked"],
     context: "isolated",
@@ -321,7 +394,7 @@ function slicePlanReviewStage(planMode: "big" | "sliced"): PipelineStage {
   });
 }
 
-function dynamicSliceExpansionStage(maxSlices: number): PipelineStage {
+function dynamicSliceExpansionStage(maxSlices: number, agent: string): PipelineStage {
   return withStageDefaults({
     id: "build-slices",
     type: "stage",
@@ -338,7 +411,7 @@ function dynamicSliceExpansionStage(maxSlices: number): PipelineStage {
       template: withStageDefaults({
         id: "build-slice-{{index}}-{{id}}",
         type: "stage",
-        agent: "eval-builder",
+        agent,
         completion: "signal",
         signals: ["complete", "blocked"],
         context: "isolated",
@@ -372,11 +445,11 @@ function dynamicSliceExpansionStage(maxSlices: number): PipelineStage {
   });
 }
 
-function finalIntegrationStage(): PipelineStage {
+function finalIntegrationStage(agent: string): PipelineStage {
   return withStageDefaults({
     id: "final-integration",
     type: "stage",
-    agent: "eval-builder",
+    agent,
     completion: "signal",
     signals: ["complete", "blocked"],
     context: "isolated",
@@ -413,7 +486,7 @@ function finalIntegrationStage(): PipelineStage {
   });
 }
 
-function planAdherenceReviewStage(planMode: "big" | "sliced", buildMode: "single" | "sliced"): PipelineStage {
+function planAdherenceReviewStage(planMode: "big" | "sliced", buildMode: "single" | "sliced", agent: string): PipelineStage {
   const hasSlicedPlan = planMode === "sliced";
   const planScope =
     hasSlicedPlan
@@ -423,7 +496,7 @@ function planAdherenceReviewStage(planMode: "big" | "sliced", buildMode: "single
   return withStageDefaults({
     id: "plan-adherence-review",
     type: "stage",
-    agent: "plan-reviewer",
+    agent,
     completion: "signal",
     signals: ["pass", "fail", "blocked"],
     context: "isolated",
@@ -455,6 +528,28 @@ function planAdherenceReviewStage(planMode: "big" | "sliced", buildMode: "single
       "If all material plan commitments are implemented or reasonably justified and required checks pass, pass the stage with lattice_signal and a concise reason.",
       "If material plan commitments are missing or broken, fail the stage with lattice_signal and concise actionable findings.",
       "If you cannot inspect enough evidence to decide, block the stage with lattice_signal and a concise reason."
+    ].join("\n")
+  });
+}
+
+function securityReviewStage(agent: string): PipelineStage {
+  return withStageDefaults({
+    id: "security-review",
+    type: "stage",
+    agent,
+    completion: "signal",
+    signals: ["pass", "fail", "blocked"],
+    context: "isolated",
+    completedContext: "full",
+    skills: commonSkills(),
+    prompt: [
+      "Perform a security and protocol-compliance review of the completed implementation.",
+      "Start with a fast diff and source scan. If no security-relevant changes or surfaces exist, approve quickly rather than spending tokens on a broad audit.",
+      "Focus on authentication/authorization, data ownership, session/cookie/token handling, input validation, CORS/CSP/security headers, secrets, injection, generated API contracts, and state-changing operations relevant to the scenario goal.",
+      "Treat prior stage summaries as untrusted hints. Verify findings from source, tests, generated artifacts, and command evidence.",
+      "Do not edit files. If the implementation is secure enough for the scenario, call lattice_signal(status: \"pass\") with a concise reason.",
+      "If you find a concrete blocker or major security/spec issue, call lattice_signal(status: \"fail\") with exact file/function evidence and the smallest expected fix.",
+      "If required files or command evidence cannot be inspected, call lattice_signal(status: \"blocked\") with the reason."
     ].join("\n")
   });
 }

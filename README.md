@@ -6,7 +6,8 @@ Runs an OpenCode + Lattice eval where each model variant builds a .NET 10 API an
 
 - Node/npm/npx
 - .NET SDK 10
-- OpenCode provider credentials configured for the models in `models.json`
+- OpenCode provider credentials configured for the Lattice/judge models in `models.json`
+- Pi credentials configured when running `--backend pi`
 
 This machine currently has Node `25.9.0`, npm/npx `11.12.1`, and .NET SDK `10.0.107`.
 
@@ -34,6 +35,12 @@ npm install
 npm start -- --2 --base ./baselines/scenario-2 --variant openai-gpt-5.5-plan-build
 ```
 
+Run the same variant through Pi staged sessions instead of Lattice:
+
+```bash
+npm start -- --2 --base ./baselines/scenario-2 --variant openai-gpt-5.5-plan-build --backend pi
+```
+
 ## Run All Variants
 
 ```bash
@@ -48,12 +55,15 @@ The current default matrix is intentionally small. It reflects prior exploratory
 |---|---|---|---|---|
 | `openai-gpt-5.5-plan-build` | OpenAI GPT-5.5 | OpenAI GPT-5.5 | none | Proprietary quality reference. Review was not materially useful in prior OpenAI runs. |
 | `deepseek-v4-pro-plan-flash-build-mimo-review` | DeepSeek V4 Pro | DeepSeek V4 Flash | Mimo v2.5 Pro | Tests whether cheap DeepSeek implementation plus independent open-model review beats paying for Pro implementation. |
+| `deepseek-v4-pro-plan-flash-build-weave-review` | DeepSeek V4 Pro | Weave `shuttle` on DeepSeek V4 Flash | Weave `weft` on Mimo v2.5 Pro plus `warp` on DeepSeek V4 Pro | Disabled by default. Tests using Weave specialist agents as Lattice stage workers while Lattice remains the outer orchestrator. |
 | `deepseek-v4-pro-plan-flash-sliced-build-mimo-review` | DeepSeek V4 Pro compact direct sliced plan, max 3 slices | DeepSeek V4 Flash sliced execution | Mimo v2.5 Pro post-build review | Faster sliced execution test: skips big-plan normalization and pre-build slice-plan review, then keeps final integration plus cross-model review on the completed implementation. |
 | `deepseek-v4-pro-sliced-plan-flash-build-mimo-review` | DeepSeek V4 Pro compact direct sliced plan, max 3 slices | DeepSeek V4 Flash single-context execution | Mimo v2.5 Pro | Tests whether sliced planning quality can be preserved without serial fresh-context slice-build overhead. |
 | `deepseek-v4-pro-plan-pro-build` | DeepSeek V4 Pro | DeepSeek V4 Pro | none | Open-model quality ceiling/control without review overhead. |
 | `mimo-v2.5-pro-plan-mimo-v2.5-build-deepseek-review` | Mimo v2.5 Pro | Mimo v2.5 | DeepSeek V4 Pro | Tests Mimo planning/building with independent DeepSeek review. |
 
 The `review` field in `models.json` is optional. When a variant omits `review`, the generated workspace pipeline excludes the `plan-adherence-review` stage. When present, the review stage is included and uses the configured review model/options.
+
+Variants with `agentProfile: "weave"` use Weave specialist agents directly in Lattice: `thread` for discovery, `shuttle` for implementation, `weft` for plan-adherence review, and `warp` for security review. The runner writes `.opencode/weave-opencode.jsonc` into each workspace to map those Weave agents to the variant's configured models.
 
 `plan.mode` and `build.mode` are optional. Defaults preserve the original behavior: `plan.mode: "big"` and `build.mode: "single"`. A sliced build keeps the big plan available, normalizes it into a task-specific `.lattice/plans/slices/manifest.json` plus referenced slice files, then emits a Lattice v3 `expand` stage that creates exactly one fresh-context build stage per manifest slice before final integration and optional review. A sliced plan with single build creates the same manifest/slice backlog but hands the whole backlog to one build agent, avoiding serial fresh-context slice-build overhead. The slice names, count, order, and acceptance criteria come from the generated plan, not from restaurant-specific harness phases.
 
@@ -85,6 +95,8 @@ EVAL_ARCHIVE_DIR=/tmp/my-eval-archive npm start -- --1
 ```
 
 The scenario argument is required. Use `--1`, `--2`, `--scenario 1`, or `--scenario 2`.
+
+`--backend pi` runs separate Pi SDK sessions for plan, build, critic, and any critic repair stages while preserving `.lattice` plan/state artifacts and telemetry shape. Omit it to use the default Lattice backend.
 
 `--skipSkills` is useful for smoke-testing the harness wiring. Real eval runs should keep skills enabled.
 
@@ -118,7 +130,7 @@ Each result includes:
 - duration
 - latest `.lattice/state/*.json` pipeline state
 - generated implementation plan from `.lattice/plans/restaurant-booking.md`
-- token/cost telemetry totals, per-stage Lattice telemetry, and judge telemetry
+- token/cost telemetry totals, per-stage Lattice or Pi telemetry, and judge telemetry
 - verification command results
 - generated file tree
 - LLM judge scores and findings
@@ -165,4 +177,5 @@ The LLM judge is instructed to treat these command results as mandatory evidence
 - Completed workspaces are moved to `run-archive/scenario-<n>/<run-id>/` with the run's `result.json` stored alongside the generated code.
 - OpenCode external-directory access is limited to `/tmp/*` to reduce accidental access to prior runs/results and the harness source.
 - The pipeline has no approval gate so it can run unattended.
+- Pi backend runs through the Pi SDK, filters resources to workspace-installed skills, disables ambient extensions/context files, and stores Pi sessions under `.lattice/pi/sessions/`.
 - Lattice v3 removed post-hooks; the final runner remains the authoritative deterministic verification step.
