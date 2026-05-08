@@ -96,7 +96,9 @@ EVAL_ARCHIVE_DIR=/tmp/my-eval-archive npm start -- --1
 
 The scenario argument is required. Use `--1`, `--2`, `--scenario 1`, or `--scenario 2`.
 
-`--backend pi` runs separate Pi SDK sessions for plan, build, critic, and any critic repair stages while preserving `.lattice` plan/state artifacts and telemetry shape. Omit it to use the default Lattice backend.
+`--backend pi` runs separate Pi SDK sessions for plan, build, critic, and any critic repair stages while preserving `.lattice` plan/state artifacts and telemetry shape. `--backend pi-single` runs one normal Pi CLI process with your usual Pi extensions/subagents/config loaded; it does not require a saved plan artifact. Pi uses Pi's model registry/auth; `openai/*` variants automatically fall back to authenticated `openai-codex/*` when the same model exists. Omit backend to use Lattice.
+
+For `--backend pi-single`, `result.json` records `pipelineState.stages[].skillUsage`: available skills plus read-tool and `/skill:` invocation evidence with event ranges from Pi JSONL.
 
 `--skipSkills` is useful for smoke-testing the harness wiring. Real eval runs should keep skills enabled.
 
@@ -177,5 +179,6 @@ The LLM judge is instructed to treat these command results as mandatory evidence
 - Completed workspaces are moved to `run-archive/scenario-<n>/<run-id>/` with the run's `result.json` stored alongside the generated code.
 - OpenCode external-directory access is limited to `/tmp/*` to reduce accidental access to prior runs/results and the harness source.
 - The pipeline has no approval gate so it can run unattended.
-- Pi backend runs through the Pi SDK, filters resources to workspace-installed skills, disables ambient extensions/context files, and stores Pi sessions under `.lattice/pi/sessions/`.
+- `--backend pi` runs through the Pi SDK, filters resources to workspace-installed skills, disables ambient extensions/context files, and stores Pi sessions under `.lattice/pi/sessions/`.
+- `--backend pi-single` runs the normal `pi --mode json` CLI from the workspace, preserving your usual Pi extensions/subagents/config while still writing synthetic `.lattice` state and telemetry.
 - Lattice v3 removed post-hooks; the final runner remains the authoritative deterministic verification step.

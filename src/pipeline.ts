@@ -29,7 +29,7 @@ type CriticModel = PhaseModel & {
 
 type AgentProfile = "default" | "weave";
 
-export type EvalBackend = "lattice" | "pi";
+export type EvalBackend = "lattice" | "pi" | "pi-single";
 
 export type ModelVariant = {
   id: string;

@@ -1,5 +1,7 @@
 // pattern: Imperative Shell
 
+import { spawn } from "node:child_process";
+import { createWriteStream, type Dirent } from "node:fs";
 import {
   AuthStorage,
   createAgentSession,
@@ -10,7 +12,7 @@ import {
   SessionManager,
   type Skill
 } from "@mariozechner/pi-coding-agent";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { Type } from "typebox";
 import type { CommandResult } from "./checks.js";
@@ -21,6 +23,12 @@ import {
   type ModelVariant,
   type PhaseModel
 } from "./pipeline.js";
+import {
+  createPiSkillUsageAccumulator,
+  recordPiSkillUsageEvent,
+  summarizePiSkillUsage,
+  type PiSkillUsageSummary
+} from "./pi-skill-usage.js";
 import type { AssistantTelemetry, TokenTelemetry } from "./telemetry.js";
 import { listFiles, waitForStableWorkspace } from "./workspace.js";
 
@@ -38,11 +46,12 @@ export type PiPipelineStage = {
     observedModel?: string;
     observedProvider?: string;
   };
+  skillUsage?: PiSkillUsageSummary;
 };
 
 export type PiPipelineState = {
   name: "restaurant-booking-eval";
-  backend: "pi";
+  backend: "pi" | "pi-single";
   status: "running" | "completed" | "failed";
   stages: PiPipelineStage[];
   createdAt: string;
@@ -89,7 +98,7 @@ export async function runPiPipeline(input: {
   await mkdir(path.join(input.workspace, ".lattice", "pi", "stage-outputs"), { recursive: true });
   await mkdir(path.join(input.workspace, ".lattice", "state"), { recursive: true });
 
-  const state = newPiState();
+  const state = newPiState("pi");
   await writePiState(input.workspace, state);
 
   try {
@@ -108,6 +117,7 @@ export async function runPiPipeline(input: {
     state.stages.push(planStage);
     await writeStageOutput(input.workspace, "pi-plan", planStage.summary ?? "");
     await writePiState(input.workspace, markStateRunning(state));
+    assertStageCompleted(planStage);
 
     const plan = await readPlan(input.workspace);
 
@@ -126,6 +136,7 @@ export async function runPiPipeline(input: {
     state.stages.push(buildStage);
     await writeStageOutput(input.workspace, "pi-build", buildStage.summary ?? "");
     await writePiState(input.workspace, markStateRunning(state));
+    assertStageCompleted(buildStage);
 
     input.log(`${input.variant.id}: Pi build completed; waiting for workspace to settle before checks`);
     await waitForStableWorkspace(input.workspace, 10_000, 120_000, input.log);
@@ -157,9 +168,73 @@ export async function runPiPipeline(input: {
     const failed = markStateFailed(state, errorSummary(error));
     await writePiState(input.workspace, failed);
     input.log(`${input.variant.id}: Pi pipeline failed: ${errorSummary(error)}`);
+    const fileTree = await listFiles(input.workspace, 500);
+    return { pipelineState: failed, plan: await readPlan(input.workspace), checks: [], fileTree, critic: [] };
+  }
+}
+
+export async function runPiSingleProcess(input: {
+  workspace: string;
+  variant: ModelVariant;
+  scenario: ScenarioConfig;
+  task: string;
+  timeoutMs: number;
+  runChecks: RunChecks;
+  log: Logger;
+}): Promise<PiPipelineResult> {
+  await mkdir(path.join(input.workspace, ".lattice", "pi", "sessions"), { recursive: true });
+  await mkdir(path.join(input.workspace, ".lattice", "pi", "stage-outputs"), { recursive: true });
+  await mkdir(path.join(input.workspace, ".lattice", "state"), { recursive: true });
+
+  const state = newPiState("pi-single");
+  await writePiState(input.workspace, state);
+  const startedAt = new Date();
+  const stage: PiPipelineStage = {
+    id: "pi-single",
+    agent: "pi",
+    status: "running",
+    startedAt: startedAt.toISOString()
+  };
+  state.stages.push(stage);
+  await writePiState(input.workspace, markStateRunning(state));
+
+  try {
+    input.log(`${input.variant.id}: Pi single-process run`);
+    const piModel = modelNameForPi(input.variant.build.model);
+    await writePiSingleProjectSettings(input.workspace, input.variant);
+    const result = await runPiCliJson({
+      workspace: input.workspace,
+      model: piModel,
+      prompt: buildSingleProcessPrompt(input.task),
+      timeoutMs: input.timeoutMs,
+      log: input.log
+    });
+    const completedAt = new Date();
+    stage.status = result.exitCode === 0 ? "completed" : "failed";
+    stage.completedAt = completedAt.toISOString();
+    stage.summary = lastAssistantText(result.messages);
+    stage.telemetry = stageTelemetry(result.messages, input.variant.build.model);
+    stage.skillUsage = result.skillUsage;
+    if (result.exitCode !== 0) stage.error = `pi exited ${result.exitCode}: ${result.stderr.slice(0, 2000)}`;
+    await writeStageOutput(input.workspace, "pi-single", stage.summary ?? "");
+    await writePiState(input.workspace, markStateCompleted(state));
+    assertStageCompleted(stage);
+
+    input.log(`${input.variant.id}: Pi single-process completed; waiting for workspace to settle before checks`);
+    await waitForStableWorkspace(input.workspace, 10_000, 120_000, input.log);
+    input.log(`${input.variant.id}: running deterministic checks after Pi single-process run`);
     const checks = await input.runChecks(input.workspace, input.scenario.id);
     const fileTree = await listFiles(input.workspace, 500);
-    return { pipelineState: failed, plan: await readPlan(input.workspace), checks, fileTree, critic: [] };
+    return { pipelineState: markStateCompleted(state), plan: await readPlan(input.workspace), checks, fileTree, critic: [] };
+  } catch (error) {
+    stage.status = "failed";
+    stage.completedAt = new Date().toISOString();
+    stage.error = errorSummary(error);
+    const failed = markStateFailed(state, errorSummary(error));
+    await writePiState(input.workspace, failed);
+    input.log(`${input.variant.id}: Pi single-process failed: ${errorSummary(error)}`);
+    const fileTree = await listFiles(input.workspace, 500);
+    return { pipelineState: failed, plan: await readPlan(input.workspace), checks: [], fileTree, critic: [] };
   }
 }
 
@@ -205,6 +280,7 @@ async function runPiCriticRepairLoop(input: {
     input.state.stages.push(critic.stage);
     await writeStageOutput(input.workspace, `pi-critic-${attempt}`, JSON.stringify(critic.output, null, 2));
     await writePiState(input.workspace, markStateRunning(input.state));
+    assertStageCompleted(critic.stage);
 
     const shouldRepair = criticNeedsRepair(critic.output) && attempt <= maxRepairAttempts;
     const summary: PiCriticAttemptSummary = {
@@ -239,6 +315,7 @@ async function runPiCriticRepairLoop(input: {
     input.state.stages.push(repair);
     await writeStageOutput(input.workspace, `pi-repair-${attempt}`, repair.summary ?? "");
     await writePiState(input.workspace, markStateRunning(input.state));
+    assertStageCompleted(repair);
     summary.repairTelemetry = repair.telemetry ?? emptyTelemetry();
     attempts.push(summary);
 
@@ -392,7 +469,7 @@ async function createPiSession(input: {
   const authStorage = AuthStorage.create();
   const modelRegistry = ModelRegistry.create(authStorage);
   const [provider, modelId] = splitModel(input.phase.model);
-  const model = modelRegistry.find(provider, modelId);
+  const model = resolvePiModel(modelRegistry, provider, modelId);
   if (!model) throw new Error(`Pi model not found: ${input.phase.model}`);
 
   const resourceLoader = new DefaultResourceLoader({
@@ -489,6 +566,23 @@ function buildCriticPrompt(details: {
   ].join("\n");
 }
 
+function buildSingleProcessPrompt(task: string): string {
+  return [
+    "You are running Pi as the user normally uses it for a coding-agent eval.",
+    "Use your normal Pi capabilities, extensions, subagents, skills, and tools as appropriate. Do not artificially split into harness stages.",
+    "Implement the scenario task completely in this workspace.",
+    "You do not need to write a separate plan file; keep planning in-process unless you personally need an artifact.",
+    "If you use subagents or review tools, use them the way you normally would.",
+    "Before finishing, run `node .opencode/scripts/deterministic-checks.mjs --json` or equivalent deterministic checks and fix failures you can.",
+    "Do an internal quality/critic pass before final response; repair blocker/major issues you find.",
+    "Do not inspect eval archive/result files. Work only on product source, tests, generated artifacts, scripts, and docs.",
+    "Final response: concise summary of changes, checks run, and any known limitations.",
+    "",
+    "## Scenario Task",
+    task
+  ].join("\n");
+}
+
 function buildRepairPrompt(details: { task: string; plan: string | null; checks: CommandResult[]; criticOutput: unknown }): string {
   return [
     "You are the repair stage for an unattended coding-agent eval.",
@@ -513,6 +607,186 @@ function buildRepairPrompt(details: { task: string; plan: string | null; checks:
   ].join("\n");
 }
 
+async function writePiSingleProjectSettings(workspace: string, variant: ModelVariant): Promise<void> {
+  const buildModel = modelNameForPi(variant.build.model);
+  const planModel = modelNameForPi(variant.plan.model);
+  const scoutModel = modelNameForPi((variant.slice ?? variant.plan).model);
+  const reviewModel = modelNameForPi((criticModelForVariant(variant) ?? reviewModelForVariant(variant) ?? variant.plan).model);
+  const [provider, modelId] = splitModel(buildModel);
+  const settingsPath = path.join(workspace, ".pi", "settings.json");
+  await mkdir(path.dirname(settingsPath), { recursive: true });
+  const existing = await readJsonObject(settingsPath);
+  const enabledModels = Array.from(new Set([buildModel, planModel, scoutModel, reviewModel]));
+  const override = {
+    defaultProvider: provider,
+    defaultModel: modelId,
+    defaultThinkingLevel: thinkingLevelForPhase(variant.build),
+    enabledModels,
+    subagents: {
+      agentOverrides: {
+        scout: { model: scoutModel, thinking: thinkingLevelForPhase(variant.slice ?? variant.plan) },
+        researcher: { model: scoutModel, thinking: thinkingLevelForPhase(variant.slice ?? variant.plan) },
+        "context-builder": { model: planModel, thinking: thinkingLevelForPhase(variant.plan) },
+        planner: { model: planModel, thinking: thinkingLevelForPhase(variant.plan) },
+        worker: { model: buildModel, thinking: thinkingLevelForPhase(variant.build) },
+        reviewer: { model: reviewModel, thinking: thinkingLevelForReview(variant) },
+        oracle: { model: reviewModel, thinking: "xhigh" }
+      }
+    }
+  };
+  await writeFile(settingsPath, `${JSON.stringify(deepMerge(existing, override), null, 2)}\n`);
+}
+
+function thinkingLevelForReview(variant: ModelVariant): any {
+  return thinkingLevelForPhase(criticModelForVariant(variant) ?? reviewModelForVariant(variant) ?? variant.plan);
+}
+
+async function readJsonObject(filePath: string): Promise<Record<string, unknown>> {
+  try {
+    const parsed = JSON.parse(await readFile(filePath, "utf8"));
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+async function listAvailableSkills(workspace: string): Promise<string[]> {
+  const roots = [path.join(workspace, ".pi", "skills"), path.join(workspace, ".agents", "skills")];
+  const names = new Set<string>();
+  for (const root of roots) {
+    let entries: Dirent[];
+    try {
+      entries = await readdir(root, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      if (entry.isDirectory()) names.add(entry.name);
+    }
+  }
+  return Array.from(names).sort();
+}
+
+function deepMerge(base: Record<string, unknown>, override: Record<string, unknown>): Record<string, unknown> {
+  const merged: Record<string, unknown> = { ...base };
+  for (const [key, value] of Object.entries(override)) {
+    const current = merged[key];
+    merged[key] = isPlainObject(current) && isPlainObject(value) ? deepMerge(current, value) : value;
+  }
+  return merged;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+async function runPiCliJson(input: {
+  workspace: string;
+  model: string;
+  prompt: string;
+  timeoutMs: number;
+  log: Logger;
+}): Promise<{ exitCode: number | null; stderr: string; messages: any[]; skillUsage: PiSkillUsageSummary }> {
+  const stdoutPath = path.join(input.workspace, ".lattice", "pi", "stage-outputs", "pi-single.jsonl");
+  const stderrPath = path.join(input.workspace, ".lattice", "pi", "stage-outputs", "pi-single.stderr.txt");
+  await writeFile(stdoutPath, "");
+  await writeFile(stderrPath, "");
+  const stdoutFile = createWriteStream(stdoutPath, { flags: "a" });
+  const stderrFile = createWriteStream(stderrPath, { flags: "a" });
+  const skillUsage = createPiSkillUsageAccumulator(await listAvailableSkills(input.workspace));
+
+  const args = ["--mode", "json", "--session-dir", path.join(".lattice", "pi", "sessions"), "--model", input.model, input.prompt];
+  input.log(`Pi CLI: pi --mode json --session-dir .lattice/pi/sessions --model ${input.model} <prompt>`);
+  const started = Date.now();
+
+  return await new Promise((resolve, reject) => {
+    const child = spawn("pi", args, { cwd: input.workspace, env: process.env, stdio: ["ignore", "pipe", "pipe"] });
+    let stderr = "";
+    let pending = "";
+    let messages: any[] = [];
+    let jsonBytes = 0;
+    let lastActivity = Date.now();
+    const assistantMessages: any[] = [];
+    const heartbeat = setInterval(() => {
+      input.log(`Pi CLI: still running after ${Math.round((Date.now() - started) / 60000)}m (${jsonBytes} JSON bytes, last output ${Math.round((Date.now() - lastActivity) / 1000)}s ago)`);
+    }, 60_000);
+    const timer = setTimeout(() => {
+      child.kill("SIGTERM");
+      reject(new Error(`pi-single timed out after ${Math.round(input.timeoutMs / 60000)}m`));
+    }, input.timeoutMs);
+
+    child.stdout.on("data", (chunk) => {
+      const text = chunk.toString();
+      stdoutFile.write(text);
+      jsonBytes += Buffer.byteLength(text);
+      lastActivity = Date.now();
+      pending += text;
+      const lines = pending.split("\n");
+      pending = lines.pop() ?? "";
+      for (const line of lines) {
+        consumePiJsonLine(line, assistantMessages, input.workspace, skillUsage, input.log, (agentMessages) => {
+          messages = agentMessages;
+        });
+      }
+    });
+    child.stderr.on("data", (chunk) => {
+      const text = chunk.toString();
+      stderr += text;
+      stderrFile.write(text);
+    });
+    child.on("close", (exitCode) => {
+      clearTimeout(timer);
+      clearInterval(heartbeat);
+      stdoutFile.end();
+      stderrFile.end();
+      if (pending.trim()) {
+        consumePiJsonLine(pending, assistantMessages, input.workspace, skillUsage, input.log, (agentMessages) => {
+          messages = agentMessages;
+        });
+      }
+      input.log(`Pi CLI: exited ${exitCode} in ${Math.round((Date.now() - started) / 1000)}s`);
+      resolve({ exitCode, stderr, messages: messages.length > 0 ? messages : assistantMessages, skillUsage: summarizePiSkillUsage(skillUsage) });
+    });
+    child.on("error", (error) => {
+      clearTimeout(timer);
+      clearInterval(heartbeat);
+      stdoutFile.end();
+      stderrFile.end();
+      reject(error);
+    });
+  });
+}
+
+function consumePiJsonLine(
+  line: string,
+  assistantMessages: any[],
+  workspace: string,
+  skillUsage: ReturnType<typeof createPiSkillUsageAccumulator>,
+  log: Logger,
+  setMessages: (messages: any[]) => void
+): void {
+  if (!line.trim()) return;
+  let event: any;
+  try {
+    event = JSON.parse(line);
+  } catch {
+    return;
+  }
+  recordPiSkillUsageEvent(skillUsage, event, workspace);
+  if (event?.type === "agent_start") log("Pi CLI: agent started");
+  if (event?.type === "turn_start") log("Pi CLI: turn started");
+  if (event?.type === "tool_execution_start") log(`Pi CLI: tool ${event.toolName} started`);
+  if (event?.type === "tool_execution_update") log(`Pi CLI: tool ${event.toolName} update`);
+  if (event?.type === "tool_execution_end") log(`Pi CLI: tool ${event.toolName} ${event.isError ? "failed" : "completed"}`);
+  if (event?.type === "message_end" && event.message?.role === "assistant") {
+    assistantMessages.push(event.message);
+    log("Pi CLI: assistant message completed");
+  }
+  if (event?.type === "agent_end" && Array.isArray(event.messages)) {
+    setMessages(event.messages);
+  }
+}
+
 async function readPlan(workspace: string): Promise<string | null> {
   try {
     return await readFile(path.join(workspace, ".lattice", "plans", "restaurant-booking.md"), "utf8");
@@ -529,9 +803,9 @@ async function writePiState(workspace: string, state: PiPipelineState): Promise<
   await writeFile(path.join(workspace, ".lattice", "state", "pi-run.json"), `${JSON.stringify(state, null, 2)}\n`);
 }
 
-function newPiState(): PiPipelineState {
+function newPiState(backend: PiPipelineState["backend"]): PiPipelineState {
   const now = new Date().toISOString();
-  return { name: "restaurant-booking-eval", backend: "pi", status: "running", stages: [], createdAt: now, updatedAt: now };
+  return { name: "restaurant-booking-eval", backend, status: "running", stages: [], createdAt: now, updatedAt: now };
 }
 
 function markStateRunning(state: PiPipelineState): PiPipelineState {
@@ -641,6 +915,11 @@ function parseJsonObject(text: string): unknown {
   }
 }
 
+function assertStageCompleted(stage: PiPipelineStage): void {
+  if (stage.status === "completed") return;
+  throw new Error(`${stage.id} failed${stage.error ? `: ${stage.error}` : ""}`);
+}
+
 function repairAttemptLimit(value: unknown): number {
   if (typeof value !== "number" || !Number.isFinite(value)) return 1;
   return Math.max(0, Math.min(3, Math.trunc(value)));
@@ -677,6 +956,31 @@ async function withTimeout<T>(label: string, timeoutMs: number, action: () => Pr
   }
 }
 
+function modelNameForPi(model: string): string {
+  const authStorage = AuthStorage.create();
+  const modelRegistry = ModelRegistry.create(authStorage);
+  const [provider, modelId] = splitModel(model);
+  const resolved = resolvePiModel(modelRegistry, provider, modelId);
+  return resolved ? `${resolved.provider}/${resolved.id}` : model;
+}
+
+function resolvePiModel(modelRegistry: ModelRegistry, provider: string, modelId: string): ReturnType<ModelRegistry["find"]> {
+  const exact = modelRegistry.find(provider, modelId);
+  if (exact && modelRegistry.hasConfiguredAuth(exact)) return exact;
+
+  for (const alias of piProviderAliases(provider)) {
+    const candidate = modelRegistry.find(alias, modelId);
+    if (candidate && modelRegistry.hasConfiguredAuth(candidate)) return candidate;
+  }
+
+  return exact;
+}
+
+function piProviderAliases(provider: string): string[] {
+  if (provider === "openai") return ["openai-codex", "github-copilot", "opencode"];
+  return [];
+}
+
 function splitModel(model: string): [string, string] {
   const [provider, ...modelParts] = model.split("/");
   return [provider, modelParts.join("/")];
@@ -687,6 +991,9 @@ function numberValue(value: unknown): number {
 }
 
 function errorSummary(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return String(error);
+  const message = error instanceof Error ? error.message : String(error);
+  if (message.includes("No API key found")) {
+    return `${message}\n\nPi backend resolves models through Pi's model registry. If you logged in through OpenAI OAuth/Codex, use an openai-codex/* model or rely on the harness openai/* -> openai-codex/* fallback when that model is available.`;
+  }
+  return message;
 }

@@ -27,7 +27,7 @@ import {
   type ModelVariant,
   type PhaseModel
 } from "./pipeline.js";
-import { runPiPipeline } from "./pi-runner.js";
+import { runPiPipeline, runPiSingleProcess } from "./pi-runner.js";
 import type { ScenarioConfig } from "./run-types.js";
 import { summarizeTelemetry, telemetryFromAssistantInfo, type AssistantTelemetry, type TelemetrySummary } from "./telemetry.js";
 import { archiveRun, exists, listFiles, prepareWorkspace, waitForStableWorkspace } from "./workspace.js";
@@ -183,17 +183,27 @@ async function runVariant(input: {
 
     const client = opencode.client as any;
 
-    if ((input.variant.backend ?? "lattice") === "pi") {
-      const piResult = await runPiPipeline({
-        workspace,
-        variant: input.variant,
-        scenario: input.scenarioConfig,
-        task: input.task,
-        timeoutMs: input.timeoutMs,
-        skillsEnabled: input.skipSkills !== true,
-        runChecks,
-        log
-      });
+    if ((input.variant.backend ?? "lattice") === "pi" || input.variant.backend === "pi-single") {
+      const piResult = input.variant.backend === "pi-single"
+        ? await runPiSingleProcess({
+            workspace,
+            variant: input.variant,
+            scenario: input.scenarioConfig,
+            task: input.task,
+            timeoutMs: input.timeoutMs,
+            runChecks,
+            log
+          })
+        : await runPiPipeline({
+            workspace,
+            variant: input.variant,
+            scenario: input.scenarioConfig,
+            task: input.task,
+            timeoutMs: input.timeoutMs,
+            skillsEnabled: input.skipSkills !== true,
+            runChecks,
+            log
+          });
       const pipelineTelemetry = summarizeTelemetry(piResult.pipelineState);
       const completedAt = new Date();
 
@@ -863,8 +873,8 @@ async function makeScenarioConfig(scenario: string, args: Record<string, string>
 
 function parseBackend(value: string | undefined): EvalBackend | undefined {
   if (!value) return undefined;
-  if (value === "lattice" || value === "pi") return value;
-  throw new Error(`Invalid backend ${value}. Expected lattice or pi.`);
+  if (value === "lattice" || value === "pi" || value === "pi-single") return value;
+  throw new Error(`Invalid backend ${value}. Expected lattice, pi, or pi-single.`);
 }
 
 function parseScenario(args: Record<string, string>): string {

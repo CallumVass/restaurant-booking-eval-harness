@@ -247,6 +247,48 @@ function checksTable(checks) {
   `;
 }
 
+function skillUsageSection(result) {
+  const stages = result.pipelineState?.stages || [];
+  const rows = stages.flatMap((stage) => {
+    const usage = stage.skillUsage;
+    if (!usage) return [];
+    const used = [
+      ...(usage.read || []).map((skill) => ({ ...skill, kind: "read" })),
+      ...(usage.invoked || []).map((skill) => ({ ...skill, kind: "invoked" }))
+    ];
+    if (used.length === 0) {
+      return [`
+        <tr>
+          <td>${escapeHtml(stage.id)}</td>
+          <td colspan="5">No skill-use events recorded; ${formatNumber((usage.available || []).length)} skills available.</td>
+        </tr>
+      `];
+    }
+    return used.map((skill) => `
+      <tr>
+        <td>${escapeHtml(stage.id)}</td>
+        <td>${escapeHtml(skill.name)}</td>
+        <td>${escapeHtml(skill.kind)}</td>
+        <td>${formatNumber(skill.count)}</td>
+        <td>${formatNumber(skill.firstEventIndex)}–${formatNumber(skill.lastEventIndex)}</td>
+        <td><code>${escapeHtml(skill.path || "")}</code></td>
+      </tr>
+    `);
+  });
+  if (rows.length === 0) return "";
+  return `
+    <details>
+      <summary>Pi skill usage</summary>
+      <div class="telemetry-table">
+        <table>
+          <thead><tr><th>Stage</th><th>Skill</th><th>Evidence</th><th>Count</th><th>Event range</th><th>Path</th></tr></thead>
+          <tbody>${rows.join("")}</tbody>
+        </table>
+      </div>
+    </details>
+  `;
+}
+
 function telemetrySection(result) {
   const telemetry = result.telemetry || {};
   const stages = telemetry.stages || [];
@@ -336,6 +378,7 @@ function renderCard(item, result) {
       ${checksTable(result.checks)}
       <h3>Telemetry</h3>
       ${telemetrySection(result)}
+      ${skillUsageSection(result)}
       <details>
         <summary>Saved implementation plan</summary>
         <pre>${escapeHtml(result.plan || "No plan recorded.")}</pre>
