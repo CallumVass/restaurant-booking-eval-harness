@@ -58,16 +58,12 @@ type StageAgents = {
 };
 
 const pinnedSkills = [
-  "tdd",
-  "clean-ddd-hexagonal",
   "dotnet-backend-patterns",
   "dotnet-10-csharp-14",
   "vercel-react-best-practices",
   "shadcn",
   "tanstack-query-best-practices",
-  "orval",
-  "functional-core-imperative-shell",
-  "vertical-slice-architecture"
+  "orval"
 ];
 const defaultMaxSliceSlots = 8;
 const requirementPrecedence =
