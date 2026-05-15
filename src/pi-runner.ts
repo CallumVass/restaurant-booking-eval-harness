@@ -1,7 +1,8 @@
 // pattern: Imperative Shell
 
 import { spawn } from "node:child_process";
-import { createWriteStream, type Dirent } from "node:fs";
+import { accessSync, constants, createWriteStream, type Dirent } from "node:fs";
+import os from "node:os";
 import {
   AuthStorage,
   createAgentSession,
@@ -12,7 +13,7 @@ import {
   SessionManager,
   type Skill
 } from "@mariozechner/pi-coding-agent";
-import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { Type } from "typebox";
 import type { CommandResult } from "./checks.js";
@@ -80,6 +81,30 @@ type Logger = (message: string) => void;
 type CriticOutput = {
   verdict?: unknown;
   findings?: unknown;
+};
+
+type DelegatorProfileSummary = {
+  name: string;
+  model: string;
+  thinking: string;
+};
+
+type PiSingleSwarmSettings = {
+  enabled: boolean;
+  maxDelegationCalls: number;
+  planningAgents: number;
+  reviewAgents: number;
+  maxConcurrency: number;
+  implementationProfile: string;
+  reducerProfile: string;
+  reviewProfile: string;
+  preferWorkflow: boolean;
+};
+
+type PiSingleProjectSettings = {
+  agentDir: string;
+  delegatorProfiles: DelegatorProfileSummary[];
+  swarm: PiSingleSwarmSettings;
 };
 
 type RunChecks = (workspace: string, scenario: string) => Promise<CommandResult[]>;
@@ -201,12 +226,13 @@ export async function runPiSingleProcess(input: {
   try {
     input.log(`${input.variant.id}: Pi single-process run`);
     const piModel = modelNameForPi(input.variant.build.model);
-    await writePiSingleProjectSettings(input.workspace, input.variant);
+    const piSingleSettings = await writePiSingleProjectSettings(input.workspace, input.variant);
     const result = await runPiCliJson({
       workspace: input.workspace,
       model: piModel,
-      prompt: buildSingleProcessPrompt(input.task),
+      prompt: buildSingleProcessPrompt(input.task, piSingleSettings),
       timeoutMs: input.timeoutMs,
+      agentDir: piSingleSettings.agentDir,
       log: input.log
     });
     const completedAt = new Date();
@@ -566,17 +592,43 @@ function buildCriticPrompt(details: {
   ].join("\n");
 }
 
-function buildSingleProcessPrompt(task: string): string {
+function buildSingleProcessPrompt(task: string, settings: PiSingleProjectSettings): string {
+  const delegatorLines = settings.delegatorProfiles.length > 0
+    ? [
+        "",
+        "## Eval Delegator Profiles",
+        "Variant-specific delegator profiles are configured for this eval run:",
+        ...settings.delegatorProfiles.map((profile) => `- ${profile.name}: ${profile.model}, thinking ${profile.thinking}`)
+      ]
+    : [];
+  const swarmLines = settings.swarm.enabled
+    ? [
+        "",
+        "## Bounded Kimi-Style Swarm Protocol",
+        `Hard budget: at most ${settings.swarm.maxDelegationCalls} delegation tool calls total. Prefer delegate_workflow=${settings.swarm.preferWorkflow}; do not make repeated delegate_task calls for small questions.`,
+        `Before major edits, call delegate_workflow exactly once in mode=swarm-research or map-reduce with budget maxAgents=${settings.swarm.planningAgents}, maxConcurrency=${settings.swarm.maxConcurrency}, maxStages=2, maxRetries=0, maxTurnsPerAgent=4.`,
+        "Planning swarm roles should cover backend/domain/API, frontend/OpenAPI/TanStack/UI, tests/integration/checks, and a reducer/risk synthesis when agent budget allows.",
+        `Use profile ${settings.swarm.implementationProfile} for implementation-style child work, ${settings.swarm.reducerProfile} for synthesis/reconciliation, and ${settings.swarm.reviewProfile} for high-risk review. Reserve deep/xhigh thinking for reduce/review, not routine implementation.`,
+        "Implement primarily in the main agent after reading the swarm artifact. Do not delegate during implementation unless blocked by missing evidence.",
+        `Before final response, call delegate_workflow exactly once in mode=swarm-review with budget maxAgents=${settings.swarm.reviewAgents}, maxConcurrency=${settings.swarm.maxConcurrency}, maxStages=1, maxRetries=0, maxTurnsPerAgent=4.`,
+        "Review swarm output should list blocker/major issues only. Repair only concrete blocker/major findings, then run deterministic checks."
+      ]
+    : [];
+
   return [
     "You are running Pi as the user normally uses it for a coding-agent eval.",
-    "Use your normal Pi capabilities, extensions, subagents, skills, and tools as appropriate. Do not artificially split into harness stages.",
+    "Use your normal Pi capabilities, extensions, delegator/review tools, skills, and tools as appropriate.",
+    "This eval is non-trivial. Follow global AGENTS.md: do not do all investigation, planning, implementation, and review in the main agent.",
+    "Use bounded swarm orchestration rather than unbounded repeated delegation.",
+    "Do not mimic the harness' staged pipeline or write a separate plan file unless useful; keep orchestration lightweight and in-process.",
     "Implement the scenario task completely in this workspace.",
-    "You do not need to write a separate plan file; keep planning in-process unless you personally need an artifact.",
-    "If you use subagents or review tools, use them the way you normally would.",
+    "If delegation tools are unavailable, budget-rejected, or fail, continue without them and state why in the final response.",
     "Before finishing, run `node .opencode/scripts/deterministic-checks.mjs --json` or equivalent deterministic checks and fix failures you can.",
     "Do an internal quality/critic pass before final response; repair blocker/major issues you find.",
     "Do not inspect eval archive/result files. Work only on product source, tests, generated artifacts, scripts, and docs.",
     "Final response: concise summary of changes, checks run, and any known limitations.",
+    ...delegatorLines,
+    ...swarmLines,
     "",
     "## Scenario Task",
     task
@@ -607,38 +659,130 @@ function buildRepairPrompt(details: { task: string; plan: string | null; checks:
   ].join("\n");
 }
 
-async function writePiSingleProjectSettings(workspace: string, variant: ModelVariant): Promise<void> {
+async function writePiSingleProjectSettings(workspace: string, variant: ModelVariant): Promise<PiSingleProjectSettings> {
   const buildModel = modelNameForPi(variant.build.model);
   const planModel = modelNameForPi(variant.plan.model);
-  const scoutModel = modelNameForPi((variant.slice ?? variant.plan).model);
+  const sliceModel = variant.slice ? modelNameForPi(variant.slice.model) : undefined;
   const reviewModel = modelNameForPi((criticModelForVariant(variant) ?? reviewModelForVariant(variant) ?? variant.plan).model);
   const [provider, modelId] = splitModel(buildModel);
   const settingsPath = path.join(workspace, ".pi", "settings.json");
   await mkdir(path.dirname(settingsPath), { recursive: true });
   const existing = await readJsonObject(settingsPath);
-  const enabledModels = Array.from(new Set([buildModel, planModel, scoutModel, reviewModel]));
-  const override = {
+  const globalAgentDir = getAgentDir();
+  const globalSettings = await readJsonObject(path.join(globalAgentDir, "settings.json"));
+  const delegatorProfiles = resolvePiSingleDelegatorProfiles(variant);
+  const swarm = resolvePiSingleSwarmSettings(variant);
+  const enabledModels = Array.from(
+    new Set([
+      ...stringArray(globalSettings.enabledModels),
+      buildModel,
+      planModel,
+      ...(sliceModel ? [sliceModel] : []),
+      reviewModel,
+      ...delegatorProfiles.map((profile) => profile.model)
+    ])
+  );
+  const delegatorOverride = {
+    delegator: {
+      profiles: Object.fromEntries(delegatorProfiles.map((profile) => [profile.name, { model: profile.model, thinking: profile.thinking }])),
+      ...(swarm.enabled
+        ? {
+            parallel: { maxTasks: Math.max(swarm.planningAgents, swarm.reviewAgents), concurrency: swarm.maxConcurrency },
+            swarmPolicy: {
+              maxDelegationCalls: swarm.maxDelegationCalls,
+              preferWorkflow: swarm.preferWorkflow,
+              maxAgents: Math.max(swarm.planningAgents, swarm.reviewAgents),
+              maxConcurrency: swarm.maxConcurrency,
+              blockRecursiveDelegation: true
+            }
+          }
+        : {})
+    }
+  };
+  const piOverride = {
     defaultProvider: provider,
     defaultModel: modelId,
     defaultThinkingLevel: thinkingLevelForPhase(variant.build),
-    enabledModels,
-    subagents: {
-      agentOverrides: {
-        scout: { model: scoutModel, thinking: thinkingLevelForPhase(variant.slice ?? variant.plan) },
-        researcher: { model: scoutModel, thinking: thinkingLevelForPhase(variant.slice ?? variant.plan) },
-        "context-builder": { model: planModel, thinking: thinkingLevelForPhase(variant.plan) },
-        planner: { model: planModel, thinking: thinkingLevelForPhase(variant.plan) },
-        worker: { model: buildModel, thinking: thinkingLevelForPhase(variant.build) },
-        reviewer: { model: reviewModel, thinking: thinkingLevelForReview(variant) },
-        oracle: { model: reviewModel, thinking: "xhigh" }
-      }
-    }
+    enabledModels
   };
-  await writeFile(settingsPath, `${JSON.stringify(deepMerge(existing, override), null, 2)}\n`);
+  const projectSettings = deepMerge(deepMerge(existing, piOverride), delegatorOverride);
+  delete projectSettings.subagents;
+  await writeFile(settingsPath, `${JSON.stringify(projectSettings, null, 2)}\n`);
+
+  const agentSettings = deepMerge(deepMerge(globalSettings, piOverride), delegatorOverride);
+  delete agentSettings.subagents;
+  const agentDir = await preparePiSingleAgentDir(workspace, globalAgentDir, agentSettings);
+  return { agentDir, delegatorProfiles, swarm };
 }
 
-function thinkingLevelForReview(variant: ModelVariant): any {
-  return thinkingLevelForPhase(criticModelForVariant(variant) ?? reviewModelForVariant(variant) ?? variant.plan);
+function resolvePiSingleSwarmSettings(variant: ModelVariant): PiSingleSwarmSettings {
+  const configured = variant.piSingle?.swarm;
+  return {
+    enabled: configured?.enabled ?? true,
+    maxDelegationCalls: positiveInteger(configured?.maxDelegationCalls, 2),
+    planningAgents: positiveInteger(configured?.planningAgents, 4),
+    reviewAgents: positiveInteger(configured?.reviewAgents, 3),
+    maxConcurrency: positiveInteger(configured?.maxConcurrency, 4),
+    implementationProfile: configured?.implementationProfile || "balanced",
+    reducerProfile: configured?.reducerProfile || "deep",
+    reviewProfile: configured?.reviewProfile || "deep",
+    preferWorkflow: configured?.preferWorkflow ?? true
+  };
+}
+
+function positiveInteger(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : fallback;
+}
+
+function resolvePiSingleDelegatorProfiles(variant: ModelVariant): DelegatorProfileSummary[] {
+  const configuredProfiles = configuredPiSingleDelegatorProfiles(variant) ?? defaultPiSingleDelegatorProfiles(variant);
+
+  return Object.entries(configuredProfiles).map(([name, profile]) => ({
+    name,
+    model: modelNameForPi(profile.model),
+    thinking: normalizeThinking(profile.thinking)
+  }));
+}
+
+async function preparePiSingleAgentDir(workspace: string, sourceAgentDir: string, settings: Record<string, unknown>): Promise<string> {
+  const agentDir = path.join(os.tmpdir(), "restaurant-booking-eval-harness-pi-single-agent", path.basename(workspace));
+  await rm(agentDir, { recursive: true, force: true });
+  await mkdir(agentDir, { recursive: true });
+
+  const skippedEntries = new Set(["settings.json", "sessions", "background-tasks", "delegator", "run-history.jsonl"]);
+  for (const entry of await readdir(sourceAgentDir, { withFileTypes: true })) {
+    if (skippedEntries.has(entry.name)) continue;
+    await symlink(path.join(sourceAgentDir, entry.name), path.join(agentDir, entry.name), entry.isDirectory() ? "dir" : "file");
+  }
+
+  await writeFile(path.join(agentDir, "settings.json"), `${JSON.stringify(settings, null, 2)}\n`);
+  return agentDir;
+}
+
+function configuredPiSingleDelegatorProfiles(variant: ModelVariant): Record<string, { model: string; thinking: string }> | undefined {
+  const profiles = variant.piSingle?.delegator?.profiles;
+  if (!isPlainObject(profiles)) return undefined;
+
+  const normalized: Record<string, { model: string; thinking: string }> = {};
+  for (const [name, profile] of Object.entries(profiles)) {
+    if (Boolean(name) && isPlainObject(profile) && typeof profile.model === "string" && typeof profile.thinking === "string") {
+      normalized[name] = { model: profile.model, thinking: profile.thinking };
+    }
+  }
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
+}
+
+function defaultPiSingleDelegatorProfiles(variant: ModelVariant): Record<string, { model: string; thinking: string }> {
+  const deepPhase = criticModelForVariant(variant) ?? reviewModelForVariant(variant) ?? variant.plan;
+  return {
+    light: { model: variant.build.model, thinking: thinkingLevelForPhase(variant.build) },
+    balanced: { model: variant.build.model, thinking: thinkingLevelForPhase(variant.build) },
+    deep: { model: deepPhase.model, thinking: thinkingLevelForPhase(deepPhase) }
+  };
+}
+
+function normalizeThinking(value: string): string {
+  return ["off", "minimal", "low", "medium", "high", "xhigh"].includes(value) ? value : "medium";
 }
 
 async function readJsonObject(filePath: string): Promise<Record<string, unknown>> {
@@ -648,6 +792,10 @@ async function readJsonObject(filePath: string): Promise<Record<string, unknown>
   } catch {
     return {};
   }
+}
+
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 }
 
 async function listAvailableSkills(workspace: string): Promise<string[]> {
@@ -685,6 +833,7 @@ async function runPiCliJson(input: {
   model: string;
   prompt: string;
   timeoutMs: number;
+  agentDir?: string;
   log: Logger;
 }): Promise<{ exitCode: number | null; stderr: string; messages: any[]; skillUsage: PiSkillUsageSummary }> {
   const stdoutPath = path.join(input.workspace, ".lattice", "pi", "stage-outputs", "pi-single.jsonl");
@@ -696,11 +845,16 @@ async function runPiCliJson(input: {
   const skillUsage = createPiSkillUsageAccumulator(await listAvailableSkills(input.workspace));
 
   const args = ["--mode", "json", "--session-dir", path.join(".lattice", "pi", "sessions"), "--model", input.model, input.prompt];
-  input.log(`Pi CLI: pi --mode json --session-dir .lattice/pi/sessions --model ${input.model} <prompt>`);
+  const piCli = piCliExecutable();
+  input.log(`Pi CLI: ${piCli} --mode json --session-dir .lattice/pi/sessions --model ${input.model} <prompt>`);
   const started = Date.now();
 
   return await new Promise((resolve, reject) => {
-    const child = spawn("pi", args, { cwd: input.workspace, env: process.env, stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(piCli, args, {
+      cwd: input.workspace,
+      env: input.agentDir ? { ...process.env, PI_CODING_AGENT_DIR: input.agentDir } : process.env,
+      stdio: ["ignore", "pipe", "pipe"]
+    });
     let stderr = "";
     let pending = "";
     let messages: any[] = [];
@@ -954,6 +1108,24 @@ async function withTimeout<T>(label: string, timeoutMs: number, action: () => Pr
   } finally {
     if (timeout) clearTimeout(timeout);
   }
+}
+
+function piCliExecutable(): string {
+  const configured = process.env.PI_SINGLE_BIN ?? process.env.PI_BIN;
+  if (configured) return configured;
+
+  for (const entry of (process.env.PATH ?? "").split(path.delimiter)) {
+    if (!entry || entry.includes(`${path.sep}node_modules${path.sep}.bin`) || entry.endsWith(`${path.sep}node_modules${path.sep}.bin`)) continue;
+    const candidate = path.join(entry, process.platform === "win32" ? "pi.cmd" : "pi");
+    try {
+      accessSync(candidate, constants.X_OK);
+      return candidate;
+    } catch {
+      // Keep searching.
+    }
+  }
+
+  return "pi";
 }
 
 function modelNameForPi(model: string): string {

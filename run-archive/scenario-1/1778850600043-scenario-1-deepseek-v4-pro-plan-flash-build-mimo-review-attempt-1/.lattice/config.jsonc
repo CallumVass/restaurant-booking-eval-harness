@@ -1,0 +1,19 @@
+{
+  "agents": {
+    "eval-planner": {
+      "model": "opencode-go/deepseek-v4-pro"
+    },
+    "eval-slicer": {
+      "model": "opencode-go/deepseek-v4-pro"
+    },
+    "plan-reviewer": {
+      "model": "opencode-go/mimo-v2.5-pro"
+    },
+    "eval-builder": {
+      "model": "opencode-go/deepseek-v4-flash"
+    },
+    "build": {
+      "model": "opencode-go/deepseek-v4-flash"
+    }
+  }
+}

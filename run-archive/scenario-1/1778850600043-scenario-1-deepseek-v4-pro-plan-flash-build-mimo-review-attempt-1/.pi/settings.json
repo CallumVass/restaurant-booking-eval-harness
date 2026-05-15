@@ -1,0 +1,40 @@
+{
+  "defaultProvider": "opencode-go",
+  "defaultModel": "deepseek-v4-flash",
+  "defaultThinkingLevel": "medium",
+  "enabledModels": [
+    "openai-codex/gpt-5.5",
+    "openai-codex/gpt-5.4",
+    "openai-codex/gpt-5.4-mini",
+    "opencode-go/deepseek-v4-flash",
+    "opencode-go/deepseek-v4-pro",
+    "opencode-go/mimo-v2.5-pro"
+  ],
+  "delegator": {
+    "profiles": {
+      "light": {
+        "model": "opencode-go/deepseek-v4-flash",
+        "thinking": "medium"
+      },
+      "balanced": {
+        "model": "opencode-go/deepseek-v4-flash",
+        "thinking": "medium"
+      },
+      "deep": {
+        "model": "opencode-go/mimo-v2.5-pro",
+        "thinking": "high"
+      }
+    },
+    "parallel": {
+      "maxTasks": 4,
+      "concurrency": 4
+    },
+    "swarmPolicy": {
+      "maxDelegationCalls": 2,
+      "preferWorkflow": true,
+      "maxAgents": 4,
+      "maxConcurrency": 4,
+      "blockRecursiveDelegation": true
+    }
+  }
+}

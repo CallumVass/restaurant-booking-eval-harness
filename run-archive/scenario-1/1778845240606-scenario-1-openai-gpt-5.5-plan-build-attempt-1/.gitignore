@@ -1,0 +1,9 @@
+node_modules/
+bin/
+obj/
+frontend/node_modules/
+.opencode/node_modules/
+.opencode/package.json
+.opencode/package-lock.json
+.opencode/skills/
+.agents/skills/

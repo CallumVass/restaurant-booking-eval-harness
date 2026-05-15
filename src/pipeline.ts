@@ -28,6 +28,31 @@ type CriticModel = PhaseModel & {
 };
 
 type AgentProfile = "default" | "weave";
+type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
+
+type DelegatorProfile = {
+  model: string;
+  thinking: ThinkingLevel;
+};
+
+type PiSingleSwarmConfig = {
+  enabled?: boolean;
+  maxDelegationCalls?: number;
+  planningAgents?: number;
+  reviewAgents?: number;
+  maxConcurrency?: number;
+  implementationProfile?: string;
+  reducerProfile?: string;
+  reviewProfile?: string;
+  preferWorkflow?: boolean;
+};
+
+type PiSingleConfig = {
+  delegator?: {
+    profiles?: Record<string, DelegatorProfile>;
+  };
+  swarm?: PiSingleSwarmConfig;
+};
 
 export type EvalBackend = "lattice" | "pi" | "pi-single";
 
@@ -43,6 +68,7 @@ export type ModelVariant = {
   critic?: CriticModel;
   agentProfile?: AgentProfile;
   backend?: EvalBackend;
+  piSingle?: PiSingleConfig;
 };
 
 type PipelineStage = StageDefinition;

@@ -24,3 +24,14 @@ run-archive/**/*.user
 run-archive/**/*.suo
 run-archive/**/*.tsbuildinfo
 run-archive/**/.DS_Store
+
+*csproj.lscache
+**/bin/
+**/obj/
+*.user
+*.suo
+*.tsbuildinfo
+run-archive/**/.pi/skills/
+run-archive/**/.lattice/pi/sessions/
+run-archive/**/.lattice/pi/stage-outputs/
+run-archive/**/.weave/runtime/
