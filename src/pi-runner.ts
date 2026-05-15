@@ -241,6 +241,18 @@ export async function runPiSingleProcess(input: {
     stage.summary = lastAssistantText(result.messages);
     stage.telemetry = stageTelemetry(result.messages, input.variant.build.model);
     stage.skillUsage = result.skillUsage;
+    const delegationTelemetry = await readDelegationTelemetry(piSingleSettings.agentDir);
+    if (delegationTelemetry) {
+      state.stages.push({
+        id: "pi-delegation",
+        agent: "pi",
+        status: "completed",
+        startedAt: startedAt.toISOString(),
+        completedAt: completedAt.toISOString(),
+        summary: "Aggregated Pi delegator child-agent usage from usage.json artifacts.",
+        telemetry: delegationTelemetry
+      });
+    }
     if (result.exitCode !== 0) stage.error = `pi exited ${result.exitCode}: ${result.stderr.slice(0, 2000)}`;
     await writeStageOutput(input.workspace, "pi-single", stage.summary ?? "");
     await writePiState(input.workspace, markStateCompleted(state));
@@ -979,6 +991,49 @@ function markStateFailed(state: PiPipelineState, error: string): PiPipelineState
   state.error = error;
   state.updatedAt = new Date().toISOString();
   return state;
+}
+
+async function readDelegationTelemetry(agentDir: string): Promise<PiPipelineStage["telemetry"] | undefined> {
+  const root = path.join(agentDir, "delegator", "runs");
+  const telemetry = emptyTelemetry();
+
+  async function walk(directory: string): Promise<void> {
+    let entries: Dirent[];
+    try {
+      entries = await readdir(directory, { withFileTypes: true });
+    } catch {
+      return;
+    }
+
+    for (const entry of entries) {
+      const entryPath = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        await walk(entryPath);
+      } else if (entry.name === "usage.json") {
+        addDelegationUsage(telemetry, await readJsonObject(entryPath));
+      }
+    }
+  }
+
+  await walk(root);
+  if (telemetry.messageCount === 0) return undefined;
+  return {
+    ...telemetry,
+    model: "delegated-workers",
+    provider: "pi-delegator",
+    observedModel: "delegated-workers",
+    observedProvider: "pi-delegator",
+    estimatedCostUSD: telemetry.costUSD
+  };
+}
+
+function addDelegationUsage(total: TokenTelemetry, usage: Record<string, unknown>): void {
+  total.tokensIn += numberValue(usage.input);
+  total.tokensOut += numberValue(usage.output);
+  total.tokensCacheRead += numberValue(usage.cacheRead);
+  total.tokensCacheWrite += numberValue(usage.cacheWrite);
+  total.costUSD += numberValue(usage.cost);
+  total.messageCount += numberValue(usage.turns);
 }
 
 function stageTelemetry(messages: any[], configuredModel: string): PiPipelineStage["telemetry"] {

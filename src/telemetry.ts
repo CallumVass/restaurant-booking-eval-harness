@@ -118,7 +118,7 @@ function extractStageTelemetry(state: unknown): TelemetrySummary["stages"] {
     };
     const model = typeof telemetryRecord.model === "string" ? telemetryRecord.model : undefined;
     const observedModel = typeof telemetryRecord.observedModel === "string" ? telemetryRecord.observedModel : undefined;
-    const estimatedCostUSD = estimatePublicCost(telemetryRecord, observedModel ?? model);
+    const estimatedCostUSD = estimatePublicCost(telemetryRecord, observedModel ?? model) ?? telemetryRecord.estimatedCostUSD;
     return [
       {
         id: typeof stageRecord.id === "string" ? stageRecord.id : "unknown",

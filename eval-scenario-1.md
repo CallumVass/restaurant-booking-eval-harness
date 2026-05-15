@@ -12,7 +12,7 @@ Costs use archived provider-reported costs where available plus estimated OpenAI
 |---:|---|---|---|---|---:|---:|---:|---:|---|
 | 1 | `openai-gpt-5.5-plan-build` | Lattice | none | completed | 91 | 11.1m | 135,605 | ~$3.54 | pass |
 | 2 | `openai-gpt-5.5-plan-build` | Pi single | bounded swarm, 2 `delegate_workflow` calls | completed | 89 | 7.7m | 110,688 | ~$1.35 | pass |
-| 3 | `deepseek-v4-pro-plan-flash-build-mimo-review` | Pi single | delegated swarm, 8 `delegate_workflow` calls | completed | 88 | 29.7m | 170,669 | ~$0.15 | pass |
+| 3 | `deepseek-v4-pro-plan-flash-build-mimo-review` | Pi single | delegated swarm, 8 `delegate_workflow` calls | completed | 88 | 29.7m | 504,848 | ~$0.32 | pass |
 | 4 | `deepseek-v4-pro-plan-flash-sliced-build-mimo-review` | Lattice | staged sliced + review | completed, review approved | 86 | 57.9m | 704,447 | $0.56 | pass |
 | 5 | `mimo-v2.5-pro-plan-mimo-v2.5-build-deepseek-review` | Lattice | staged review | judged after review retry exhausted | 84 | 34.3m | 368,209 | $1.62 | pass |
 | 6 | `deepseek-v4-pro-plan-pro-build` | Lattice | none | completed | 82 | 45.2m | 265,302 | $0.80 | pass |
@@ -45,7 +45,7 @@ Costs use archived provider-reported costs where available plus estimated OpenAI
 ## Delegation Findings
 
 - **OpenAI bounded swarm (`pi-single`)** used exactly two unique `delegate_workflow` calls and finished fastest at 7.7m / ~$1.35, but scored `89` due to weaker shadcn evidence and incomplete OpenAPI error documentation.
-- **DeepSeek Flash bounded/delegated Pi single** improved the original DeepSeek Flash + Mimo review run from `78` to `88`, cut runtime from 34.8m to 29.7m, cut tokens from 321,658 to 170,669, and cut cost from `$0.65` to about `$0.15`. It used DeepSeek Flash for the main run and Mimo v2.5 Pro through the `deep` delegation profile.
+- **DeepSeek Flash bounded/delegated Pi single** improved the original DeepSeek Flash + Mimo review run from `78` to `88`, cut runtime from 34.8m to 29.7m, cut parent tokens fell but delegated-worker-inclusive tokens were 504,848; estimated cost still fell from `$0.65` to about `$0.32`. It used DeepSeek Flash for the main run and Mimo v2.5 Pro through the `deep` delegation profile.
 - The DeepSeek Pi single run beat the older dynamic sliced DeepSeek run overall (`88` vs `86`) while being much faster and cheaper, but it had a runtime URL drift issue between Orval, backend launch settings, and README instructions.
 - Bounded delegation helped cost and speed more than top-end OpenAI quality in Scenario 1. The best absolute score remains the original OpenAI Lattice run (`91`).
 

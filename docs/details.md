@@ -111,7 +111,7 @@ const evals = [
     delegation: "8 delegate_workflow calls",
     scenario: "Scenario 1",
     rank: 3,
-    estimatedCost: "~$0.15",
+    estimatedCost: "~$0.32",
     path: "run-archive/scenario-1/1778850600043-scenario-1-deepseek-v4-pro-plan-flash-build-mimo-review-attempt-1/result.json"
   },
   {
@@ -155,7 +155,7 @@ const evals = [
     delegation: "2 delegate_workflow calls",
     scenario: "Scenario 2",
     rank: 1,
-    estimatedCost: "~$2.69",
+    estimatedCost: "~$4.66",
     path: "run-archive/scenario-2/1778847125134-scenario-2-openai-gpt-5.5-plan-build-attempt-1/result.json"
   },
   {
@@ -173,6 +173,14 @@ const evals = [
     path: "run-archive/scenario-2/1777364720430-scenario-2-deepseek-v4-pro-plan-flash-build-mimo-review-attempt-1/result.json"
   },
   {
+    id: "scenario-2-deepseek-v4-pro-plan-flash-build-mimo-review-pi-single-delegated-swarm",
+    delegation: "3 delegate_workflow calls",
+    scenario: "Scenario 2",
+    rank: 6,
+    estimatedCost: "~$0.18",
+    path: "run-archive/scenario-2/1778855220636-scenario-2-deepseek-v4-pro-plan-flash-build-mimo-review-attempt-1/result.json"
+  },
+  {
     id: "scenario-2-mimo-v25-pro-plan-mimo-v25-build-deepseek-review",
     delegation: "Lattice review",
     scenario: "Scenario 2",
@@ -183,7 +191,7 @@ const evals = [
     id: "scenario-2-deepseek-v4-pro-plan-pro-build",
     delegation: "none",
     scenario: "Scenario 2",
-    rank: 6,
+    rank: 7,
     path: "run-archive/scenario-2/1777304791852-scenario-2-deepseek-v4-pro-plan-pro-build-attempt-1/result.json"
   }
 ];

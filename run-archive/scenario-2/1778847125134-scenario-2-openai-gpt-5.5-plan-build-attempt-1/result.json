@@ -20,7 +20,7 @@
         "status": "completed",
         "startedAt": "2026-05-15T12:12:29.421Z",
         "completedAt": "2026-05-15T12:23:13.784Z",
-        "summary": "Confirmed deterministic checks passed:\n\n- backend build/test/format ✅\n- frontend install/build/typecheck/lint/format/deadcode ✅\n\nNo further action needed.",
+        "summary": "Confirmed deterministic checks passed:\n\n- backend build/test/format \u2705\n- frontend install/build/typecheck/lint/format/deadcode \u2705\n\nNo further action needed.",
         "telemetry": {
           "tokensIn": 136216,
           "tokensOut": 23736,
@@ -77,6 +77,26 @@
           ],
           "invoked": []
         }
+      },
+      {
+        "id": "pi-delegation",
+        "agent": "pi",
+        "status": "completed",
+        "summary": "Aggregated Pi delegator child-agent usage from 21 child usage records.",
+        "telemetry": {
+          "tokensIn": 311220,
+          "tokensOut": 13041,
+          "tokensReasoning": 0,
+          "tokensCacheRead": 580608,
+          "tokensCacheWrite": 0,
+          "costUSD": 1.9775442,
+          "estimatedCostUSD": 1.9775442,
+          "messageCount": 105,
+          "model": "delegated-workers",
+          "provider": "pi-delegator",
+          "observedModel": "delegated-workers",
+          "observedProvider": "pi-delegator"
+        }
       }
     ],
     "createdAt": "2026-05-15T12:12:29.420Z",
@@ -84,14 +104,14 @@
   },
   "plan": null,
   "telemetry": {
-    "tokensIn": 140704,
-    "tokensOut": 24805,
+    "tokensIn": 451924,
+    "tokensOut": 37846,
     "tokensReasoning": 516,
-    "tokensCacheRead": 2444672,
+    "tokensCacheRead": 3025280,
     "tokensCacheWrite": 0,
-    "costUSD": 2.5925200000000004,
-    "messageCount": 57,
-    "estimatedCostUSD": 2.685486,
+    "costUSD": 4.570064200000001,
+    "messageCount": 162,
+    "estimatedCostUSD": 4.6630302,
     "stages": [
       {
         "id": "pi-single",
@@ -110,6 +130,22 @@
         "costUSD": 2.5925200000000004,
         "estimatedCostUSD": 2.59252,
         "messageCount": 56
+      },
+      {
+        "id": "pi-delegation",
+        "agent": "pi",
+        "tokensIn": 311220,
+        "tokensOut": 13041,
+        "tokensReasoning": 0,
+        "tokensCacheRead": 580608,
+        "tokensCacheWrite": 0,
+        "costUSD": 1.9775442,
+        "estimatedCostUSD": 1.9775442,
+        "messageCount": 105,
+        "model": "delegated-workers",
+        "provider": "pi-delegator",
+        "observedModel": "delegated-workers",
+        "observedProvider": "pi-delegator"
       }
     ],
     "judge": {
@@ -158,7 +194,7 @@
       "command": "npm --prefix frontend run build",
       "exitCode": 0,
       "durationMs": 4262,
-      "stdout": "\n> frontend@0.0.0 build\n> npm run generate:api && tsc -b && vite build\n\n\n> frontend@0.0.0 generate:api\n> orval --config orval.config.ts\n\n🍻 orval v8.8.1 - A swagger client generator for typescript\nbooking Cleaning output folder\n🎉 booking - Your OpenAPI spec has been converted into ready to use orval!\nvite v8.0.10 building client environment for production...\n\u001b[2K\rtransforming...✓ 1785 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/index.html                   0.45 kB │ gzip:  0.29 kB\ndist/assets/index-DMtbxTpE.css   16.16 kB │ gzip:  3.99 kB\ndist/assets/index-Cv-bojaz.js   277.22 kB │ gzip: 85.46 kB\n\n✓ built in 217ms\n",
+      "stdout": "\n> frontend@0.0.0 build\n> npm run generate:api && tsc -b && vite build\n\n\n> frontend@0.0.0 generate:api\n> orval --config orval.config.ts\n\n\ud83c\udf7b orval v8.8.1 - A swagger client generator for typescript\nbooking Cleaning output folder\n\ud83c\udf89 booking - Your OpenAPI spec has been converted into ready to use orval!\nvite v8.0.10 building client environment for production...\n\u001b[2K\rtransforming...\u2713 1785 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/index.html                   0.45 kB \u2502 gzip:  0.29 kB\ndist/assets/index-DMtbxTpE.css   16.16 kB \u2502 gzip:  3.99 kB\ndist/assets/index-Cv-bojaz.js   277.22 kB \u2502 gzip: 85.46 kB\n\n\u2713 built in 217ms\n",
       "stderr": ""
     },
     {
@@ -201,7 +237,7 @@
       "command": "npm --prefix frontend test",
       "exitCode": 0,
       "durationMs": 1909,
-      "stdout": "\n> frontend@0.0.0 test\n> vitest run\n\n\n\u001b[1m\u001b[30m\u001b[46m RUN \u001b[49m\u001b[39m\u001b[22m \u001b[36mv4.1.6 \u001b[39m\u001b[90m/tmp/restaurant-booking-eval-harness-active/1778847125134-scenario-2-openai-gpt-5.5-plan-build-attempt-1/frontend\u001b[39m\n\n \u001b[32m✓\u001b[39m src/App.test.tsx \u001b[2m(\u001b[22m\u001b[2m4 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[33m 555\u001b[2mms\u001b[22m\u001b[39m\n     \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m requires login before booking and offers an auth path \u001b[33m 333\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m4 passed\u001b[39m\u001b[22m\u001b[90m (4)\u001b[39m\n\u001b[2m   Start at \u001b[22m 13:23:32\n\u001b[2m   Duration \u001b[22m 1.33s\u001b[2m (transform 91ms, setup 0ms, import 242ms, tests 555ms, environment 394ms)\u001b[22m\n\n",
+      "stdout": "\n> frontend@0.0.0 test\n> vitest run\n\n\n\u001b[1m\u001b[30m\u001b[46m RUN \u001b[49m\u001b[39m\u001b[22m \u001b[36mv4.1.6 \u001b[39m\u001b[90m/tmp/restaurant-booking-eval-harness-active/1778847125134-scenario-2-openai-gpt-5.5-plan-build-attempt-1/frontend\u001b[39m\n\n \u001b[32m\u2713\u001b[39m src/App.test.tsx \u001b[2m(\u001b[22m\u001b[2m4 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[33m 555\u001b[2mms\u001b[22m\u001b[39m\n     \u001b[33m\u001b[2m\u2713\u001b[22m\u001b[39m requires login before booking and offers an auth path \u001b[33m 333\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m4 passed\u001b[39m\u001b[22m\u001b[90m (4)\u001b[39m\n\u001b[2m   Start at \u001b[22m 13:23:32\n\u001b[2m   Duration \u001b[22m 1.33s\u001b[2m (transform 91ms, setup 0ms, import 242ms, tests 555ms, environment 394ms)\u001b[22m\n\n",
       "stderr": "",
       "evidenceOnly": true
     }

@@ -1,0 +1,379 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Restaurant Booking API",
+    "version": "1.0.0"
+  },
+  "servers": [{ "url": "http://localhost:5177" }],
+  "paths": {
+    "/api/csrf-token": {
+      "get": {
+        "operationId": "getCsrfToken",
+        "tags": ["Auth"],
+        "responses": {
+          "200": {
+            "description": "CSRF token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["token"],
+                  "properties": {
+                    "token": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "operationId": "register",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RegisterRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Registered user",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UserInfo" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/Error" },
+          "401": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "operationId": "login",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Logged in user",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UserInfo" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/Error" },
+          "401": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "operationId": "logout",
+        "tags": ["Auth"],
+        "responses": {
+          "200": {
+            "description": "Logged out"
+          },
+          "400": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "operationId": "getCurrentUser",
+        "tags": ["Auth"],
+        "responses": {
+          "200": {
+            "description": "Current user",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UserInfo" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/restaurants": {
+      "get": {
+        "operationId": "listRestaurants",
+        "tags": ["Restaurants"],
+        "responses": {
+          "200": {
+            "description": "Restaurants",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Restaurant" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/restaurants/{restaurantId}/availability": {
+      "get": {
+        "operationId": "listAvailableSlots",
+        "tags": ["Availability"],
+        "parameters": [
+          {
+            "name": "restaurantId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string", "format": "date" }
+          },
+          {
+            "name": "partySize",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer", "format": "int32" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Available slots",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/AvailabilitySlot" }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/Error" },
+          "404": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/bookings": {
+      "get": {
+        "operationId": "listBookings",
+        "tags": ["Bookings"],
+        "responses": {
+          "200": {
+            "description": "Bookings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Booking" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createBooking",
+        "tags": ["Bookings"],
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateBookingRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created booking",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Booking" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/Error" },
+          "401": { "$ref": "#/components/responses/Error" },
+          "404": { "$ref": "#/components/responses/Error" },
+          "409": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/my-bookings": {
+      "get": {
+        "operationId": "getMyBookings",
+        "tags": ["Bookings"],
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "User's bookings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Booking" }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    }
+  },
+  "components": {
+    "responses": {
+      "Error": {
+        "description": "Business error",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": ".AspNetCore.Identity.Application",
+        "description": "HTTP-only session cookie set after login."
+      }
+    },
+    "schemas": {
+      "RegisterRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string", "minLength": 4 },
+          "name": { "type": "string" }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string" }
+        }
+      },
+      "UserInfo": {
+        "type": "object",
+        "required": ["id", "email", "name"],
+        "properties": {
+          "id": { "type": "string" },
+          "email": { "type": "string" },
+          "name": { "type": "string" }
+        }
+      },
+      "Restaurant": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "cuisine",
+          "neighborhood",
+          "description",
+          "tables"
+        ],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "cuisine": { "type": "string" },
+          "neighborhood": { "type": "string" },
+          "description": { "type": "string" },
+          "tables": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Table" }
+          }
+        }
+      },
+      "Table": {
+        "type": "object",
+        "required": ["id", "capacity"],
+        "properties": {
+          "id": { "type": "string" },
+          "capacity": { "type": "integer", "format": "int32" }
+        }
+      },
+      "Booking": {
+        "type": "object",
+        "required": [
+          "id",
+          "restaurantId",
+          "restaurantName",
+          "tableId",
+          "partySize",
+          "date",
+          "time",
+          "guestName",
+          "guestEmail"
+        ],
+        "properties": {
+          "id": { "type": "string" },
+          "restaurantId": { "type": "string" },
+          "restaurantName": { "type": "string" },
+          "tableId": { "type": "string" },
+          "partySize": { "type": "integer", "format": "int32" },
+          "date": { "type": "string", "format": "date" },
+          "time": { "type": "string", "example": "17:00:00" },
+          "guestName": { "type": "string" },
+          "guestEmail": { "type": "string" },
+          "userId": { "type": "string", "nullable": true }
+        }
+      },
+      "CreateBookingRequest": {
+        "type": "object",
+        "required": [
+          "restaurantId",
+          "date",
+          "time",
+          "partySize",
+          "guestName",
+          "guestEmail"
+        ],
+        "properties": {
+          "restaurantId": { "type": "string" },
+          "date": { "type": "string", "format": "date" },
+          "time": { "type": "string", "example": "17:00:00" },
+          "partySize": { "type": "integer", "format": "int32" },
+          "guestName": { "type": "string" },
+          "guestEmail": { "type": "string" }
+        }
+      },
+      "AvailabilitySlot": {
+        "type": "object",
+        "required": ["time", "availableTableCount"],
+        "properties": {
+          "time": { "type": "string", "example": "17:00:00" },
+          "availableTableCount": { "type": "integer", "format": "int32" }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": ["code", "message"],
+        "properties": {
+          "code": { "type": "string" },
+          "message": { "type": "string" }
+        }
+      }
+    }
+  }
+}
