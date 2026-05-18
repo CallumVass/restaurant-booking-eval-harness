@@ -88,10 +88,12 @@ async function main() {
   const task = await readFile(scenarioConfig.taskPath, "utf8");
   const requestedVariant = args.variant;
   const backendOverride = parseBackend(args.backend);
+  const piSingleExtensionsOverride = parseOptionalBoolean(args.piSingleExtensions, "piSingleExtensions");
+  const piSingleModelContextWindow = args.piSingleModelContextWindow === undefined ? undefined : parsePositiveInteger(args.piSingleModelContextWindow, "piSingleModelContextWindow");
   const variants = (requestedVariant
     ? models.variants.filter((variant) => variant.id === requestedVariant)
     : models.variants.filter((variant) => variant.enabled !== false)
-  ).map((variant) => (backendOverride ? { ...variant, backend: backendOverride } : variant));
+  ).map((variant) => applyCliVariantOverrides(variant, backendOverride, piSingleExtensionsOverride, piSingleModelContextWindow));
 
   if (variants.length === 0) {
     throw new Error(`No variants matched ${requestedVariant}`);
@@ -206,6 +208,7 @@ async function runVariant(input: {
           });
       const pipelineTelemetry = summarizeTelemetry(piResult.pipelineState);
       const completedAt = new Date();
+
 
       if (!isPipelineCompleted(piResult.pipelineState) && !piResult.checks.every((check) => check.exitCode === 0)) {
         log(`${input.variant.id}: Pi pipeline did not complete and deterministic checks failed; skipping judge`);
@@ -877,6 +880,35 @@ function parseBackend(value: string | undefined): EvalBackend | undefined {
   throw new Error(`Invalid backend ${value}. Expected lattice, pi, or pi-single.`);
 }
 
+function parseOptionalBoolean(value: string | undefined, name: string): boolean | undefined {
+  if (value === undefined) return undefined;
+  if (value === "true") return true;
+  if (value === "false") return false;
+  throw new Error(`${name} must be true or false.`);
+}
+
+function applyCliVariantOverrides(
+  variant: ModelVariant,
+  backendOverride: EvalBackend | undefined,
+  piSingleExtensionsOverride: boolean | undefined,
+  piSingleModelContextWindow: number | undefined
+): ModelVariant {
+  const next = backendOverride ? { ...variant, backend: backendOverride } : { ...variant };
+  if (piSingleExtensionsOverride === undefined && piSingleModelContextWindow === undefined) return next;
+  return {
+    ...next,
+    piSingle: {
+      ...next.piSingle,
+      ...(piSingleExtensionsOverride === undefined
+        ? {}
+        : { extensions: { ...next.piSingle?.extensions, enabled: piSingleExtensionsOverride } }),
+      ...(piSingleModelContextWindow === undefined
+        ? {}
+        : { model: { ...next.piSingle?.model, contextWindow: piSingleModelContextWindow } })
+    }
+  };
+}
+
 function parseScenario(args: Record<string, string>): string {
   const numericFlags = Object.entries(args)
     .filter(([, value]) => value === "true")
@@ -884,10 +916,10 @@ function parseScenario(args: Record<string, string>): string {
     .filter((key) => /^\d+$/.test(key));
   const scenario = args.scenario ?? numericFlags[0];
   if (!scenario) {
-    throw new Error("Scenario is required. Use `npm start -- --1`, `npm start -- --2`, or `npm start -- --scenario 2`.");
+    throw new Error("Scenario is required. Use `npm start -- --1`, `npm start -- --2`, `npm start -- --3`, or `npm start -- --scenario 4`.");
   }
-  if (!/^[12]$/.test(scenario)) {
-    throw new Error(`Invalid scenario ${scenario}. Use --1, --2, --scenario 1, or --scenario 2.`);
+  if (!/^[1234]$/.test(scenario)) {
+    throw new Error(`Invalid scenario ${scenario}. Use --1, --2, --3, --4, --scenario 1, --scenario 2, --scenario 3, or --scenario 4.`);
   }
   if (numericFlags.length > 1) {
     throw new Error(`Only one scenario may be selected; got ${numericFlags.map((flag) => `--${flag}`).join(", ")}.`);
@@ -898,6 +930,13 @@ function parseScenario(args: Record<string, string>): string {
 function parseNonNegativeInteger(value: string, name: string): number {
   if (!/^\d+$/.test(value)) {
     throw new Error(`${name} must be a non-negative integer.`);
+  }
+  return Number(value);
+}
+
+function parsePositiveInteger(value: string, name: string): number {
+  if (!/^\d+$/.test(value) || Number(value) <= 0) {
+    throw new Error(`${name} must be a positive integer.`);
   }
   return Number(value);
 }

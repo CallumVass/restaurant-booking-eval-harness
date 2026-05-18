@@ -30,28 +30,18 @@ type CriticModel = PhaseModel & {
 type AgentProfile = "default" | "weave";
 type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
 
-type DelegatorProfile = {
-  model: string;
-  thinking: ThinkingLevel;
+type PiSingleExtensionsConfig = {
+  enabled?: boolean;
 };
 
-type PiSingleSwarmConfig = {
-  enabled?: boolean;
-  maxDelegationCalls?: number;
-  planningAgents?: number;
-  reviewAgents?: number;
-  maxConcurrency?: number;
-  implementationProfile?: string;
-  reducerProfile?: string;
-  reviewProfile?: string;
-  preferWorkflow?: boolean;
+type PiSingleModelConfig = {
+  contextWindow?: number;
 };
 
 type PiSingleConfig = {
-  delegator?: {
-    profiles?: Record<string, DelegatorProfile>;
-  };
-  swarm?: PiSingleSwarmConfig;
+  parent?: PhaseModel;
+  extensions?: PiSingleExtensionsConfig;
+  model?: PiSingleModelConfig;
 };
 
 export type EvalBackend = "lattice" | "pi" | "pi-single";

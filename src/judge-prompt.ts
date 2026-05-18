@@ -73,6 +73,33 @@ export function judgeInstructionsForScenario(scenario: string, hasBaseline: bool
     );
   }
 
+  if (scenario === "3") {
+    instructions.push(
+      "For scenario 3, scenarioScores must use exactly these names: roleAuthorization, ownerIsolation, auditSafety, backendCoverage, frontendRoleFlows, generatedClientIntegration, brownfieldIntegration, regressionSafety.",
+      "Score roleAuthorization low if diner, restaurant-owner, and admin roles are absent, if protected endpoints do not return 401/403 appropriately, or if authorization is enforced only in the frontend.",
+      "Score ownerIsolation low if one owner can view or modify another owner's restaurants/bookings, if admin-only visibility leaks into diner-facing history, or if broad booking endpoints bypass ownership rules.",
+      "Score auditSafety low if required successful state-changing operations are not audited or if audit/admin responses expose passwords, password hashes, CSRF tokens, cookies, raw headers, or full claims dumps.",
+      "Score backendCoverage low if HTTP tests do not exercise unauthenticated, diner, owner A, owner B, and admin boundaries plus audit creation and secret-redaction behavior.",
+      "Score frontendRoleFlows low if the SPA lacks role-aware diner/owner/admin UI, permission-error states, or focused tests for role-specific flows.",
+      "Score generatedClientIntegration low if new owner/admin/audit endpoints are not represented in OpenAPI/client generation or the frontend bypasses generated hooks/typed operations unnecessarily.",
+      "Score regressionSafety low if existing Scenario 2 diner auth, CSRF, booking ownership, conflict/validation behavior, generated client workflow, or tests regress."
+    );
+  }
+
+  if (scenario === "4") {
+    instructions.push(
+      "For scenario 4, scenarioScores must use exactly these names: enterpriseAuthzMatrix, complianceAuditSafety, legacyContractCoverage, largeContextIntegration, backendCoverage, frontendComplianceFlows, generatedClientIntegration, regressionSafety.",
+      "Score enterpriseAuthzMatrix low if the solution does not implement the canonical S4 seeded accounts, exact owner mappings for ember/luna/saffron, 401/403 contracts, wrong-owner 403 behavior, and admin-scoped global visibility from the compliance pack.",
+      "Score complianceAuditSafety low if exact S4 audit action names are missing, required state changes are not audited, or admin audit/storage responses can expose any denylisted secret fields from the audit redaction policy.",
+      "Score legacyContractCoverage low if /api/bookings or legacy restaurant booking routes are broadened into admin/owner views instead of keeping diner-scoped behavior and adding clearly scoped owner/admin routes.",
+      "Score largeContextIntegration low if the implementation ignores the large compliance pack, omits S4 compliance markers in tests/source, or satisfies only the shorter prompt while missing buried canonical requirements.",
+      "Score backendCoverage low if HTTP tests do not cover unauthenticated, diner, owner Ember, owner Luna, owner Saffron, admin, audit action names, redaction denylist, and legacy route preservation.",
+      "Score frontendComplianceFlows low if role-aware owner/admin/diner UI, permission states, safe audit display, and logout clearing role UI are absent or untested.",
+      "Score generatedClientIntegration low if owner/admin/audit endpoints and 401/403 responses are not represented in OpenAPI/client generation or the frontend bypasses generated typed operations unnecessarily.",
+      "Score regressionSafety low if existing Scenario 2 diner auth, CSRF, booking ownership, conflict/validation behavior, generated client workflow, or tests regress."
+    );
+  }
+
   return instructions;
 }
 

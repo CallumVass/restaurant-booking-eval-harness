@@ -89,45 +89,40 @@ npm start -- --1 --variant moonshot-kimi-k2.6-high-plan-medium-build --runRetrie
 npm start -- --1 --skipSkills
 npm start -- --scenario 2 --models ./models.json
 npm start -- --scenario 2 --base ./baselines/scenario-2
+npm start -- --scenario 3 --base ./baselines/scenario-3
+npm start -- --scenario 4 --base ./baselines/scenario-4
 npm start -- --1 --task ./scenarios/1.md
+npm start -- --1 --backend pi-single --piSingleExtensions false
+npm start -- --4 --base ./baselines/scenario-4 --backend pi-single --piSingleModelContextWindow 180000
 EVAL_RUNS_DIR=/tmp/my-eval-runs npm start -- --1
 EVAL_ARCHIVE_DIR=/tmp/my-eval-archive npm start -- --1
 ```
 
-The scenario argument is required. Use `--1`, `--2`, `--scenario 1`, or `--scenario 2`.
+The scenario argument is required. Use `--1`, `--2`, `--3`, `--4`, `--scenario 1`, `--scenario 2`, `--scenario 3`, or `--scenario 4`.
 
 `--backend pi` runs separate Pi SDK sessions for plan, build, critic, and any critic repair stages while preserving `.lattice` plan/state artifacts and telemetry shape. `--backend pi-single` runs one normal Pi CLI process with your usual Pi extensions/subagents/config loaded; it does not require a saved plan artifact. Pi uses Pi's model registry/auth; `openai/*` variants automatically fall back to authenticated `openai-codex/*` when the same model exists. Omit backend to use Lattice.
 
-For `--backend pi-single`, `result.json` records `pipelineState.stages[].skillUsage`: available skills plus read-tool and `/skill:` invocation evidence with event ranges from Pi JSONL.
+For `--backend pi-single`, `result.json` records `pipelineState.stages[].skillUsage`: available skills plus read-tool and `/skill:` invocation evidence with event ranges from Pi JSONL. Use `--piSingleExtensions false` to add `--no-extensions` to the Pi CLI process for broad extension ablation runs. Use `--piSingleModelContextWindow <tokens>` to override the Pi model context window for pressure tests.
 
-`pi-single` can also read optional variant-local delegator profiles from `models.json`:
+`pi-single` can also read an optional parent model override from `models.json`:
 
 ```json
 {
   "piSingle": {
-    "delegator": {
-      "profiles": {
-        "light": { "model": "openai/gpt-5.4-mini", "thinking": "medium" },
-        "balanced": { "model": "openai/gpt-5.5", "thinking": "low" },
-        "deep": { "model": "openai/gpt-5.5", "thinking": "xhigh" }
-      }
+    "extensions": {
+      "enabled": true
     },
-    "swarm": {
-      "enabled": true,
-      "maxDelegationCalls": 2,
-      "planningAgents": 4,
-      "reviewAgents": 3,
-      "maxConcurrency": 4,
-      "implementationProfile": "balanced",
-      "reducerProfile": "deep",
-      "reviewProfile": "deep",
-      "preferWorkflow": true
+    "parent": {
+      "model": "openai/gpt-5.5",
+      "agentOptions": {
+        "reasoningEffort": "high"
+      }
     }
   }
 }
 ```
 
-For `pi-single`, the harness launches Pi with a temporary agent dir that links to your normal auth/extensions/skills but writes these variant profiles and bounded swarm policy as that process's global delegator settings. That lets `light`/`balanced`/`deep` override your normal global profiles for the eval run only. The prompt asks for one bounded planning workflow and one bounded review workflow, not repeated ad hoc delegation.
+For `pi-single`, the harness launches Pi with a temporary agent dir that links to your normal auth/extensions/skills and writes only the selected parent model settings for that process.
 
 `--skipSkills` is useful for smoke-testing the harness wiring. Real eval runs should keep skills enabled.
 
@@ -209,5 +204,5 @@ The LLM judge is instructed to treat these command results as mandatory evidence
 - OpenCode external-directory access is limited to `/tmp/*` to reduce accidental access to prior runs/results and the harness source.
 - The pipeline has no approval gate so it can run unattended.
 - `--backend pi` runs through the Pi SDK, filters resources to workspace-installed skills, disables ambient extensions/context files, and stores Pi sessions under `.lattice/pi/sessions/`.
-- `--backend pi-single` runs the normal global `pi --mode json` CLI from the workspace, preserving your usual Pi extensions/delegator/config while still writing synthetic `.lattice` state and telemetry. Set `PI_SINGLE_BIN=/path/to/pi` to override the CLI path.
+- `--backend pi-single` runs the normal global `pi --mode json` CLI from the workspace, preserving your usual Pi extensions/config while still writing synthetic `.lattice` state and telemetry. Set `PI_SINGLE_BIN=/path/to/pi` to override the CLI path.
 - Lattice v3 removed post-hooks; the final runner remains the authoritative deterministic verification step.

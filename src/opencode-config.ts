@@ -134,7 +134,7 @@ export function makeWeaveConfig(variant: ModelVariant) {
       shuttle: weaveAgentOverride(variant.build, {
         prompt_append: [
           latticeWorkerHint,
-          "You may be invoked directly by Lattice rather than Tapestry. Execute the stage prompt completely; do not wait for a Tapestry-style delegation wrapper."
+          "You may be invoked directly by Lattice rather than Tapestry. Execute the stage prompt completely; do not wait for a Tapestry-style coordination wrapper."
         ].join("\n")
       }),
       weft: weaveAgentOverride(review, {

@@ -16,35 +16,6 @@
           "reasoningEffort": "medium",
           "textVerbosity": "low"
         }
-      },
-      "piSingle": {
-        "delegator": {
-          "profiles": {
-            "light": {
-              "model": "openai/gpt-5.4-mini",
-              "thinking": "medium"
-            },
-            "balanced": {
-              "model": "openai/gpt-5.5",
-              "thinking": "medium"
-            },
-            "deep": {
-              "model": "openai/gpt-5.5",
-              "thinking": "xhigh"
-            }
-          }
-        },
-        "swarm": {
-          "enabled": true,
-          "maxDelegationCalls": 2,
-          "planningAgents": 4,
-          "reviewAgents": 3,
-          "maxConcurrency": 4,
-          "implementationProfile": "balanced",
-          "reducerProfile": "deep",
-          "reviewProfile": "deep",
-          "preferWorkflow": true
-        }
       }
     },
     {
@@ -69,32 +40,11 @@
         }
       },
       "piSingle": {
-        "delegator": {
-          "profiles": {
-            "light": {
-              "model": "opencode-go/deepseek-v4-flash",
-              "thinking": "medium"
-            },
-            "balanced": {
-              "model": "opencode-go/deepseek-v4-flash",
-              "thinking": "medium"
-            },
-            "deep": {
-              "model": "opencode-go/mimo-v2.5-pro",
-              "thinking": "high"
-            }
+        "parent": {
+          "model": "opencode-go/deepseek-v4-pro",
+          "agentOptions": {
+            "reasoningEffort": "high"
           }
-        },
-        "swarm": {
-          "enabled": true,
-          "maxDelegationCalls": 2,
-          "planningAgents": 4,
-          "reviewAgents": 3,
-          "maxConcurrency": 4,
-          "implementationProfile": "balanced",
-          "reducerProfile": "deep",
-          "reviewProfile": "deep",
-          "preferWorkflow": true
         }
       }
     },
@@ -126,39 +76,6 @@
         "agentOptions": {
           "reasoningEffort": "high"
         }
-      },
-      "piSingle": {
-        "delegator": {
-          "profiles": {
-            "light": {
-              "model": "opencode-go/deepseek-v4-flash",
-              "thinking": "medium"
-            },
-            "balanced": {
-              "model": "opencode-go/deepseek-v4-flash",
-              "thinking": "medium"
-            },
-            "deep": {
-              "model": "opencode-go/deepseek-v4-pro",
-              "thinking": "high"
-            },
-            "review": {
-              "model": "opencode-go/mimo-v2.5-pro",
-              "thinking": "high"
-            }
-          }
-        },
-        "swarm": {
-          "enabled": true,
-          "maxDelegationCalls": 2,
-          "planningAgents": 4,
-          "reviewAgents": 3,
-          "maxConcurrency": 4,
-          "implementationProfile": "balanced",
-          "reducerProfile": "deep",
-          "reviewProfile": "deep",
-          "preferWorkflow": true
-        }
       }
     },
     {
@@ -184,35 +101,6 @@
         "model": "opencode-go/mimo-v2.5-pro",
         "agentOptions": {
           "reasoningEffort": "high"
-        }
-      },
-      "piSingle": {
-        "delegator": {
-          "profiles": {
-            "light": {
-              "model": "opencode-go/deepseek-v4-flash",
-              "thinking": "medium"
-            },
-            "balanced": {
-              "model": "opencode-go/deepseek-v4-flash",
-              "thinking": "medium"
-            },
-            "deep": {
-              "model": "opencode-go/mimo-v2.5-pro",
-              "thinking": "high"
-            }
-          }
-        },
-        "swarm": {
-          "enabled": true,
-          "maxDelegationCalls": 2,
-          "planningAgents": 4,
-          "reviewAgents": 3,
-          "maxConcurrency": 4,
-          "implementationProfile": "balanced",
-          "reducerProfile": "deep",
-          "reviewProfile": "deep",
-          "preferWorkflow": true
         }
       }
     },
@@ -249,39 +137,6 @@
           "reasoningEffort": "high",
           "textVerbosity": "low"
         }
-      },
-      "piSingle": {
-        "delegator": {
-          "profiles": {
-            "light": {
-              "model": "opencode-go/deepseek-v4-flash",
-              "thinking": "medium"
-            },
-            "balanced": {
-              "model": "opencode-go/deepseek-v4-flash",
-              "thinking": "medium"
-            },
-            "deep": {
-              "model": "openai/gpt-5.5",
-              "thinking": "high"
-            },
-            "review": {
-              "model": "opencode-go/mimo-v2.5-pro",
-              "thinking": "high"
-            }
-          }
-        },
-        "swarm": {
-          "enabled": true,
-          "maxDelegationCalls": 2,
-          "planningAgents": 4,
-          "reviewAgents": 3,
-          "maxConcurrency": 4,
-          "implementationProfile": "balanced",
-          "reducerProfile": "deep",
-          "reviewProfile": "deep",
-          "preferWorkflow": true
-        }
       }
     },
     {
@@ -300,32 +155,11 @@
         }
       },
       "piSingle": {
-        "delegator": {
-          "profiles": {
-            "light": {
-              "model": "opencode-go/deepseek-v4-pro",
-              "thinking": "medium"
-            },
-            "balanced": {
-              "model": "opencode-go/deepseek-v4-pro",
-              "thinking": "medium"
-            },
-            "deep": {
-              "model": "opencode-go/deepseek-v4-pro",
-              "thinking": "high"
-            }
+        "parent": {
+          "model": "opencode-go/deepseek-v4-pro",
+          "agentOptions": {
+            "reasoningEffort": "high"
           }
-        },
-        "swarm": {
-          "enabled": true,
-          "maxDelegationCalls": 2,
-          "planningAgents": 4,
-          "reviewAgents": 3,
-          "maxConcurrency": 4,
-          "implementationProfile": "balanced",
-          "reducerProfile": "deep",
-          "reviewProfile": "deep",
-          "preferWorkflow": true
         }
       }
     },
@@ -348,35 +182,6 @@
         "model": "opencode-go/deepseek-v4-pro",
         "agentOptions": {
           "reasoningEffort": "high"
-        }
-      },
-      "piSingle": {
-        "delegator": {
-          "profiles": {
-            "light": {
-              "model": "opencode-go/mimo-v2.5",
-              "thinking": "medium"
-            },
-            "balanced": {
-              "model": "opencode-go/mimo-v2.5",
-              "thinking": "medium"
-            },
-            "deep": {
-              "model": "opencode-go/deepseek-v4-pro",
-              "thinking": "high"
-            }
-          }
-        },
-        "swarm": {
-          "enabled": true,
-          "maxDelegationCalls": 2,
-          "planningAgents": 4,
-          "reviewAgents": 3,
-          "maxConcurrency": 4,
-          "implementationProfile": "balanced",
-          "reducerProfile": "deep",
-          "reviewProfile": "deep",
-          "preferWorkflow": true
         }
       }
     }

@@ -116,6 +116,8 @@ async function runSemanticProbes(workspace: string, scenario: string, files: str
   const frontendSourceFiles = textFiles.filter(
     (file) => file.startsWith("frontend/src/") && !file.includes("/generated/") && !file.includes("/__generated__/")
   );
+  const backendSourceFiles = textFiles.filter((file) => file.startsWith("backend/") && file.endsWith(".cs"));
+  const backendTestFiles = textFiles.filter((file) => file.startsWith("backend/") && file.includes(".Tests/") && file.endsWith(".cs"));
   const generatedFrontendFiles = textFiles.filter(
     (file) => file.startsWith("frontend/src/") && (file.includes("/generated/") || file.includes("/__generated__/"))
   );
@@ -168,6 +170,101 @@ async function runSemanticProbes(workspace: string, scenario: string, files: str
         severity: "major",
         message: "Scenario 2 asks for generated TanStack Query hooks where supported, but Orval config does not appear to generate React Query/TanStack hooks.",
         evidence: ["frontend/orval.config.* lacks react-query/tanstack markers"]
+      });
+    }
+  }
+
+  if (scenario === "3" || scenario === "4") {
+    const roleHits = await grepFiles(workspace, backendSourceFiles, /\b(Admin|Owner|RestaurantOwner|ClaimTypes\.Role|IsInRole|AddPolicy|RequireAuthorization\([^)]*(Admin|Owner)|RequireRole)\b/i);
+    if (roleHits.length === 0) {
+      findings.push({
+        probe: "missing-role-authorization-risk",
+        severity: "major",
+        message: "Scenario 3 requires diner, restaurant-owner, and admin authorization, but backend role/owner authorization markers were not found.",
+        evidence: ["No backend .cs files matched role/owner/admin authorization markers."]
+      });
+    }
+
+    const auditHits = await grepFiles(workspace, backendSourceFiles, /\bAudit(Event|Store|Log|Trail)?\b/i);
+    if (auditHits.length === 0) {
+      findings.push({
+        probe: "missing-audit-log-risk",
+        severity: "major",
+        message: "Scenario 3 requires audit events for successful state-changing operations, but backend audit implementation markers were not found.",
+        evidence: ["No backend .cs files matched Audit/AuditEvent/AuditStore markers."]
+      });
+    }
+
+    const ownerAdminTestHits = await grepFiles(workspace, backendTestFiles, /\b(Forbidden|HttpStatusCode\.Forbidden|owner|admin|audit|Owner|Admin|Audit)\b/);
+    if (ownerAdminTestHits.length === 0) {
+      findings.push({
+        probe: "missing-role-boundary-tests-risk",
+        severity: "major",
+        message: "Scenario 3 requires HTTP tests for diner/owner/admin boundaries and audit behavior, but backend test markers were not found.",
+        evidence: ["No backend test files matched owner/admin/audit/Forbidden boundary markers."]
+      });
+    }
+
+    const frontendRoleHits = await grepFiles(workspace, frontendSourceFiles, /\b(owner|admin|audit|Owner|Admin|Audit)\b/);
+    if (frontendRoleHits.length === 0) {
+      findings.push({
+        probe: "missing-role-ui-risk",
+        severity: "major",
+        message: "Scenario 3 requires role-aware diner/owner/admin UI, but frontend role/audit markers were not found.",
+        evidence: ["No frontend source files matched owner/admin/audit UI markers."]
+      });
+    }
+
+    const possibleSecretAuditHits = await grepFiles(workspace, backendSourceFiles, /Audit[\s\S]{0,120}(PasswordHash|passwordHash|csrf|CSRF|Cookie|Headers|Claims)/i);
+    if (possibleSecretAuditHits.length > 0) {
+      findings.push({
+        probe: "audit-secret-leak-risk",
+        severity: "major",
+        message: "Audit implementation appears near password/token/cookie/header/claims material; verify admin audit responses do not leak secrets.",
+        evidence: possibleSecretAuditHits.slice(0, 8)
+      });
+    }
+  }
+
+  if (scenario === "4") {
+    const allBackendAndTests = [...backendSourceFiles, ...backendTestFiles];
+    const ownerCanaries = await grepFiles(workspace, allBackendAndTests, /RBAC-S4-OWNER-(EMBER|LUNA|SAFFRON)|owner\.ember@example\.test|owner\.luna@example\.test|owner\.saffron@example\.test/);
+    if (ownerCanaries.length < 3) {
+      findings.push({
+        probe: "missing-s4-owner-canaries-risk",
+        severity: "major",
+        message: "Scenario 4 requires exact compliance-pack owner mappings for Ember, Luna, and Saffron owners; backend source/tests do not show enough canary evidence.",
+        evidence: ownerCanaries.length > 0 ? ownerCanaries.slice(0, 8) : ["No backend source/test files matched S4 owner canaries."]
+      });
+    }
+
+    const auditActionHits = await grepFiles(workspace, allBackendAndTests, /user\.registered\.v2|user\.login\.succeeded\.v2|user\.logout\.succeeded\.v2|booking\.created\.v2|owner\.restaurant\.profile\.updated\.v2/);
+    if (auditActionHits.length < 5) {
+      findings.push({
+        probe: "missing-s4-audit-actions-risk",
+        severity: "major",
+        message: "Scenario 4 requires exact audit action names from the compliance pack; backend source/tests do not show all required actions.",
+        evidence: auditActionHits.length > 0 ? auditActionHits.slice(0, 8) : ["No backend source/test files matched S4 audit action names."]
+      });
+    }
+
+    const redactionHits = await grepFiles(workspace, allBackendAndTests, /securityStamp|resetToken|refreshToken|setCookie|rawHeaders|requestHeaders|claimsPrincipal|connectionString/i);
+    if (redactionHits.length === 0) {
+      findings.push({
+        probe: "missing-s4-redaction-denylist-risk",
+        severity: "major",
+        message: "Scenario 4 requires tests or implementation evidence for the expanded audit redaction denylist.",
+        evidence: ["No backend source/test files matched expanded S4 redaction denylist fields."]
+      });
+    }
+
+    const legacyScopedHits = await grepFiles(workspace, allBackendAndTests, /LEGACY-S4-DINER-HISTORY-SCOPED|admin\/bookings|\/api\/admin\/bookings|ListMyBookings|BookingsForUser/);
+    if (legacyScopedHits.length === 0) {
+      findings.push({
+        probe: "missing-s4-legacy-route-preservation-risk",
+        severity: "major",
+        message: "Scenario 4 requires preserving diner-scoped booking history while using admin-scoped routes for global visibility.",
+        evidence: ["No backend source/test files matched S4 legacy-route preservation markers."]
       });
     }
   }
